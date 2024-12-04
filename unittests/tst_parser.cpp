@@ -1,16 +1,45 @@
 #include <QtTest>
+
 #include <libneoada/lexer.h>
+#include <libneoada/parser.h>
+
 #include <iostream>
 
 // add necessary includes here
 
-class Parser : public QObject
+// trim from start (in place)
+inline std::string ltrim(const std::string &s) {
+    std::string ret = s;
+    ret.erase(ret.begin(), std::find_if(ret.begin(), ret.end(), [](unsigned char ch) {
+                return !std::isspace(ch);
+            }));
+    return ret;
+}
+
+// trim from end (in place)
+inline std::string rtrim(const std::string &s) {
+    std::string ret = s;
+    ret.erase(std::find_if(ret.rbegin(), ret.rend(), [](unsigned char ch) {
+                return !std::isspace(ch);
+            }).base(), ret.end());
+    return ret;
+}
+
+// trim from both ends (in place)
+inline std::string trim(const std::string &s) {
+    std::string ret = rtrim(s);
+    return ltrim(ret);
+}
+
+#define QCOMPARE_TRIM(a,b)  if (trim(a)!=trim(b)) { std::cout <<  "A\n" << trim(a) << std::endl << "B\n" << trim(b) << std::endl; } QCOMPARE(trim(a),trim(b))
+
+class TstParser : public QObject
 {
     Q_OBJECT
 
 public:
-    Parser();
-    ~Parser();
+    TstParser();
+    ~TstParser();
 
 private slots:
 
@@ -20,11 +49,35 @@ private slots:
     void test_lexer_Identifiers();
     void test_lexer_Strings();
     void test_lexer_Comments();
+    void test_lexer_Expression1();
+    void test_lexer_Expression2();
+
+    void test_parser_Declaration1();
+    void test_parser_Declaration2();
+
+    void test_parser_Expression1();
+    void test_parser_Expression2();
+
+    void test_parser_SimpleProgram();
+    void test_parser_SimpleExpression();
+
+
+    void test_parser_Expression3();
+    void test_parser_Expression4();
+    void test_parser_Expression5();
+    void test_parser_Expression6();
+    void test_parser_Expression7();
+    void test_parser_Expression8();
+    void test_parser_Expression9();
+
+
+
+    void test_parser_FunctionCall1();
 };
 
-Parser::Parser() {}
+TstParser::TstParser() {}
 
-Parser::~Parser() {}
+TstParser::~TstParser() {}
 
 /*-----------------------------------------------------------------------------------------------*\
                                        LEXER LITERALS
@@ -32,14 +85,14 @@ Parser::~Parser() {}
 
 
 //-------------------------------------------------------------------------------------------------
-void Parser::test_lexer_Numbers()
+void TstParser::test_lexer_Numbers()
 {
     NadaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.parse("123 1_000.0 42E+3 16#FF# 2#1010#E+2", [&](const std::string& token, NadaLexer::TokenType) {
-        results.push_back(token);
-    });
+    lexer.setScript("123 1_000.0 42E+3 16#FF# 2#1010#E+2");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
 
     QVERIFY(results.size() == 5);
     QVERIFY(results[0] == "123");
@@ -50,14 +103,14 @@ void Parser::test_lexer_Numbers()
 }
 
 //-------------------------------------------------------------------------------------------------
-void Parser::test_lexer_OperatorsAndSymbols()
+void TstParser::test_lexer_OperatorsAndSymbols()
 {
     NadaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.parse(":= ** <= >= + - * / > < ( ) ;", [&](const std::string& token, NadaLexer::TokenType) {
-        results.push_back(token);
-    });
+    lexer.setScript(":= ** <= >= + - * / > < ( ) ;");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
 
     QVERIFY(results.size() == 13);
     QVERIFY(results[0] == ":=");
@@ -77,14 +130,14 @@ void Parser::test_lexer_OperatorsAndSymbols()
 }
 
 //-------------------------------------------------------------------------------------------------
-void Parser::test_lexer_Identifiers()
+void TstParser::test_lexer_Identifiers()
 {
     NadaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.parse("myVar _private x123", [&](const std::string& token, NadaLexer::TokenType) {
-        results.push_back(token);
-    });
+    lexer.setScript("myVar _private x123");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
 
     QVERIFY(results.size() == 3);
     QVERIFY(results[0] == "myVar");
@@ -93,14 +146,14 @@ void Parser::test_lexer_Identifiers()
 }
 
 //-------------------------------------------------------------------------------------------------
-void Parser::test_lexer_Strings()
+void TstParser::test_lexer_Strings()
 {
     NadaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.parse("\"Hello, World!\" \"NeoAda\" \"Test String\" \"Double\"\"Quotes\"", [&](const std::string& token, NadaLexer::TokenType) {
-        results.push_back(token);
-    });
+    lexer.setScript("\"Hello, World!\" \"NeoAda\" \"Test String\" \"Double\"\"Quotes\"");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
 
     QVERIFY(results.size() == 4);
     QVERIFY(results[0] == "\"Hello, World!\"");
@@ -109,17 +162,18 @@ void Parser::test_lexer_Strings()
     QVERIFY(results[3] == "\"Double\"\"Quotes\"");
 }
 
-void Parser::test_lexer_Comments() {
+void TstParser::test_lexer_Comments() {
     NadaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.parse(R"(
+    lexer.setScript(R"(
         declare x: Natural := 42; -- A comment
         -- Another comment
         declare y: Natural := x + 1;
-    )", [&](const std::string& token, NadaLexer::TokenType) {
-                    results.push_back(token);
-                });
+    )");
+
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
 
     QVERIFY(results.size() == 16);
     QVERIFY(results[0] == "declare");
@@ -139,6 +193,361 @@ void Parser::test_lexer_Comments() {
     QVERIFY(results[14] == "1");
     QVERIFY(results[15] == ";");
 }
-QTEST_APPLESS_MAIN(Parser)
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_lexer_Expression1()
+{
+    NadaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("(42)");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 3);
+    QVERIFY(results[0] == "(");
+    QVERIFY(results[1] == "42");
+    QVERIFY(results[2] == ")");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_lexer_Expression2()
+{
+    NadaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("x := (42);");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 6);
+    QVERIFY(results[0] == "x");
+    QVERIFY(results[1] == ":=");
+    QVERIFY(results[2] == "(");
+    QVERIFY(results[3] == "42");
+    QVERIFY(results[4] == ")");
+    QVERIFY(results[5] == ";");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration1()
+{
+    std::string script = R"(
+        declare x : Number;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "x")
+    Node(Identifier, "Number")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration2()
+{
+    std::string script = R"(
+        declare x : Number := 42;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "x")
+    Node(Identifier, "Number")
+    Node(Number, "42")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Expression1()
+{
+    std::string script = R"(
+        x := 42;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(Number, "42")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Expression2()
+{
+    std::string script = R"(
+        x := (42);
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(Expression, "")
+      Node(Number, "42")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+void TstParser::test_parser_SimpleProgram()
+{
+    std::string script = R"(
+        declare x: Natural;
+        x := 42;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "x")
+    Node(Identifier, "Natural")
+  Node(Assignment, "x")
+    Node(Number, "42")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+void TstParser::test_parser_SimpleExpression()
+{
+    std::string script = R"(
+        x := 42 + 23;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "+")
+      Node(Number, "42")
+      Node(Number, "23")
+)";
+    std::string currentAST =  ast->serialize();
+
+    // std::cout << currentAST;
+    // std::cout << expectedAST;
+
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Expression3()
+{
+    std::string script = R"(
+        x := 42 + 23;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "+")
+      Node(Number, "42")
+      Node(Number, "23")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Expression4()
+{
+    std::string script = R"(
+        x := 1 + 2 - 3;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "-")
+      Node(BinaryOperator, "+")
+        Node(Number, "1")
+        Node(Number, "2")
+      Node(Number, "3")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Expression5()
+{
+    std::string script = R"(
+        x := 1 + 2 - 3 + 4;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "+")
+      Node(BinaryOperator, "-")
+        Node(BinaryOperator, "+")
+          Node(Number, "1")
+          Node(Number, "2")
+        Node(Number, "3")
+      Node(Number, "4")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+void TstParser::test_parser_Expression6()
+{
+    std::string script = R"(
+        x := a**b + 7;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "+")
+      Node(BinaryOperator, "**")
+        Node(Identifier, "a")
+        Node(Identifier, "b")
+      Node(Number, "7")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+void TstParser::test_parser_Expression7()
+{
+    std::string script = R"(
+        x := 7 + a**b;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "+")
+      Node(Number, "7")
+      Node(BinaryOperator, "**")
+        Node(Identifier, "a")
+        Node(Identifier, "b")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+
+void TstParser::test_parser_Expression8()
+{
+    std::string script = R"(
+        x := test();
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(FunctionCall, "test")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+void TstParser::test_parser_Expression9()
+{
+    std::string script = R"(
+        x := 42 + (y * foo(z)) - 5 ** 2;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "-")
+      Node(BinaryOperator, "+")
+        Node(Number, "42")
+        Node(Expression, "")
+          Node(BinaryOperator, "*")
+            Node(Identifier, "y")
+            Node(FunctionCall, "foo")
+              Node(Identifier, "z")
+      Node(BinaryOperator, "**")
+        Node(Number, "5")
+        Node(Number, "2")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_FunctionCall1()
+{
+    std::string script = R"(
+        print()
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(FunctionCall, "print")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+QTEST_APPLESS_MAIN(TstParser)
 
 #include "tst_parser.moc"

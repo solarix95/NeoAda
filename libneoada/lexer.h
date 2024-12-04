@@ -3,6 +3,7 @@
 
 #include <string>
 #include <functional>
+#include <vector>
 
 class NadaLexer {
 public:
@@ -16,15 +17,33 @@ public:
         Unknown        // Unerwartete oder nicht erkannte Token
     };
 
+    NadaLexer();
+
     // Hauptmethode: Skript analysieren und für jedes Token den Callback aufrufen
+    void setLookAhead(int lookAhead);
     bool parse(const std::string& script, std::function<void(const std::string& token, NadaLexer::TokenType t)> callback);
 
+    void setScript(const std::string& script);
+    bool nextToken();
+    bool nextToken(std::string& token, NadaLexer::TokenType &t);
+    bool token(std::string& token, NadaLexer::TokenType &t) const;
+    std::string token(int relativeIndex = 0) const;
+
 private:
+    bool parseNext();
+
     // Hilfsmethoden für das Parsen
     bool isWhitespace(char c) const;
     bool isIdentifierStart(char c) const;
     bool isIdentifierPart(char c) const;
     bool isDigit(char c) const;
+
+    std::string mScript;
+    size_t      mPos;
+    int         mReadAhead;
+
+    std::vector<std::pair<std::string,TokenType>> mTokens;
+    int                                           mTokenIdx;
 };
 
 #endif
