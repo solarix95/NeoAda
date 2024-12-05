@@ -1,9 +1,13 @@
 #include <QtTest>
 
+#include <iostream>
+
 #include <libneoada/lexer.h>
 #include <libneoada/parser.h>
+#include <libneoada/state.h>
+#include <libneoada/interpreter.h>
 
-#include <iostream>
+
 
 // add necessary includes here
 
@@ -70,9 +74,11 @@ private slots:
     void test_parser_Expression8();
     void test_parser_Expression9();
 
-
-
     void test_parser_FunctionCall1();
+
+    void test_state_Declarations();
+
+    void test_interpreter_Declarations();
 };
 
 TstParser::TstParser() {}
@@ -548,6 +554,44 @@ Node(Program, "")
     QCOMPARE_TRIM(currentAST, expectedAST);
 
 }
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_state_Declarations()
+{
+    NadaState state;
+
+    // enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
+    QCOMPARE(state.declareGlobal("a", "Any"), true);
+    QCOMPARE(state.declareGlobal("b", "Number"), true);
+    QCOMPARE(state.declareGlobal("c", "Natural"), true);
+    QCOMPARE(state.declareGlobal("d", "Supernatural"), true);
+    QCOMPARE(state.declareGlobal("e", "Boolean"), true);
+    QCOMPARE(state.declareGlobal("f", "Byte"), true);
+    QCOMPARE(state.declareGlobal("g", "Character"), true);
+    QCOMPARE(state.declareGlobal("h", "String"), true);
+    QCOMPARE(state.declareGlobal("i", "Struct"), true);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Declarations()
+{
+    std::string script = R"(
+        declare x: Natural;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QCOMPARE(state.typeOfGlobal("x"), Nada::Natural);
+    QCOMPARE(state.typeOfGlobal("X"), Nada::Natural);
+    QCOMPARE(state.typeOfGlobal("z"), Nada::Undefined);
+}
+
 QTEST_APPLESS_MAIN(TstParser)
 
 #include "tst_parser.moc"

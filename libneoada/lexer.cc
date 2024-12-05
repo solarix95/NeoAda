@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <unordered_set>
 
+//-------------------------------------------------------------------------------------------------
 NadaLexer::NadaLexer()
     : mPos(-1)
     , mReadAhead(0)
@@ -10,12 +11,14 @@ NadaLexer::NadaLexer()
 {
 }
 
+//-------------------------------------------------------------------------------------------------
 void NadaLexer::setLookAhead(int lookAhead)
 {
     assert(lookAhead >= 0);
     mReadAhead = lookAhead;
 }
 
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::parse(const std::string& script, std::function<void (const std::string &, NadaLexer::TokenType)> callback) {
     size_t i = 0; // Aktuelle Position im Skript
 
