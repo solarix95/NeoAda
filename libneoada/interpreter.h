@@ -14,7 +14,6 @@ public:
 
 private:
     NadaValue  executeState(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state);
-
     NadaState *mState;
 };
 

@@ -6,3 +6,9 @@ NadaValue::NadaValue(Nada::Type type)
 {
     mValue.uInt64 = 0;
 }
+
+//-------------------------------------------------------------------------------------------------
+std::string NadaValue::toString() const
+{
+    return "Gugusli";
+}

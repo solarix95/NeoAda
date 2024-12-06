@@ -16,10 +16,10 @@ Nada::Type Nada::typeByString(const std::string &name)
         return Nada::Natural;
 
     if (lowerName == "supernatural")
-        return Nada::Natural;
+        return Nada::Supernatural;
 
     if (lowerName == "boolean")
-        return Nada::Natural;
+        return Nada::Boolean;
 
     if (lowerName == "byte")
         return Nada::Byte;

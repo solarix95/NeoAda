@@ -55,16 +55,14 @@ private slots:
     void test_lexer_Comments();
     void test_lexer_Expression1();
     void test_lexer_Expression2();
+    void test_lexer_HelloWorld();
+
 
     void test_parser_Declaration1();
     void test_parser_Declaration2();
 
     void test_parser_Expression1();
     void test_parser_Expression2();
-
-    void test_parser_SimpleProgram();
-    void test_parser_SimpleExpression();
-
 
     void test_parser_Expression3();
     void test_parser_Expression4();
@@ -74,11 +72,17 @@ private slots:
     void test_parser_Expression8();
     void test_parser_Expression9();
 
+    void test_parser_HelloWorld();
+
+    void test_parser_SimpleProgram();
+    void test_parser_SimpleExpression();
+
     void test_parser_FunctionCall1();
 
     void test_state_Declarations();
 
     void test_interpreter_Declarations();
+    void test_interpreter_ProcedureCall();
 };
 
 TstParser::TstParser() {}
@@ -157,15 +161,19 @@ void TstParser::test_lexer_Strings()
     NadaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.setScript("\"Hello, World!\" \"NeoAda\" \"Test String\" \"Double\"\"Quotes\"");
+    lexer.setScript("\"Hello, World!\" \"NeoAda\" \"Test String\" \"Double\"\"Quotes\" \"1\"\"2\"");
     while (lexer.nextToken())
         results.push_back(lexer.token());
 
-    QVERIFY(results.size() == 4);
+    QVERIFY(results.size() == 6);
     QVERIFY(results[0] == "\"Hello, World!\"");
     QVERIFY(results[1] == "\"NeoAda\"");
     QVERIFY(results[2] == "\"Test String\"");
     QVERIFY(results[3] == "\"Double\"\"Quotes\"");
+
+    // Useccase "1""2"
+    QVERIFY(results[4] == "\"1\"");
+    QVERIFY(results[5] == "\"2\"");
 }
 
 void TstParser::test_lexer_Comments() {
@@ -233,6 +241,24 @@ void TstParser::test_lexer_Expression2()
     QVERIFY(results[3] == "42");
     QVERIFY(results[4] == ")");
     QVERIFY(results[5] == ";");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_lexer_HelloWorld()
+{
+    NadaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("print(\"Hello World\");");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 5);
+    QVERIFY(results[0] == "print");
+    QVERIFY(results[1] == "(");
+    QVERIFY(results[2] == "\"Hello World\"");
+    QVERIFY(results[3] == ")");
+    QVERIFY(results[4] == ";");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -533,6 +559,26 @@ Node(Program, "")
 
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_HelloWorld()
+{
+    std::string script = R"(
+        print("Hello World");
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(FunctionCall, "print")
+    Node(Literal, ""Hello World"")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_FunctionCall1()
@@ -552,7 +598,6 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -575,8 +620,20 @@ void TstParser::test_state_Declarations()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_Declarations()
 {
+    //  enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
+
     std::string script = R"(
         declare x: Natural;
+
+        declare a: Any;
+        declare b: Number;
+        declare c: Supernatural;
+        declare d: Boolean;
+        declare e: Byte;
+        declare f: Character;
+        declare g: String;
+        declare h: Struct;
+
     )";
 
     NadaLexer       lexer;
@@ -590,6 +647,40 @@ void TstParser::test_interpreter_Declarations()
     QCOMPARE(state.typeOfGlobal("x"), Nada::Natural);
     QCOMPARE(state.typeOfGlobal("X"), Nada::Natural);
     QCOMPARE(state.typeOfGlobal("z"), Nada::Undefined);
+
+    QCOMPARE(state.typeOfGlobal("a"), Nada::Any);
+    QCOMPARE(state.typeOfGlobal("b"), Nada::Number);
+    QCOMPARE(state.typeOfGlobal("c"), Nada::Supernatural);
+    QCOMPARE(state.typeOfGlobal("d"), Nada::Boolean);
+    QCOMPARE(state.typeOfGlobal("e"), Nada::Byte);
+    QCOMPARE(state.typeOfGlobal("f"), Nada::Character);
+    QCOMPARE(state.typeOfGlobal("g"), Nada::String);
+    QCOMPARE(state.typeOfGlobal("h"), Nada::Struct);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ProcedureCall()
+{
+    std::string script = R"(
+        print("hello NeoAda");
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    state.bind("print",{{"message", "String"}}, [](const NadaFncParameters& args) -> NadaValue {
+
+        // std::cout << args["message"].toString() << std::endl;
+        std::cout << "GUGUSLI" << std::endl;
+
+        return NadaValue();
+    });
+
+    auto ret = interpreter.execute(ast);
 }
 
 QTEST_APPLESS_MAIN(TstParser)

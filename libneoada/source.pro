@@ -12,7 +12,8 @@ HEADERS += \
     $$NEOADA_PATH/state.h \
     $$NEOADA_PATH/type.h \
     $$NEOADA_PATH/utils.h \
-    $$NEOADA_PATH/symboltable.h
+    $$NEOADA_PATH/symboltable.h \
+    $$NEOADA_PATH/functiontable.h
 
 
 SOURCES += \
@@ -23,4 +24,5 @@ SOURCES += \
     $$NEOADA_PATH/state.cc \
     $$NEOADA_PATH/type.cc \
     $$NEOADA_PATH/utils.cc \
-    $$NEOADA_PATH/symboltable.cc
+    $$NEOADA_PATH/symboltable.cc \
+    $$NEOADA_PATH/functiontable.cc

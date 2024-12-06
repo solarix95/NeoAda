@@ -2,6 +2,8 @@
 #define VALUE_H
 
 #include <stdint.h>
+#include <vector>
+#include <string>
 #include "type.h"
 
 class NadaValue
@@ -10,6 +12,8 @@ public:
     NadaValue(Nada::Type type = Nada::Undefined);
 
     void initDefaultValue();
+
+    std::string toString() const;
 
 private:
     Nada::Type   mType;
@@ -23,5 +27,8 @@ private:
         void         *uPtr;
     }            mValue;
 };
+
+using NadaValues = std::vector<NadaValue>;
+
 
 #endif // VALUE_H

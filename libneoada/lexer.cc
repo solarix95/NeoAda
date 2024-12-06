@@ -312,7 +312,6 @@ bool NadaLexer::parseNext()
                         mPos += 2; // Überspringe beide Anführungszeichen
                     } else {
                         // Abschluss des Strings
-                        mPos++;
                         break;
                     }
                 } else {
@@ -322,13 +321,13 @@ bool NadaLexer::parseNext()
                 }
             }
 
-            if (mPos > mScript.size() || mScript[start] != '"' || mScript[mPos - 1] != '"') {
-                std::cerr << "Invalid string literal: " << mScript.substr(start, mPos - start) << "\n";
+            if (mPos > mScript.size() || mScript[start] != '"' || mScript[mPos] != '"') {
+                std::cerr << "Invalid string literal: " << mScript.substr(start, mPos + 1 - start) << "\n";
                 isValid = false;
             }
 
             if (isValid) {
-                mTokens.push_back(std::make_pair(mScript.substr(start, mPos - start),TokenType::String));
+                mTokens.push_back(std::make_pair(mScript.substr(start, mPos - start + 1),TokenType::String));
                 return true;
             }
             continue;

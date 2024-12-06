@@ -33,6 +33,19 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         assert(node->children.size() >= 1);
         state->declareGlobal(node->value, node->children[0]->value);
         break;
+    case NadaParser::ASTNodeType::FunctionCall: {
+        NadaValues values;
+        for (const auto &node : node->children) {
+            values.push_back(executeState(node, state));
+        }
+
+        if (!state->hasFunction(node->value,values))
+            return NadaValue(); // TODO: ERROR
+
+        auto &fnc = state->function(node->value,values);
+
+        return fnc.nativeCallback(NadaFncParameters());
+    }   break;
     default:
         break;
     }
