@@ -6,16 +6,38 @@
 #include <string>
 #include "type.h"
 
+class NadaSharedString;
 class NadaValue
 {
 public:
-    NadaValue(Nada::Type type = Nada::Undefined);
+    NadaValue();
+    NadaValue(const NadaValue &other);
+    ~NadaValue();
+
+    void fromString(const std::string &value);
+
 
     void initDefaultValue();
 
+    const std::string &cStringValue() const;
+
+    bool        setString(const std::string &newValue);
     std::string toString() const;
 
+    NadaValue& operator=(const NadaValue&other);
+
+    // Unit-Test only
+    int         refCount() const;
+
+
 private:
+    void reset();
+    void assignOther(const NadaValue &other);
+    void assignOtherString(const NadaValue &other);
+
+    NadaSharedString *internalString();
+    const NadaSharedString *cInternalString() const;
+
     Nada::Type   mType;
 
     union {

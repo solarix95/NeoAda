@@ -9,13 +9,16 @@
 #include "value.h"
 
 using NadaFncParameters = std::vector<std::pair<std::string, std::string>>;
-using NadaFncCallback   = std::function<NadaValue(const NadaFncParameters&)>;
+using NadaFncValues     = std::unordered_map<std::string, NadaValue>;
+using NadaFncCallback   = std::function<NadaValue(const NadaFncValues&)>;
 
 struct NadaFunctionEntry {
     std::string       returnType;
     NadaFncParameters parameters;
 
     NadaFncCallback   nativeCallback; // Built-in
+
+    NadaFncValues     fncValues(const NadaValues &values) const;
 };
 
 struct NadaOverloadedFunction {

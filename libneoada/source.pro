@@ -13,7 +13,9 @@ HEADERS += \
     $$NEOADA_PATH/type.h \
     $$NEOADA_PATH/utils.h \
     $$NEOADA_PATH/symboltable.h \
-    $$NEOADA_PATH/functiontable.h
+    $$NEOADA_PATH/functiontable.h \
+    $$NEOADA_PATH/shareddata.h \
+    $$NEOADA_PATH/sharedstring.h
 
 
 SOURCES += \
@@ -25,4 +27,6 @@ SOURCES += \
     $$NEOADA_PATH/type.cc \
     $$NEOADA_PATH/utils.cc \
     $$NEOADA_PATH/symboltable.cc \
-    $$NEOADA_PATH/functiontable.cc
+    $$NEOADA_PATH/functiontable.cc \
+    $$NEOADA_PATH/shareddata.cc \
+    $$NEOADA_PATH/sharedstring.cc

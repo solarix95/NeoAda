@@ -212,7 +212,7 @@ bool NadaLexer::nextToken()
 
 
     auto ret =  ++mTokenIdx < (int)mTokens.size();
-    std::cout << "TOKEN NOW: " << token() << std::endl;
+    // std::cout << "TOKEN NOW: " << token() << std::endl;
     return ret;
 }
 
@@ -327,7 +327,7 @@ bool NadaLexer::parseNext()
             }
 
             if (isValid) {
-                mTokens.push_back(std::make_pair(mScript.substr(start, mPos - start + 1),TokenType::String));
+                mTokens.push_back(std::make_pair(stringLiteral,TokenType::String));
                 return true;
             }
             continue;

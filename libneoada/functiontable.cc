@@ -59,3 +59,13 @@ NadaFunctionEntry &NadaFunctionTable::symbol(const std::string &name, const Nada
     assert(false && "symbol lookup error");
     std::terminate();
 }
+
+//-------------------------------------------------------------------------------------------------
+NadaFncValues NadaFunctionEntry::fncValues(const NadaValues &values) const
+{
+    NadaFncValues ret;
+    assert(values.size() == parameters.size());
+    for (int i=0; i<(int)parameters.size(); i++)
+        ret[parameters[i].first] = values[i];
+    return ret;
+}

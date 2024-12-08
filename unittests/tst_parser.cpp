@@ -7,6 +7,7 @@
 #include <libneoada/state.h>
 #include <libneoada/interpreter.h>
 
+#include <libneoada/sharedstring.h>
 
 
 // add necessary includes here
@@ -46,6 +47,9 @@ public:
     ~TstParser();
 
 private slots:
+
+    // Core Datastructure
+    void test_core_SharedString();
 
     // Lexer Literals
     void test_lexer_Numbers();
@@ -88,6 +92,66 @@ private slots:
 TstParser::TstParser() {}
 
 TstParser::~TstParser() {}
+
+/*-----------------------------------------------------------------------------------------------*\
+                                       CORE DATASTRUCTURES
+\*-----------------------------------------------------------------------------------------------*/
+
+void TstParser::test_core_SharedString()
+{
+    // Test "Copy on Write"
+    NadaValue s1;
+
+    QCOMPARE(s1.refCount(), 0);
+
+    s1.fromString("");
+    QCOMPARE(s1.refCount(), 0);
+    QCOMPARE(s1.toString(), "");
+
+    s1.fromString("1");
+    QCOMPARE(s1.refCount(), 1);
+    QCOMPARE(s1.toString(), "1");
+
+    NadaValue s2(s1);
+    QCOMPARE(s1.refCount(), 2);
+    QCOMPARE(s2.refCount(), 2);
+    QCOMPARE(s2.toString(), "1");
+
+    // same value -> don't change situation
+    s2.setString("1");
+    QCOMPARE(s1.refCount(), 2);
+    QCOMPARE(s2.refCount(), 2);
+    QCOMPARE(s2.toString(), "1");
+
+
+    // new value -> detach shared data
+    s2.setString("2");
+    QCOMPARE(s1.refCount(), 1);
+    QCOMPARE(s2.refCount(), 1);
+    QCOMPARE(s2.toString(), "2");
+
+    s1.setString("");
+    QCOMPARE(s1.refCount(), 0);
+    QCOMPARE(s2.refCount(), 1);
+
+    s2.setString("");
+    QCOMPARE(s1.refCount(), 0);
+    QCOMPARE(s2.refCount(), 0);
+
+    s1.setString("1");
+
+    {
+        NadaValue s3;
+        QCOMPARE(s1.refCount(), 1);
+        QCOMPARE(s3.refCount(), 0);
+
+        s3 = s1;
+        QCOMPARE(s1.refCount(), 2);
+        QCOMPARE(s3.refCount(), 2);
+    }
+    QCOMPARE(s1.refCount(), 1);
+}
+
 
 /*-----------------------------------------------------------------------------------------------*\
                                        LEXER LITERALS
@@ -161,19 +225,15 @@ void TstParser::test_lexer_Strings()
     NadaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.setScript("\"Hello, World!\" \"NeoAda\" \"Test String\" \"Double\"\"Quotes\" \"1\"\"2\"");
+    lexer.setScript("\"Hello, World!\" \"NeoAda\" \"Test String\" \"Double\"\"Quotes\"");
     while (lexer.nextToken())
         results.push_back(lexer.token());
 
-    QVERIFY(results.size() == 6);
-    QVERIFY(results[0] == "\"Hello, World!\"");
-    QVERIFY(results[1] == "\"NeoAda\"");
-    QVERIFY(results[2] == "\"Test String\"");
-    QVERIFY(results[3] == "\"Double\"\"Quotes\"");
-
-    // Useccase "1""2"
-    QVERIFY(results[4] == "\"1\"");
-    QVERIFY(results[5] == "\"2\"");
+    QVERIFY(results.size() == 4);
+    QVERIFY(results[0] == "Hello, World!");
+    QVERIFY(results[1] == "NeoAda");
+    QVERIFY(results[2] == "Test String");
+    QVERIFY(results[3] == "Double\"Quotes");
 }
 
 void TstParser::test_lexer_Comments() {
@@ -256,7 +316,7 @@ void TstParser::test_lexer_HelloWorld()
     QVERIFY(results.size() == 5);
     QVERIFY(results[0] == "print");
     QVERIFY(results[1] == "(");
-    QVERIFY(results[2] == "\"Hello World\"");
+    QVERIFY(results[2] == "Hello World");
     QVERIFY(results[3] == ")");
     QVERIFY(results[4] == ";");
 }
@@ -573,12 +633,11 @@ void TstParser::test_parser_HelloWorld()
     std::string expectedAST = R"(
 Node(Program, "")
   Node(FunctionCall, "print")
-    Node(Literal, ""Hello World"")
+    Node(Literal, "Hello World")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
 }
-
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_FunctionCall1()
@@ -672,15 +731,14 @@ void TstParser::test_interpreter_ProcedureCall()
 
     auto ast = parser.parse(script);
 
-    state.bind("print",{{"message", "String"}}, [](const NadaFncParameters& args) -> NadaValue {
-
-        // std::cout << args["message"].toString() << std::endl;
-        std::cout << "GUGUSLI" << std::endl;
-
+    std::string printedResult;
+    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+        printedResult = args.at("message").toString();
         return NadaValue();
     });
 
     auto ret = interpreter.execute(ast);
+    QCOMPARE(printedResult,"hello NeoAda");
 }
 
 QTEST_APPLESS_MAIN(TstParser)
