@@ -1,6 +1,16 @@
 #include "value.h"
 #include "sharedstring.h"
+#include "numericparser.h"
+
 #include <cassert>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <cstdint>
+#include <stdexcept>
+#include <sstream>
+#include <limits>
+#include <regex>
 
 //-------------------------------------------------------------------------------------------------
 NadaValue::NadaValue()
@@ -24,12 +34,81 @@ NadaValue::~NadaValue()
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::fromString(const std::string &value)
+bool NadaValue::fromString(const std::string &value)
 {
     reset();
     mType = Nada::String;
     if (!value.empty())
         mValue.uPtr = new NadaSharedString(value);
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::fromNumber(const std::string &value)
+{
+    reset();
+
+    std::string cleanLiteral = NadaNumericParser::removeSeparators(value);
+
+    try {
+        if (NadaNumericParser::isBasedLiteral(cleanLiteral)) {
+            bool ok;
+            uint64_t value = NadaNumericParser::parseBasedLiteral(cleanLiteral, ok);
+            if (!ok)
+                return false;
+            return fromNumber(value);
+        }
+
+        if (NadaNumericParser::isFloatingPointLiteral(cleanLiteral)) {
+            double value = std::stod(cleanLiteral);
+            return fromNumber(value);
+        }
+
+        uint64_t uintValue = std::stoull(cleanLiteral, nullptr, 0);
+        if (uintValue <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+            return fromNumber(static_cast<int64_t>(uintValue));
+        } else {
+            return fromNumber(uintValue);
+        }
+    } catch (const std::runtime_error&) {
+        // std::cerr << "Fehler: " << e.what() << std::endl;
+        assert(mType == Nada::Undefined);
+        return false;
+    } catch (...) {
+        // std::cerr << "Fehler: " << e.what() << std::endl;
+        assert(mType == Nada::Undefined);
+        return false;
+    }
+
+    assert(mType == Nada::Undefined);
+    return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::fromNumber(uint64_t value)
+{
+    reset();
+    mValue.uUInt64 = value;
+    mType = Nada::Supernatural;
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::fromNumber(int64_t value)
+{
+    reset();
+    mValue.uInt64 = value;
+    mType = Nada::Natural;
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::fromNumber(double value)
+{
+    reset();
+    mValue.uDouble = value;
+    mType = Nada::Number;
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -111,12 +190,20 @@ bool NadaValue::setString(const std::string &newValue)
 //-------------------------------------------------------------------------------------------------
 std::string NadaValue::toString() const
 {
+    std::ostringstream oss;
+
     switch (mType) {
     case Nada::Undefined: return "";
-    case Nada::Any:
+    case Nada::Any:       return "";
     case Nada::Number:
+        oss << std::setprecision(15) << std::fixed << mValue.uDouble;
+        break;
     case Nada::Natural:
+        oss << mValue.uInt64;
+        break;
     case Nada::Supernatural:
+        oss << mValue.uUInt64;
+        break;
     case Nada::Boolean:
     case Nada::Byte:
     case Nada::Character:
@@ -129,7 +216,13 @@ std::string NadaValue::toString() const
         return "NOT IMPLEMENTED";
     }
 
-    assert(0 && "Don't reach code here");
+    return oss.str();
+}
+
+//-------------------------------------------------------------------------------------------------
+Nada::Type NadaValue::type() const
+{
+    return mType;
 }
 
 //-------------------------------------------------------------------------------------------------

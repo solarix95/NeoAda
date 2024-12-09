@@ -14,7 +14,11 @@ public:
     NadaValue(const NadaValue &other);
     ~NadaValue();
 
-    void fromString(const std::string &value);
+    bool fromString(const std::string &value);
+    bool fromNumber(const std::string &value);
+    bool fromNumber(uint64_t value);
+    bool fromNumber(int64_t value);
+    bool fromNumber(double value);
 
 
     void initDefaultValue();
@@ -23,6 +27,7 @@ public:
 
     bool        setString(const std::string &newValue);
     std::string toString() const;
+    Nada::Type  type() const;
 
     NadaValue& operator=(const NadaValue&other);
 

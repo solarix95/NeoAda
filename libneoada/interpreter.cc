@@ -51,6 +51,10 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
     case NadaParser::ASTNodeType::Literal:
         ret.fromString(node->value);
         break;
+    case NadaParser::ASTNodeType::Number: {
+        auto done = ret.fromNumber(node->value);
+        // FIXME: Error-Handling? done?
+    }   break;
     default:
         break;
     }

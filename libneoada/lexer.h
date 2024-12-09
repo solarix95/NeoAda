@@ -27,7 +27,9 @@ public:
     bool nextToken();
     bool nextToken(std::string& token, NadaLexer::TokenType &t);
     bool token(std::string& token, NadaLexer::TokenType &t) const;
+
     std::string token(int relativeIndex = 0) const;
+    NadaLexer::TokenType tokenType(int relativeIndex = 0) const;
 
 private:
     bool parseNext();

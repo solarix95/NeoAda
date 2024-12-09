@@ -48,7 +48,7 @@ bool NadaLexer::parse(const std::string& script, std::function<void (const std::
             }
 
             const std::unordered_set<std::string> reservedWords = {
-                "declare", "if", "then", "else", "end", "loop", "exit", "procedure",
+                "declare", "if", "then", "else", "end", "while", "loop", "exit", "procedure",
                 "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 
@@ -251,6 +251,16 @@ std::string NadaLexer::token(int relativeIndex) const
 }
 
 //-------------------------------------------------------------------------------------------------
+NadaLexer::TokenType NadaLexer::tokenType(int relativeIndex) const
+{
+    int absoluteIndex = mTokenIdx + relativeIndex;
+    if (mTokens.empty() || (absoluteIndex < 0) || (absoluteIndex >= (int)mTokens.size()))
+        return NadaLexer::TokenType::Unknown;
+
+    return mTokens[absoluteIndex].second;
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::parseNext()
 {
     mPos++;
@@ -280,7 +290,7 @@ bool NadaLexer::parseNext()
             }
 
             const std::unordered_set<std::string> reservedWords = {
-                "declare", "if", "then", "else", "end", "loop", "exit", "procedure",
+                "declare", "if", "then", "else", "end", "while", "loop", "exit", "procedure",
                 "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 

@@ -50,6 +50,7 @@ private slots:
 
     // Core Datastructure
     void test_core_SharedString();
+    void test_core_NumericValues();
 
     // Lexer Literals
     void test_lexer_Numbers();
@@ -60,6 +61,7 @@ private slots:
     void test_lexer_Expression1();
     void test_lexer_Expression2();
     void test_lexer_HelloWorld();
+    void test_lexer_HelloWorld2();
 
 
     void test_parser_Declaration1();
@@ -77,11 +79,13 @@ private slots:
     void test_parser_Expression9();
 
     void test_parser_HelloWorld();
+    void test_parser_HelloWorld2();
 
     void test_parser_SimpleProgram();
     void test_parser_SimpleExpression();
 
     void test_parser_FunctionCall1();
+    void test_parser_WhileLoop();
 
     void test_state_Declarations();
 
@@ -152,6 +156,36 @@ void TstParser::test_core_SharedString()
     QCOMPARE(s1.refCount(), 1);
 }
 
+void TstParser::test_core_NumericValues()
+{
+    NadaValue v;
+
+    QCOMPARE(v.fromNumber("123_456"),true);      // int64_t
+    QCOMPARE(v.type(), Nada::Natural);
+
+    QCOMPARE(v.fromNumber("1.23E+10"),true);     // double
+    QCOMPARE(v.type(), Nada::Number);
+
+    QCOMPARE(v.fromNumber("16#1F#"),true);       // uint64_t (Base 16)
+    QCOMPARE(v.type(), Nada::Supernatural);
+
+    QCOMPARE(v.fromNumber("2#1011_0001#"),true); // uint64_t (Base 2)
+    QCOMPARE(v.type(), Nada::Supernatural);
+
+    QCOMPARE(v.fromNumber("10#123#E+2"),true);   // uint64_t mit Exponent
+    QCOMPARE(v.type(), Nada::Supernatural);
+
+    QCOMPARE(v.fromNumber("1.2_34"),true);       // double
+    QCOMPARE(v.type(), Nada::Number);
+
+    QCOMPARE(v.fromNumber("18446744073709551615"),true); // uint64_t (Maximalwert)
+    QCOMPARE(v.type(), Nada::Supernatural);
+
+    QCOMPARE(v.fromNumber("InvalidLiteral"),false);
+    QCOMPARE(v.type(), Nada::Undefined);
+
+
+}
 
 /*-----------------------------------------------------------------------------------------------*\
                                        LEXER LITERALS
@@ -319,6 +353,29 @@ void TstParser::test_lexer_HelloWorld()
     QVERIFY(results[2] == "Hello World");
     QVERIFY(results[3] == ")");
     QVERIFY(results[4] == ";");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_lexer_HelloWorld2()
+{
+    NadaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("print(\"Hello World\");print(\"Hello World\");");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 10);
+    QVERIFY(results[0] == "print");
+    QVERIFY(results[1] == "(");
+    QVERIFY(results[2] == "Hello World");
+    QVERIFY(results[3] == ")");
+    QVERIFY(results[4] == ";");
+    QVERIFY(results[5] == "print");
+    QVERIFY(results[6] == "(");
+    QVERIFY(results[7] == "Hello World");
+    QVERIFY(results[8] == ")");
+    QVERIFY(results[9] == ";");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -640,6 +697,30 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_HelloWorld2()
+{
+    // ";" expected-Bug
+    std::string script = R"(
+        print("Hello World");
+        print("Hello World");
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(FunctionCall, "print")
+    Node(Literal, "Hello World")
+  Node(FunctionCall, "print")
+    Node(Literal, "Hello World")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_FunctionCall1()
 {
     std::string script = R"(
@@ -657,6 +738,39 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_WhileLoop()
+{
+    std::string script = R"(
+
+while x < 10 loop
+    x := x + 1;
+end loop;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(WhileLoop, "")
+    Node(BinaryOperator, "<")
+      Node(Identifier, "x")
+      Node(Literal, "10")
+    Node(Block, "")
+      Node(Assignment, "x")
+        Node(BinaryOperator, "+")
+          Node(Identifier, "x")
+          Node(Literal, "1")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -722,6 +836,7 @@ void TstParser::test_interpreter_ProcedureCall()
 {
     std::string script = R"(
         print("hello NeoAda");
+        print(42);
     )";
 
     NadaLexer       lexer;
@@ -731,14 +846,18 @@ void TstParser::test_interpreter_ProcedureCall()
 
     auto ast = parser.parse(script);
 
-    std::string printedResult;
+    std::vector<std::string> results;
     state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
-        printedResult = args.at("message").toString();
+        results.push_back(args.at("message").toString());
         return NadaValue();
     });
 
-    auto ret = interpreter.execute(ast);
-    QCOMPARE(printedResult,"hello NeoAda");
+    interpreter.execute(ast);
+
+
+    QVERIFY(results.size() == 2);
+    QVERIFY(results[0] == "hello NeoAda");
+    QVERIFY(results[1] == "42");
 }
 
 QTEST_APPLESS_MAIN(TstParser)

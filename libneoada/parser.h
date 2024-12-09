@@ -19,7 +19,9 @@ public:
         Identifier,
         BinaryOperator, // Für "+" "-" "*" "/"
         FunctionCall,
+        Block,          // Begin/End
         IfStatement,
+        WhileLoop,
         Loop
     };
 
@@ -28,6 +30,7 @@ public:
         ParsingProgram, // Ein Programm wird geparst
         ParsingDeclaration, // declare ..
         ParsingIdentifier,  // "x()" oder "x := "
+        ParsingWhileLoop,
 
         ExpectingTypeSeparator, ExpectingType,
         ExpectingPostIdentifier, // x ":=" oder x()
@@ -62,6 +65,11 @@ public:
 
 private:
     std::shared_ptr<ASTNode> onError(const std::string &msg);
+    std::shared_ptr<ASTNode> parseStatement();
+    std::shared_ptr<ASTNode> parseDeclaration();
+    std::shared_ptr<ASTNode> parseSeparator(const std::shared_ptr<ASTNode> &currentNode);
+
+
     std::shared_ptr<ASTNode> parseExpression();
 
     std::shared_ptr<ASTNode> parseSimpleExpression();   // a > b
