@@ -22,21 +22,34 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parse(const std::string &script
     NadaLexer::TokenType tokenType;
 
     while (mLexer.nextToken(token,tokenType)) {
+        auto declarationNode = parseStatement();
+        if (declarationNode)
+            ASTNode::addChild(mCurrentNode,declarationNode);
 
+    }
+
+#if 0
         switch (mState) {
         case ParserState::ParsingProgram:
             if (tokenType == NadaLexer::TokenType::Keyword && token == "declare") {
                 auto declarationNode = parseStatement();
                 if (declarationNode)
                     ASTNode::addChild(mCurrentNode,declarationNode);
-            } if (tokenType == NadaLexer::TokenType::Keyword && token == "while") {
+            } else if (tokenType == NadaLexer::TokenType::Keyword && token == "while") {
                 mState = ParserState::ParsingWhileLoop;
                 break;
-            }else if (tokenType == NadaLexer::TokenType::Identifier) {
+            } else if (tokenType == NadaLexer::TokenType::Identifier) {
+                auto identNode = parseSeparator(parseIdentifier());
+                if (identNode)
+                    ASTNode::addChild(mCurrentNode,identNode);
+
+                /*
                 mState = ParserState::ParsingIdentifier;
                 auto identifierNode = std::make_shared<ASTNode>(ASTNodeType::Identifier,token, mCurrentNode);
                 ASTNode::addChild(mCurrentNode,identifierNode);
                 mCurrentNode = identifierNode;
+                */
+            } else if (mLexer.token() == ";") { // ignore separators
             } else {
                 // Fehler: Unerwartetes Token
                 onError("Unexpected token: " + token);
@@ -49,6 +62,7 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parse(const std::string &script
             mCurrentNode = whileNode;
             auto condition = parseExpression();
             ASTNode::addChild(mCurrentNode,condition);
+            mLexer.nextToken();
             if (mLexer.token() != "loop") {
                 throw std::runtime_error("Expected 'loop' after while condition, got: " + mLexer.token());
             }
@@ -131,6 +145,7 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parse(const std::string &script
             break;
         }
     }
+#endif
     return programNode;
 }
 
@@ -147,7 +162,10 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseStatement()
 {
     if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "declare") {
         return parseSeparator(parseDeclaration());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Identifier) {
+        return parseSeparator(parseIdentifier());
     }
+
 
     return onError("Unsupported Statement");
 }
@@ -192,6 +210,32 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseDeclaration()
     return declarationNode;
 }
 
+std::shared_ptr<NadaParser::ASTNode> NadaParser::parseIdentifier()
+{
+    auto identifierNode = std::make_shared<ASTNode>(ASTNodeType::Identifier,mLexer.token());
+
+    mLexer.nextToken();
+
+    if (mLexer.token() == ":=") {
+        identifierNode->type = ASTNodeType::Assignment;
+
+        if (!mLexer.nextToken())
+            return onError("Expression expected");
+
+        auto expressionNode = parseExpression();
+        if (!expressionNode)
+            return std::shared_ptr<NadaParser::ASTNode>();
+        ASTNode::addChild(identifierNode,expressionNode);
+
+    } else if (mLexer.token() == "(") {
+        identifierNode->type = ASTNodeType::FunctionCall;
+        parseFunctionCall(identifierNode);
+    } else {
+        return onError("Invalid token after identifier");
+    }
+    return identifierNode;
+}
+
 //-------------------------------------------------------------------------------------------------
 std::shared_ptr<NadaParser::ASTNode> NadaParser::parseSeparator(const std::shared_ptr<ASTNode> &currentNode)
 {
@@ -202,7 +246,7 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseSeparator(const std::share
         return onError("Unexpected end-of-script. Separator expected.");
 
     if (mLexer.token() != ";")
-        return onError("Separator expected");
+        return onError("Separator expected, got: " + mLexer.token());
 
     return currentNode;
 }
@@ -248,6 +292,7 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Literal: return "Literal";
     case ASTNodeType::Number: return "Number";
     case ASTNodeType::Identifier: return "Identifier";
+    case ASTNodeType::UnaryOperator:  return "UnaryOperator";
     case ASTNodeType::BinaryOperator: return "BinaryOperator";
     case ASTNodeType::FunctionCall: return "FunctionCall";
     case ASTNodeType::IfStatement: return "IfStatement";
@@ -305,7 +350,14 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseSimpleExpression()
 
     auto left = parseTerm();
 
-    while (mLexer.token() == "+" || mLexer.token() == "-" || mLexer.token() == "&" || mLexer.token() == "<" || mLexer.token() == ">") {
+    if (hasUnaryOperator) {
+        auto term = left;
+        left = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator,unaryOperator);
+        ASTNode::addChild(left,term);
+    }
+
+    while (mLexer.token(1) == "+" || mLexer.token(1) == "-" || mLexer.token(1) == "&" || mLexer.token(1) == "<" || mLexer.token(1) == ">") {
+        mLexer.nextToken();
         auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
         ASTNode::addChild(operatorNode,left);
         mLexer.nextToken(); // Hole den Operator
@@ -322,7 +374,8 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseTerm()
 {
     auto left = parseFactor();
 
-    while (mLexer.token() == "*" || mLexer.token() == "/" || mLexer.token() == "mod" || mLexer.token() == "rem") {
+    while (mLexer.token(1) == "*" || mLexer.token(1) == "/" || mLexer.token(1) == "mod" || mLexer.token(1) == "rem") {
+        mLexer.nextToken();
         auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
         ASTNode::addChild(operatorNode,left);
         mLexer.nextToken(); // Hole den Operator
@@ -338,8 +391,8 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseTerm()
 std::shared_ptr<NadaParser::ASTNode> NadaParser::parseFactor()
 {
     auto left = parsePrimary();
-
-    if (mLexer.token() == "**") {
+    if (mLexer.token(1) == "**") {
+        mLexer.nextToken();
         auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
         ASTNode::addChild(operatorNode,left);
         mLexer.nextToken(); // Hole den Potenzierungsoperator
@@ -363,19 +416,20 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parsePrimary()
 
     if (tokenType == NadaLexer::TokenType::Number) {
         auto node = std::make_shared<ASTNode>(ASTNodeType::Number, token);
-        mLexer.nextToken();
+        // mLexer.nextToken();
         return node;
     } else if (tokenType == NadaLexer::TokenType::String) {
         auto node = std::make_shared<ASTNode>(ASTNodeType::Literal, token);
-        mLexer.nextToken();
+        // mLexer.nextToken();
         return node;
     } else if (tokenType == NadaLexer::TokenType::Identifier) {
         auto identifier = std::make_shared<ASTNode>(ASTNodeType::Identifier, token);
-        mLexer.nextToken();
+        // mLexer.nextToken();
 
-        if (mLexer.token() == "(") {
-            auto ret = parseFunctionCall(identifier);
+        if (mLexer.token(1) == "(") {
             mLexer.nextToken();
+            auto ret = parseFunctionCall(identifier);
+            // mLexer.nextToken();
             return ret;
         }
         return identifier;
@@ -384,10 +438,12 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parsePrimary()
         auto expresionNode = std::make_shared<ASTNode>(ASTNodeType::Expression);
         auto expression = parseExpression();
         ASTNode::addChild(expresionNode,expression);
+
+        mLexer.nextToken();
         if (mLexer.token() != ")") {
             return onError("Expected ')' after expression");
         }
-        mLexer.nextToken(); // Überspringe ')'
+        // mLexer.nextToken(); // Überspringe ')'
         return expresionNode;
 
     } else
@@ -407,15 +463,16 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseFunctionCall(std::shared_p
         while (true) {
             auto argument = parseExpression();
             ASTNode::addChild(funcNode,argument);
-            if (mLexer.token() == ",") {
-                mLexer.nextToken(); // Überspringe ','
+            if (mLexer.token(1) == ",") {
+                mLexer.nextToken(); // jump to ","
+                mLexer.nextToken(); // jump over ","
             } else {
                 break;
             }
         }
 
-        if (mLexer.token() != ")") {
-            throw std::runtime_error("Expected ')' after function arguments");
+        if (mLexer.token(1) != ")") {
+            throw std::runtime_error("Expected ')' after function arguments. Got " + mLexer.token(1));
         }
     }
 

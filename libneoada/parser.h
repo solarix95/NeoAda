@@ -17,6 +17,7 @@ public:
         Literal,
         Number,
         Identifier,
+        UnaryOperator,
         BinaryOperator, // Für "+" "-" "*" "/"
         FunctionCall,
         Block,          // Begin/End
@@ -67,6 +68,7 @@ private:
     std::shared_ptr<ASTNode> onError(const std::string &msg);
     std::shared_ptr<ASTNode> parseStatement();
     std::shared_ptr<ASTNode> parseDeclaration();
+    std::shared_ptr<ASTNode> parseIdentifier();  // "call()" or "var :="
     std::shared_ptr<ASTNode> parseSeparator(const std::shared_ptr<ASTNode> &currentNode);
 
 

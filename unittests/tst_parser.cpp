@@ -67,6 +67,10 @@ private slots:
     void test_parser_Declaration1();
     void test_parser_Declaration2();
 
+    void test_parser_Factor();
+    void test_parser_SimpleExpression1();
+    void test_parser_SimpleExpression2();
+
     void test_parser_Expression1();
     void test_parser_Expression2();
 
@@ -417,6 +421,72 @@ Node(Program, "")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Factor()
+{
+    std::string script = R"(
+        x := a**b;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "**")
+      Node(Identifier, "a")
+      Node(Identifier, "b")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_SimpleExpression1()
+{
+    std::string script = R"(
+        x := -a;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(UnaryOperator, "-")
+      Node(Identifier, "a")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_SimpleExpression2()
+{
+    std::string script = R"(
+        x := a > b;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, ">")
+      Node(Identifier, "a")
+      Node(Identifier, "b")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
 }
 
 //-------------------------------------------------------------------------------------------------

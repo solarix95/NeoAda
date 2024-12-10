@@ -6,7 +6,7 @@
 //-------------------------------------------------------------------------------------------------
 NadaLexer::NadaLexer()
     : mPos(-1)
-    , mReadAhead(0)
+    , mReadAhead(2)
     , mTokenIdx(-1)
 {
 }
@@ -212,7 +212,6 @@ bool NadaLexer::nextToken()
 
 
     auto ret =  ++mTokenIdx < (int)mTokens.size();
-    // std::cout << "TOKEN NOW: " << token() << std::endl;
     return ret;
 }
 
@@ -247,6 +246,7 @@ std::string NadaLexer::token(int relativeIndex) const
     if (mTokens.empty() || (absoluteIndex < 0) || (absoluteIndex >= (int)mTokens.size()))
         return std::string();
 
+    // std::cout << "TOKEN " << mTokens[absoluteIndex].first << std::endl;
     return mTokens[absoluteIndex].first;
 }
 
