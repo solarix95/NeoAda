@@ -33,6 +33,10 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         assert(node->children.size() >= 1);
         state->declareGlobal(node->value, node->children[0]->value);
         break;
+    case NadaParser::ASTNodeType::IfStatement: {
+        assert(node->children.size() >= 1);
+        NadaValue condition = executeState(node->children[0], state);
+    } break;
     case NadaParser::ASTNodeType::FunctionCall: {
 
         NadaValues values;
@@ -55,9 +59,38 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         auto done = ret.fromNumber(node->value);
         // FIXME: Error-Handling? done?
     }   break;
+    case NadaParser::ASTNodeType::BinaryOperator: {
+        return evaluateBinaryOperator(node, state);
+    }   break;
+    case NadaParser::ASTNodeType::Identifier: {
+        return state->value(node->value);
+    }   break;
     default:
         break;
     }
     return ret;
+
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+{
+    NadaValue ret;
+
+    if (node->value == ">") {
+        assert(node->children.size() == 2);
+        auto left  = executeState(node->children[0],state);
+        auto right = executeState(node->children[1],state);
+
+        bool done;
+        bool result = left.greaterThen(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        ret.fromBool(result);
+        return ret;
+    }
+
+    return ret;
+
 
 }

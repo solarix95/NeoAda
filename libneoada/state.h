@@ -17,6 +17,7 @@ public:
     bool               bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
     bool               hasFunction(const std::string &name, const NadaValues &parameters);
     NadaFunctionEntry &function(const std::string &name, const NadaValues &parameters);
+    NadaValue          value(const std::string &symbolName) const;
 
 private:
     NadaSymbolTable   mGlobals;

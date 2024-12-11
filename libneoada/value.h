@@ -19,9 +19,14 @@ public:
     bool fromNumber(uint64_t value);
     bool fromNumber(int64_t value);
     bool fromNumber(double value);
+    bool fromBool(bool value);
 
+    bool toBool(bool *ok) const;
 
     void initDefaultValue();
+
+    // NeoAda-Operators
+    bool greaterThen(const NadaValue &other, bool *ok) const;
 
     const std::string &cStringValue() const;
 

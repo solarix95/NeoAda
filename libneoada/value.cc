@@ -112,6 +112,98 @@ bool NadaValue::fromNumber(double value)
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaValue::fromBool(bool value)
+{
+    reset();
+    mValue.uByte = value;
+    mType = Nada::Boolean;
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::toBool(bool *ok) const
+{
+    if (ok) *ok = false;
+    switch (mType) {
+    case Nada::Undefined: return false; break;
+    case Nada::Any:       return false; break;
+    case Nada::Number:    return false; break;
+    case Nada::Natural:
+        if (ok) *ok = true;
+        return mValue.uInt64 != 0;
+        break;
+    case Nada::Supernatural:
+        if (ok) *ok = true;
+        return mValue.uInt64 != 0;
+        break;
+    case Nada::Boolean:
+        if (ok) *ok = true;
+        return mValue.uByte != 0;
+        break;
+    case Nada::Byte:
+        if (ok) *ok = true;
+        return (bool)mValue.uByte;
+        break;
+    case Nada::Character: return false; break;
+    case Nada::String:    return false; break;
+    case Nada::Struct:    return false; break;
+    }
+    return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+
+    switch (other.mType) {
+    case Nada::Undefined: return false;
+    case Nada::Any:       return false;
+    case Nada::Number:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        return mValue.uDouble > other.mValue.uDouble;
+        break;
+    case Nada::Natural:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        return mValue.uInt64 > other.mValue.uInt64;
+        break;
+    case Nada::Supernatural:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        return mValue.uUInt64 > other.mValue.uUInt64;
+        break;
+    case Nada::Boolean:
+    case Nada::Byte:
+    case Nada::Character:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        return mValue.uByte > other.mValue.uByte;
+    case Nada::String:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        if (!mValue.uPtr && !other.mValue.uPtr) // both are empty
+            return false;
+        if (!mValue.uPtr)                      // I'm empty the other is not -> not greater
+            return false;
+        if (!other.mValue.uPtr)                //  I'm not empty the other is empty -> greater
+            return true;
+        return (cInternalString()->cValue() > other.cInternalString()->cValue());
+    case Nada::Struct:
+        assert(0 && "not implemented");
+        return false;
+    }
+    return false;
+
+}
+
+//-------------------------------------------------------------------------------------------------
 void NadaValue::assignOther(const NadaValue &other)
 {
     switch (other.mType) {

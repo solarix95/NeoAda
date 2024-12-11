@@ -290,7 +290,7 @@ bool NadaLexer::parseNext()
             }
 
             const std::unordered_set<std::string> reservedWords = {
-                "declare", "if", "then", "else", "end", "while", "loop", "exit", "procedure",
+                "declare", "if", "then", "else", "elsif", "end", "while", "loop", "exit", "procedure",
                 "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 

@@ -22,6 +22,8 @@ public:
         FunctionCall,
         Block,          // Begin/End
         IfStatement,
+        Else,
+        Elsif,
         WhileLoop,
         Loop
     };
@@ -69,6 +71,10 @@ private:
     std::shared_ptr<ASTNode> parseStatement();
     std::shared_ptr<ASTNode> parseDeclaration();
     std::shared_ptr<ASTNode> parseIdentifier();  // "call()" or "var :="
+    std::shared_ptr<ASTNode> parseWhileLoop();
+    std::shared_ptr<ASTNode> parseIfStatement();
+    std::shared_ptr<ASTNode> parseBlockEnd(const std::string& endToken1,
+                                           const std::string& endToken2 = "");   // von "if"/"else"/"elsif" bis "end"
     std::shared_ptr<ASTNode> parseSeparator(const std::shared_ptr<ASTNode> &currentNode);
 
 

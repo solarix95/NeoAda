@@ -47,3 +47,16 @@ NadaFunctionEntry &NadaState::function(const std::string &name, const NadaValues
 {
     return mFunctions.symbol(name,parameters);
 }
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaState::value(const std::string &symbolName) const
+{
+    NadaSymbol symbol;
+    if (!mGlobals.get(Nada::toLower(symbolName),symbol))
+        return NadaValue();
+
+    if (!symbol.value)
+        return NadaValue();
+
+    return *(symbol.value);
+}

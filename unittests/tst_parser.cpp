@@ -68,8 +68,13 @@ private slots:
     void test_parser_Declaration2();
 
     void test_parser_Factor();
+    void test_parser_Primary1();
+    void test_parser_Primary2();
+
     void test_parser_SimpleExpression1();
     void test_parser_SimpleExpression2();
+    void test_parser_SimpleExpression3();
+    void test_parser_SimpleExpression4();
 
     void test_parser_Expression1();
     void test_parser_Expression2();
@@ -90,11 +95,18 @@ private slots:
 
     void test_parser_FunctionCall1();
     void test_parser_WhileLoop();
+    void test_parser_If();
+    void test_parser_IfElse();
+    void test_parser_ElseIf1();
+    void test_parser_ElseIf2();
+    void test_parser_ElseIf3();
+
 
     void test_state_Declarations();
 
     void test_interpreter_Declarations();
     void test_interpreter_ProcedureCall();
+    void test_interpreter_ifStatement();
 };
 
 TstParser::TstParser() {}
@@ -446,6 +458,47 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Primary1()
+{
+    std::string script = R"(
+        x := a();
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(FunctionCall, "a")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Primary2()
+{
+    std::string script = R"(
+        x := (a());
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(Expression, "")
+      Node(FunctionCall, "a")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_SimpleExpression1()
 {
     std::string script = R"(
@@ -486,6 +539,53 @@ Node(Program, "")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_SimpleExpression3()
+{
+    std::string script = R"(
+        x := a() > b;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, ">")
+      Node(FunctionCall, "a")
+      Node(Identifier, "b")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_SimpleExpression4()
+{
+    std::string script = R"(
+        x := a(z) + 1;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "+")
+      Node(FunctionCall, "a")
+        Node(Identifier, "z")
+      Node(Number, "1")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
 
 }
 
@@ -794,7 +894,7 @@ Node(Program, "")
 void TstParser::test_parser_FunctionCall1()
 {
     std::string script = R"(
-        print()
+        print();
     )";
 
     NadaLexer lexer;
@@ -830,12 +930,224 @@ Node(Program, "")
   Node(WhileLoop, "")
     Node(BinaryOperator, "<")
       Node(Identifier, "x")
-      Node(Literal, "10")
+      Node(Number, "10")
     Node(Block, "")
       Node(Assignment, "x")
         Node(BinaryOperator, "+")
           Node(Identifier, "x")
-          Node(Literal, "1")
+          Node(Number, "1")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_If()
+{
+    std::string script = R"(
+
+if x > 10 then
+    print("x > 10");
+end if;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(If, "")
+    Node(BinaryOperator, ">")
+      Node(Identifier, "x")
+      Node(Number, "10")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Literal, "x > 10")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_IfElse()
+{
+    std::string script = R"(
+
+if x > 10 then
+    print("x > 10");
+else
+    print("x <= 10");
+end if;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(If, "")
+    Node(BinaryOperator, ">")
+      Node(Identifier, "x")
+      Node(Number, "10")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Literal, "x > 10")
+    Node(Else, "")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x <= 10")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_ElseIf1()
+{
+    std::string script = R"(
+
+if x > 10 then
+    print("x > 10");
+elsif x > 5 then
+    print("x > 5");
+else
+    print("x <= 5");
+end if;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(If, "")
+    Node(BinaryOperator, ">")
+      Node(Identifier, "x")
+      Node(Number, "10")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Literal, "x > 10")
+    Node(ElseIf, "")
+      Node(BinaryOperator, ">")
+        Node(Identifier, "x")
+        Node(Number, "5")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x > 5")
+    Node(Else, "")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x <= 5")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_ElseIf2()
+{
+    std::string script = R"(
+
+if    (x > 10) then   print("x > 10");
+elsif (x > 5)  then   print("x > 5");
+else                  print("x <= 5");
+end if;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(If, "")
+    Node(Expression, "")
+      Node(BinaryOperator, ">")
+        Node(Identifier, "x")
+        Node(Number, "10")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Literal, "x > 10")
+    Node(ElseIf, "")
+      Node(Expression, "")
+        Node(BinaryOperator, ">")
+          Node(Identifier, "x")
+          Node(Number, "5")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x > 5")
+    Node(Else, "")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x <= 5")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_ElseIf3()
+{
+    std::string script = R"(
+
+if x > 10 then
+    print("x > 10");
+elsif x > 5 then
+    print("x > 5");
+elsif x > 0 then
+    print("x > 0");
+else
+    print("x <= 0");
+end if;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(If, "")
+    Node(BinaryOperator, ">")
+      Node(Identifier, "x")
+      Node(Number, "10")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Literal, "x > 10")
+    Node(ElseIf, "")
+      Node(BinaryOperator, ">")
+        Node(Identifier, "x")
+        Node(Number, "5")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x > 5")
+    Node(ElseIf, "")
+      Node(BinaryOperator, ">")
+        Node(Identifier, "x")
+        Node(Number, "0")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x > 0")
+    Node(Else, "")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "x <= 0")
 )";
 
     std::string currentAST =  ast->serialize();
@@ -928,6 +1240,36 @@ void TstParser::test_interpreter_ProcedureCall()
     QVERIFY(results.size() == 2);
     QVERIFY(results[0] == "hello NeoAda");
     QVERIFY(results[1] == "42");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ifStatement()
+{
+    std::string script = R"(
+        declare x : Number := 42.0;
+        if x > 5 then
+            print("x>5");
+        end if;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 1);
+    QVERIFY(results[0] == "x>5");
+
 }
 
 QTEST_APPLESS_MAIN(TstParser)
