@@ -17,6 +17,7 @@ public:
         Literal,
         Number,
         Identifier,
+        BooleanLiteral,
         UnaryOperator,
         BinaryOperator, // Für "+" "-" "*" "/"
         FunctionCall,

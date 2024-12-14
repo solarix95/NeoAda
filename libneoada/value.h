@@ -23,7 +23,7 @@ public:
     bool fromNumber(double value);
     bool fromBool(bool value);
 
-    bool toBool(bool *ok) const;
+    bool toBool(bool *ok = nullptr) const;
 
 
 

@@ -12,6 +12,7 @@ public:
         Keyword,       // Reservierte Wörter wie "declare", "if", "then"
         Number,        // Ganzzahl oder Gleitkommazahl
         String,        // String-Literale
+        BooleanLiteral,
         Operator,      // Operatoren wie ":=", "**", "/="
         Separator,     // Satzzeichen wie ";", "(", ")"
         Unknown        // Unerwartete oder nicht erkannte Token

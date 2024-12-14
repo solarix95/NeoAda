@@ -58,13 +58,13 @@ private slots:
     void test_lexer_Numbers();
     void test_lexer_OperatorsAndSymbols();
     void test_lexer_Identifiers();
+    void test_lexer_Boolean();
     void test_lexer_Strings();
     void test_lexer_Comments();
     void test_lexer_Expression1();
     void test_lexer_Expression2();
     void test_lexer_HelloWorld();
     void test_lexer_HelloWorld2();
-
 
     void test_parser_Declaration1();
     void test_parser_Declaration2();
@@ -112,6 +112,9 @@ private slots:
     void test_interpreter_Declarations();
     void test_interpreter_ProcedureCall();
     void test_interpreter_ifStatement();
+    void test_interpreter_Return1();
+    void test_interpreter_Return2();
+    void test_interpreter_Return3();
 };
 
 TstParser::TstParser() {}
@@ -302,6 +305,23 @@ void TstParser::test_lexer_Identifiers()
     QVERIFY(results[0] == "myVar");
     QVERIFY(results[1] == "_private");
     QVERIFY(results[2] == "x123");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_lexer_Boolean()
+{
+    NadaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("true false True False");
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 4);
+    QVERIFY(results[0] == "true");
+    QVERIFY(results[1] == "false");
+    QVERIFY(results[2] == "true");
+    QVERIFY(results[3] == "false");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1209,7 +1229,6 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1353,6 +1372,58 @@ void TstParser::test_interpreter_ifStatement()
     QVERIFY(results.size() == 1);
     QVERIFY(results[0] == "x>5");
 
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Return1()
+{
+    std::string script = R"(
+        return 42;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "42");
+}
+
+void TstParser::test_interpreter_Return2()
+{
+    std::string script = R"(
+        return true;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toBool(nullptr) == true);
+}
+
+void TstParser::test_interpreter_Return3()
+{
+    std::string script = R"(
+        return false;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toBool(nullptr) == false);
 }
 
 QTEST_APPLESS_MAIN(TstParser)

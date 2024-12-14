@@ -453,15 +453,15 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parsePrimary()
 
     if (tokenType == NadaLexer::TokenType::Number) {
         auto node = std::make_shared<ASTNode>(ASTNodeType::Number, token);
-        // mLexer.nextToken();
         return node;
-    } else if (tokenType == NadaLexer::TokenType::String) {
+    } else if (tokenType == NadaLexer::TokenType::BooleanLiteral) {
+        auto node = std::make_shared<ASTNode>(ASTNodeType::BooleanLiteral, token);
+        return node;
+    }else if (tokenType == NadaLexer::TokenType::String) {
         auto node = std::make_shared<ASTNode>(ASTNodeType::Literal, token);
-        // mLexer.nextToken();
         return node;
     } else if (tokenType == NadaLexer::TokenType::Identifier) {
         auto identifier = std::make_shared<ASTNode>(ASTNodeType::Identifier, token);
-        // mLexer.nextToken();
 
         if (mLexer.token(1) == "(") {
             mLexer.nextToken();

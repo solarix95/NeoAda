@@ -13,6 +13,8 @@ NadaValue NadaInterpreter::execute(const std::shared_ptr<NadaParser::ASTNode> &n
     assert(node);
     if (!state && !mState)
         return NadaValue();
+
+    mExecState = RunState;
     return executeState(node, state ? state : mState);
 }
 
@@ -26,12 +28,12 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
 
     switch (node->type) {
     case NadaParser::ASTNodeType::Program:
-        for (auto &child : node->children)
-            executeState(child, state);
-        break;
     case NadaParser::ASTNodeType::Block:
-        for (auto &child : node->children)
-            executeState(child, state);
+        for (auto &child : node->children) {
+            ret = executeState(child, state);
+            if (mExecState == ReturnState)
+                return ret;
+        }
         break;
     case NadaParser::ASTNodeType::Declaration:
         assert(node->children.size() >= 1);
@@ -60,6 +62,13 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
             return executeState(node->children[1],state);
         }
     } break;
+    case NadaParser::ASTNodeType::Return: {
+        assert(node->children.size() == 1);
+
+        auto returnValue = executeState(node->children[0], state);
+        mExecState = ReturnState;
+        return returnValue;
+    } break;
     case NadaParser::ASTNodeType::FunctionCall: {
 
         NadaValues values;
@@ -77,6 +86,9 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
 
     case NadaParser::ASTNodeType::Literal:
         ret.fromString(node->value);
+        break;
+    case NadaParser::ASTNodeType::BooleanLiteral:
+        ret.fromBool(node->value == "true");
         break;
     case NadaParser::ASTNodeType::Number: {
         auto done = ret.fromNumber(node->value);
