@@ -14,6 +14,8 @@ public:
     NadaValue(const NadaValue &other);
     ~NadaValue();
 
+    void initAny();
+    void initType(Nada::Type t);
     bool fromString(const std::string &value);
     bool fromNumber(const std::string &value);
     bool fromNumber(uint64_t value);
@@ -23,9 +25,10 @@ public:
 
     bool toBool(bool *ok) const;
 
-    void initDefaultValue();
+
 
     // NeoAda-Operators
+    bool assign(const NadaValue &other);
     bool greaterThen(const NadaValue &other, bool *ok) const;
 
     const std::string &cStringValue() const;
@@ -45,8 +48,12 @@ private:
     void assignOther(const NadaValue &other);
     void assignOtherString(const NadaValue &other);
 
+    // Helper unterschiedlicher Datentypen
     NadaSharedString *internalString();
     const NadaSharedString *cInternalString() const;
+    bool exact32BitInt(int &value) const;
+    bool exact64BitDbl(double &value) const;
+
 
     Nada::Type   mType;
 

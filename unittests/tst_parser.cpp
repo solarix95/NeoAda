@@ -51,6 +51,8 @@ private slots:
     // Core Datastructure
     void test_core_SharedString();
     void test_core_NumericValues();
+    void test_core_Assignment();
+
 
     // Lexer Literals
     void test_lexer_Numbers();
@@ -101,8 +103,11 @@ private slots:
     void test_parser_ElseIf2();
     void test_parser_ElseIf3();
 
+    void test_parser_return();
+
 
     void test_state_Declarations();
+    void test_state_GlobalScope();
 
     void test_interpreter_Declarations();
     void test_interpreter_ProcedureCall();
@@ -200,6 +205,36 @@ void TstParser::test_core_NumericValues()
     QCOMPARE(v.fromNumber("InvalidLiteral"),false);
     QCOMPARE(v.type(), Nada::Undefined);
 
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_Assignment()
+{
+    NadaValue v1;
+    NadaValue v2;
+
+
+    // Number -> Any
+    v1.initAny();
+    v2.fromNumber(42.23);
+    QCOMPARE(v1.assign(v2),true);
+
+    // Natural -> Any
+    v1.initAny();
+    v2.fromNumber((int64_t)42);
+    QCOMPARE(v1.assign(v2),true);
+
+    // Supernatural -> Any
+    v1.initAny();
+    v2.fromNumber((uint64_t)42);
+    QCOMPARE(v1.assign(v2),true);
+
+    // String -> Any
+    v1.initAny();
+    v2.fromString("neoAda");
+    QCOMPARE(v1.assign(v2),true);
+    QCOMPARE(v1.toString(), v2.toString());
 
 }
 
@@ -1156,20 +1191,69 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_return()
+{
+    std::string script = R"(
+        return 42;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Return, "")
+    Node(Number, "42")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_state_Declarations()
 {
     NadaState state;
 
     // enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
-    QCOMPARE(state.declareGlobal("a", "Any"), true);
-    QCOMPARE(state.declareGlobal("b", "Number"), true);
-    QCOMPARE(state.declareGlobal("c", "Natural"), true);
-    QCOMPARE(state.declareGlobal("d", "Supernatural"), true);
-    QCOMPARE(state.declareGlobal("e", "Boolean"), true);
-    QCOMPARE(state.declareGlobal("f", "Byte"), true);
-    QCOMPARE(state.declareGlobal("g", "Character"), true);
-    QCOMPARE(state.declareGlobal("h", "String"), true);
-    QCOMPARE(state.declareGlobal("i", "Struct"), true);
+    QCOMPARE(state.define("a", "Any"), true);
+    QCOMPARE(state.define("b", "Number"), true);
+    QCOMPARE(state.define("c", "Natural"), true);
+    QCOMPARE(state.define("d", "Supernatural"), true);
+    QCOMPARE(state.define("e", "Boolean"), true);
+    QCOMPARE(state.define("f", "Byte"), true);
+    QCOMPARE(state.define("g", "Character"), true);
+    QCOMPARE(state.define("h", "String"), true);
+    QCOMPARE(state.define("i", "Struct"), true);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_state_GlobalScope()
+{
+    NadaState state;
+
+    // level "0" variable;
+    QCOMPARE(state.define("a", "Number"), true);
+    QCOMPARE(state.typeOf("a"), Nada::Number);
+
+    // level "1" variable;
+    state.pushScope(); // enter "if"
+    QCOMPARE(state.define("a", "String"), true);
+    QCOMPARE(state.typeOf("a"), Nada::String);
+
+    // level "2" variable
+    state.pushScope(); // enter "if"
+    QCOMPARE(state.typeOf("a"), Nada::String);    // found level 1 "a"
+    QCOMPARE(state.define("a", "Natural"), true);
+    QCOMPARE(state.typeOf("a"), Nada::Natural);
+
+    state.popScope(); // leave "if"
+    QCOMPARE(state.typeOf("a"), Nada::String);
+
+    state.popScope(); // leave "if"
+    QCOMPARE(state.typeOf("a"), Nada::Number);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1199,18 +1283,17 @@ void TstParser::test_interpreter_Declarations()
     auto ast = parser.parse(script);
     auto ret = interpreter.execute(ast);
 
-    QCOMPARE(state.typeOfGlobal("x"), Nada::Natural);
-    QCOMPARE(state.typeOfGlobal("X"), Nada::Natural);
-    QCOMPARE(state.typeOfGlobal("z"), Nada::Undefined);
+    QCOMPARE(state.typeOf("x"), Nada::Natural);
+    QCOMPARE(state.typeOf("z"), Nada::Undefined);
 
-    QCOMPARE(state.typeOfGlobal("a"), Nada::Any);
-    QCOMPARE(state.typeOfGlobal("b"), Nada::Number);
-    QCOMPARE(state.typeOfGlobal("c"), Nada::Supernatural);
-    QCOMPARE(state.typeOfGlobal("d"), Nada::Boolean);
-    QCOMPARE(state.typeOfGlobal("e"), Nada::Byte);
-    QCOMPARE(state.typeOfGlobal("f"), Nada::Character);
-    QCOMPARE(state.typeOfGlobal("g"), Nada::String);
-    QCOMPARE(state.typeOfGlobal("h"), Nada::Struct);
+    QCOMPARE(state.typeOf("a"), Nada::Any);
+    QCOMPARE(state.typeOf("b"), Nada::Number);
+    QCOMPARE(state.typeOf("c"), Nada::Supernatural);
+    QCOMPARE(state.typeOf("d"), Nada::Boolean);
+    QCOMPARE(state.typeOf("e"), Nada::Byte);
+    QCOMPARE(state.typeOf("f"), Nada::Character);
+    QCOMPARE(state.typeOf("g"), Nada::String);
+    QCOMPARE(state.typeOf("h"), Nada::Struct);
 }
 
 //-------------------------------------------------------------------------------------------------

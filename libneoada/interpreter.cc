@@ -29,13 +29,36 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         for (auto &child : node->children)
             executeState(child, state);
         break;
+    case NadaParser::ASTNodeType::Block:
+        for (auto &child : node->children)
+            executeState(child, state);
+        break;
     case NadaParser::ASTNodeType::Declaration:
         assert(node->children.size() >= 1);
-        state->declareGlobal(node->value, node->children[0]->value);
+        if (!state->define(node->value, node->children[0]->value))
+            return NadaValue(); // FIXME: Runtime-Error
+        if (node->children.size() == 2) {
+            auto &value = state->valueRef(node->value);
+            NadaValue initialValue;
+
+            if (node->children[1]->type == NadaParser::ASTNodeType::Number)
+                initialValue.fromNumber(node->children[1]->value);
+            else if (node->children[1]->type == NadaParser::ASTNodeType::Literal)
+                initialValue.fromString(node->children[1]->value);
+            else assert(0 && "unsupported type");
+
+            if (initialValue.type() != Nada::Undefined)
+                value.assign(initialValue);
+        }
         break;
     case NadaParser::ASTNodeType::IfStatement: {
         assert(node->children.size() >= 1);
-        NadaValue condition = executeState(node->children[0], state);
+        bool conditionValid;
+        bool condition = executeState(node->children[0], state).toBool(&conditionValid);
+        // if (!conditionValid) // TODO: runtime error
+        if (condition) {
+            return executeState(node->children[1],state);
+        }
     } break;
     case NadaParser::ASTNodeType::FunctionCall: {
 

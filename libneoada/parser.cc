@@ -41,6 +41,8 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseStatement()
         return parseSeparator(parseWhileLoop());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "if") {
         return parseSeparator(parseIfStatement());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "return") {
+        return parseSeparator(parseReturn());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Identifier) {
         return parseSeparator(parseIdentifier());
     }
@@ -233,6 +235,22 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseIfStatement()
 }
 
 //-------------------------------------------------------------------------------------------------
+std::shared_ptr<NadaParser::ASTNode> NadaParser::parseReturn()
+{
+    auto returnNode = std::make_shared<ASTNode>(ASTNodeType::Return);
+    if (!mLexer.nextToken())
+        return onError("Unexpected end after 'while'");
+
+    auto expression = parseExpression();
+
+    if (!expression)
+        return onError("Expression expected after 'return'");
+
+    ASTNode::addChild(returnNode,expression);
+    return returnNode;
+}
+
+//-------------------------------------------------------------------------------------------------
 std::shared_ptr<NadaParser::ASTNode> NadaParser::parseBlockEnd(const std::string &endToken1, const std::string &endToken2)
 {
     auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block);
@@ -315,8 +333,9 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Else:  return "Else";
     case ASTNodeType::Elsif: return "ElseIf";
     case ASTNodeType::WhileLoop: return "WhileLoop";
-    case ASTNodeType::Loop:  return "Loop";
-    case ASTNodeType::Block: return "Block";
+    case ASTNodeType::Loop:   return "Loop";
+    case ASTNodeType::Block:  return "Block";
+    case ASTNodeType::Return: return "Return";
     default: return "Unknown";
     }
 }

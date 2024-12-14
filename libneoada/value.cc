@@ -3,6 +3,7 @@
 #include "numericparser.h"
 
 #include <cassert>
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -31,6 +32,35 @@ NadaValue::NadaValue(const NadaValue &other)
 NadaValue::~NadaValue()
 {
     reset();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaValue::initAny()
+{
+    reset();
+    mType = Nada::Any;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaValue::initType(Nada::Type t)
+{
+    reset();
+    mType = t;
+
+    switch (mType) {
+    case Nada::Undefined: break;
+    case Nada::Any:       break;
+    case Nada::Number:       mValue.uDouble = 0.0; break;
+    case Nada::Natural:      mValue.uInt64  =  0;  break;
+    case Nada::Supernatural: mValue.uInt64  =  0;  break;
+    case Nada::Boolean:      mValue.uByte   =  0;  break;
+    case Nada::Byte:         mValue.uByte   =  0;  break;
+    case Nada::Character:    mValue.uByte   =  0;  break;
+    case Nada::String:       mValue.uPtr    =  nullptr; break;
+    case Nada::Struct:       mValue.uPtr    =  nullptr; break;
+    default:
+        assert(0 && "not implemented");
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -152,16 +182,99 @@ bool NadaValue::toBool(bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaValue::assign(const NadaValue &other)
+{
+    if (this == &other)
+        return true;
+
+    switch (mType) {
+    case Nada::Undefined: return false; break;
+    case Nada::Any: {
+        assignOther(other);
+        return true;
+    } break;
+    case Nada::Number: {
+        if (other.mType == mType) {
+            mValue.uDouble = other.mValue.uDouble;
+            return true;
+        }
+    } break;
+    case Nada::Natural: {
+        if (other.mType == mType) {
+            mValue.uInt64 = other.mValue.uInt64;
+            return true;
+        }
+    } break;
+    case Nada::Supernatural: {
+        if (other.mType == mType) {
+            mValue.uUInt64 = other.mValue.uUInt64;
+            return true;
+        }
+    } break;
+    case Nada::Boolean: {
+        if (other.mType == mType) {
+            mValue.uByte = other.mValue.uByte;
+            return true;
+        }
+    } break;
+    case Nada::Byte: {
+        if (other.mType == mType) {
+            mValue.uByte = other.mValue.uByte;
+            return true;
+        }
+    } break;
+    case Nada::String: {
+        if (other.mType == mType) {
+            if (other.mValue.uPtr == mValue.uPtr)
+                return true;
+
+            reset();
+            assignOtherString(other);
+            return true;
+        }
+    } break;
+
+    case Nada::Character: return false; break;
+    case Nada::Struct:    return false; break;
+    }
+    return false;
+
+
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
 {
     if (ok) *ok = false;
 
-    switch (other.mType) {
+    switch (mType) {
     case Nada::Undefined: return false;
     case Nada::Any:       return false;
     case Nada::Number:
-        if (other.mType != mType)
+        if (std::isnan(mValue.uDouble )) {
+            if (ok) *ok = true;
             return false;
+        }
+        if (other.mType != mType) {
+            int v1, v2;
+            bool v1IsInt = exact32BitInt(v1);
+            bool v2IsInt = other.exact32BitInt(v2);
+            if (v1IsInt && v2IsInt) {
+                if (ok) *ok = true;
+                return v1 > v2;
+            }
+            if (v2IsInt) {
+                if (ok) *ok = true;
+                return mValue.uDouble > (double)v2;
+            }
+            double otherVal;
+            if (other.exact64BitDbl(otherVal)) {
+                if (ok) *ok = true;
+                return mValue.uDouble > otherVal;
+            }
+
+            return false; // giving up...
+        }
         if (ok) *ok = true;
         return mValue.uDouble > other.mValue.uDouble;
         break;
@@ -381,4 +494,76 @@ const NadaSharedString *NadaValue::cInternalString() const
     assert(mValue.uPtr);
 
     return ((NadaSharedString*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::exact32BitInt(int &value) const
+{
+    if ((mType == Nada::Natural) && (mValue.uInt64 <= INT32_MAX) && (mValue.uInt64 >= INT32_MIN))
+    {
+        value = (int)mValue.uInt64;
+        return true;
+    }
+
+    if ((mType == Nada::Supernatural) && (mValue.uUInt64 <= INT32_MAX))
+    {
+        value = (int)mValue.uUInt64;
+        return true;
+    }
+
+    if ((mType == Nada::Number) && (std::floor(mValue.uDouble) == mValue.uDouble)
+        && (mValue.uDouble >= INT32_MIN && mValue.uDouble <= INT32_MAX))
+    {
+        value = static_cast<int>(mValue.uDouble);
+        return true;
+    }
+
+    if (mType == Nada::Byte) {
+        value = mValue.uByte;
+        return true;
+    }
+
+    if (mType == Nada::Character) {
+        value = mValue.uChar;
+        return true;
+    }
+
+    return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::exact64BitDbl(double &value) const
+{
+    switch (mType) {
+    case Nada::Undefined:
+    case Nada::Any:
+    case Nada::String:
+    case Nada::Struct:
+        return false;
+
+    case Nada::Number: {
+        value = mValue.uDouble;
+        return true;
+    } break;
+    case Nada::Natural: {
+        if (mValue.uInt64 >= -((int64_t(1) << 53) - 1) && mValue.uInt64 <= ((int64_t(1) << 53) - 1))
+            value = static_cast<double>(mValue.uInt64);
+        return true;
+    } break;
+
+    case Nada::Supernatural: {
+        if (mValue.uInt64 >= 0 && mValue.uInt64 <= ((int64_t(1) << 53) - 1))
+            value = static_cast<double>(mValue.uUInt64);
+        return true;
+    } break;
+    case Nada::Boolean:
+    case Nada::Byte:
+        value = static_cast<double>(mValue.uByte);
+        return true;
+    case Nada::Character:
+        value = static_cast<double>(mValue.uChar);
+        return true;
+    }
+
+    return false;
 }
