@@ -16,7 +16,8 @@ HEADERS += \
     $$NEOADA_PATH/functiontable.h \
     $$NEOADA_PATH/shareddata.h \
     $$NEOADA_PATH/sharedstring.h \
-    $$NEOADA_PATH/numericparser.h
+    $$NEOADA_PATH/numericparser.h \
+    $$NEOADA_PATH/neoadaapi.h
 
 
 SOURCES += \
@@ -31,4 +32,5 @@ SOURCES += \
     $$NEOADA_PATH/functiontable.cc \
     $$NEOADA_PATH/shareddata.cc \
     $$NEOADA_PATH/sharedstring.cc \
-    $$NEOADA_PATH/numericparser.cc
+    $$NEOADA_PATH/numericparser.cc \
+    $$NEOADA_PATH/neoadaapi.cc

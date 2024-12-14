@@ -23,13 +23,18 @@ public:
     bool fromNumber(double value);
     bool fromBool(bool value);
 
-    bool toBool(bool *ok = nullptr) const;
-
+    bool    toBool(bool *ok = nullptr) const;
+    int64_t toInt64(bool *ok = nullptr) const;
 
 
     // NeoAda-Operators
-    bool assign(const NadaValue &other);
-    bool greaterThen(const NadaValue &other, bool *ok) const;
+    bool      assign(const NadaValue &other);
+    bool      equal(const NadaValue &other, bool *ok) const;
+    bool      greaterThen(const NadaValue &other, bool *ok) const;
+    NadaValue concat(const NadaValue &other, bool *ok) const;
+
+    void unaryOperator(const std::string &op, bool *ok);
+
 
     const std::string &cStringValue() const;
 

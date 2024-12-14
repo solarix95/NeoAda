@@ -1,3 +1,4 @@
+#include "neoadaapi.h"
 #include <QtTest>
 
 #include <iostream>
@@ -115,6 +116,11 @@ private slots:
     void test_interpreter_Return1();
     void test_interpreter_Return2();
     void test_interpreter_Return3();
+
+    void test_api_evaluateLiterals();
+    void test_api_evaluateEqual();
+    void test_api_evaluateNotEqual();
+    void test_api_evaluateConcatString();
 };
 
 TstParser::TstParser() {}
@@ -1392,6 +1398,7 @@ void TstParser::test_interpreter_Return1()
     QVERIFY(ret.toString() == "42");
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_Return2()
 {
     std::string script = R"(
@@ -1409,6 +1416,7 @@ void TstParser::test_interpreter_Return2()
     QVERIFY(ret.toBool(nullptr) == true);
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_Return3()
 {
     std::string script = R"(
@@ -1424,6 +1432,54 @@ void TstParser::test_interpreter_Return3()
     auto ret = interpreter.execute(ast);
 
     QVERIFY(ret.toBool(nullptr) == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateLiterals()
+{
+    QVERIFY(NeoAda::evaluate("return true;").toBool() == true);
+    QVERIFY(NeoAda::evaluate("return false;").toBool() == false);
+    QVERIFY(NeoAda::evaluate("return 42;").toInt64() == 42);
+    QVERIFY(NeoAda::evaluate("return -1;").toInt64() == -1);
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\";").toString() == "NeoAda");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateEqual()
+{
+    QVERIFY(NeoAda::evaluate("return true = true;").toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return true = false;").toBool() == false);
+    QVERIFY(NeoAda::evaluate("return 42 = 42;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42.5 = 42.5;").toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return 42 = 23;").toBool()      == false);
+
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" = \"NeoAda\";").toBool() == true);
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" = \"neoada\";").toBool() == false); // case insensitive as in Ada95
+
+
+    QVERIFY(NeoAda::evaluate("return (true = true);" ).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return (true = false);").toBool() == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateNotEqual()
+{
+    QVERIFY(NeoAda::evaluate("return true /= true;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return true /= false;").toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 42   /= 42;").toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 42.5 /= 42.5;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return 42   /= 23;").toBool()      == true);
+
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" /= \"NeoAda\";").toBool() == false);
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" /= \"neoada\";").toBool() == true); // case insensitive as in Ada95
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateConcatString()
+{
+    QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\";").toString()            == "NeoAda");
+    QVERIFY(NeoAda::evaluate("return \"Neo\" & \" \" & \"Ada\";").toString()    == "Neo Ada");
+    QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\" = \"NeoAda\";").toBool() == true);
 }
 
 QTEST_APPLESS_MAIN(TstParser)

@@ -182,6 +182,48 @@ bool NadaValue::toBool(bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
+int64_t NadaValue::toInt64(bool *ok) const
+{
+    if (ok) *ok = false;
+    switch (mType) {
+    case Nada::Undefined: return 0; break;
+    case Nada::Any:       return 0; break;
+    case Nada::Number: {
+        int ret;
+        bool isInt = exact32BitInt(ret);
+        if (isInt) {
+            if (ok) *ok = true;
+            return ret;
+        }
+        return 0;
+    }
+    case Nada::Natural:
+        if (ok) *ok = true;
+        return mValue.uInt64;
+        break;
+    case Nada::Supernatural:
+        if (mValue.uInt64 >= 0) {
+            if (ok) *ok = true;
+            return (int64_t)mValue.uUInt64;
+        }
+        break;
+    case Nada::Boolean:
+        if (ok) *ok = true;
+        return mValue.uByte;
+        break;
+    case Nada::Byte:
+        if (ok) *ok = true;
+        return (bool)mValue.uByte;
+        break;
+    case Nada::Character: return false; break;
+    case Nada::String:    return false; break;
+    case Nada::Struct:    return false; break;
+    }
+    return false;
+
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::assign(const NadaValue &other)
 {
     if (this == &other)
@@ -238,8 +280,79 @@ bool NadaValue::assign(const NadaValue &other)
     case Nada::Struct:    return false; break;
     }
     return false;
+}
 
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::equal(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
 
+    switch (mType) {
+    case Nada::Undefined: return false;
+    case Nada::Any:       return false;
+    case Nada::Number:
+        if (std::isnan(mValue.uDouble )) {
+            if (ok) *ok = true;
+            return false;
+        }
+        if (other.mType != mType) {
+            int v1, v2;
+            bool v1IsInt = exact32BitInt(v1);
+            bool v2IsInt = other.exact32BitInt(v2);
+            if (v1IsInt && v2IsInt) {
+                if (ok) *ok = true;
+                return v1 == v2;
+            }
+            if (v2IsInt) {
+                if (ok) *ok = true;
+                return mValue.uDouble == (double)v2;
+            }
+            double otherVal = 0;
+            if (other.exact64BitDbl(otherVal)) {
+                if (ok) *ok = true;
+                return mValue.uDouble == otherVal;
+            }
+
+            return false; // giving up...
+        }
+        if (ok) *ok = true;
+        return mValue.uDouble == other.mValue.uDouble;
+        break;
+    case Nada::Natural:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        return mValue.uInt64 == other.mValue.uInt64;
+        break;
+    case Nada::Supernatural:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        return mValue.uUInt64 > other.mValue.uUInt64;
+        break;
+    case Nada::Boolean:
+    case Nada::Byte:
+    case Nada::Character:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        return mValue.uByte == other.mValue.uByte;
+    case Nada::String:
+        if (other.mType != mType)
+            return false;
+        if (ok) *ok = true;
+        if (!mValue.uPtr && !other.mValue.uPtr) // both are empty
+            return false;
+        if (!mValue.uPtr)                      // I'm empty the other is not -> not greater
+            return false;
+        if (!other.mValue.uPtr)                //  I'm not empty the other is empty -> greater
+            return true;
+        return (cInternalString()->cValue() == other.cInternalString()->cValue());
+    case Nada::Struct:
+        assert(0 && "not implemented");
+        return false;
+    }
+    return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -314,6 +427,80 @@ bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
     }
     return false;
 
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+    if (mType != other.mType)
+        return NadaValue();
+
+    switch (mType) {
+    case Nada::String: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromString(cInternalString()->cValue() + other.cInternalString()->cValue());
+        return ret;
+    } break;
+    case Nada::Struct: {
+        assert(0 && "not yet implemented");
+        return NadaValue();
+    } break;
+    default:
+        break;
+    }
+
+    return NadaValue();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaValue::unaryOperator(const std::string &op, bool *ok)
+{
+    if (ok) *ok = false;
+    switch (mType) {
+    case Nada::Undefined: return; break;
+    case Nada::Any:       return; break;
+    case Nada::Number: {
+        if (op == "+") {
+            if (ok) *ok = true;
+            return;
+        }
+        if (op == "-") {
+            // FIXME: nan? inf?
+            if (ok) *ok = true;
+            mValue.uDouble = -mValue.uDouble;
+            return;
+        }
+    } break;
+    case Nada::Natural:{
+        if (op == "+") {
+            if (ok) *ok = true;
+            return;
+        }
+        if (op == "-") {
+            if (ok) *ok = true;
+            mValue.uInt64 = -mValue.uInt64;
+            return;
+        }
+    } break;
+    case Nada::Supernatural:{
+        if (op == "+") {
+            if (ok) *ok = true;
+            return;
+        }
+    } break;
+    case Nada::Boolean:
+        break;
+    case Nada::Byte:
+        break;
+    case Nada::Character:
+        break;
+    case Nada::String:
+        break;
+    case Nada::Struct:
+        break;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------

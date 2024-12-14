@@ -393,7 +393,7 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseSimpleExpression()
         ASTNode::addChild(left,term);
     }
 
-    while (mLexer.token(1) == "+" || mLexer.token(1) == "-" || mLexer.token(1) == "&" || mLexer.token(1) == "<" || mLexer.token(1) == ">") {
+    while (mLexer.token(1) == "=" || mLexer.token(1) == "/=" || mLexer.token(1) == "+" || mLexer.token(1) == "-" || mLexer.token(1) == "&" || mLexer.token(1) == "<" || mLexer.token(1) == ">") {
         mLexer.nextToken();
         auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
         ASTNode::addChild(operatorNode,left);

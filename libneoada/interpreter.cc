@@ -35,6 +35,9 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
                 return ret;
         }
         break;
+    case NadaParser::ASTNodeType::Expression: // just "()"
+        assert(node->children.size() == 1);
+        return executeState(node->children[0],state);
     case NadaParser::ASTNodeType::Declaration:
         assert(node->children.size() >= 1);
         if (!state->define(node->value, node->children[0]->value))
@@ -97,6 +100,9 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
     case NadaParser::ASTNodeType::BinaryOperator: {
         return evaluateBinaryOperator(node, state);
     }   break;
+    case NadaParser::ASTNodeType::UnaryOperator: {
+        return evaluateUnaryOperator(node, state);
+    }   break;
     case NadaParser::ASTNodeType::Identifier: {
         return state->value(node->value);
     }   break;
@@ -112,12 +118,12 @@ NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPars
 {
     NadaValue ret;
 
-    if (node->value == ">") {
-        assert(node->children.size() == 2);
-        auto left  = executeState(node->children[0],state);
-        auto right = executeState(node->children[1],state);
+    assert(node->children.size() == 2);
+    auto left  = executeState(node->children[0],state);
+    auto right = executeState(node->children[1],state);
+    bool done;
 
-        bool done;
+    if (node->value == ">") {
         bool result = left.greaterThen(right, &done);
         if (!done) // FIXME: runtime error!
             return NadaValue();
@@ -125,7 +131,43 @@ NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPars
         return ret;
     }
 
+    if (node->value == "=") {
+        bool result = left.equal(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        ret.fromBool(result);
+        return ret;
+    }
+
+    if (node->value == "/=") {
+        bool result = !left.equal(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        ret.fromBool(result);
+        return ret;
+    }
+
+    if (node->value == "&") {
+        auto result = left.concat(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        return result;
+    }
+
+    assert(0 && "not yet implemented");
     return ret;
+}
 
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaInterpreter::evaluateUnaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+{
+    assert(node->children.size() == 1);
 
+    auto expressionResult  = executeState(node->children[0],state);
+    bool done;
+    expressionResult.unaryOperator(node->value,&done);
+
+    // FIXME: runtime error
+    // if (!done)
+    return expressionResult;
 }
