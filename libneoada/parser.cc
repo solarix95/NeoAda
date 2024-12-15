@@ -6,7 +6,6 @@ NadaParser::NadaParser(NadaLexer &lexer)
     : mLexer(lexer)
     , mState(ParserState::None)
 {
-    mLexer.setLookAhead(1);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -47,7 +46,8 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseStatement()
         return parseSeparator(parseIdentifier());
     }
 
-    return onError("Unsupported Statement");
+
+    return onError("Unsupported Statement: '" + mLexer.token() + "'");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -366,8 +366,19 @@ void NadaParser::ASTNode::addChild(std::shared_ptr<ASTNode> parent, std::shared_
 //-------------------------------------------------------------------------------------------------
 std::shared_ptr<NadaParser::ASTNode> NadaParser::parseExpression()
 {
-    auto leftOperand = parseSimpleExpression();
-    return leftOperand;
+    auto left = parseSimpleExpression();
+
+    while (mLexer.token(1) == "and" || mLexer.token(1) == "or" || mLexer.token(1) == "xor") {
+        mLexer.nextToken();
+        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
+        ASTNode::addChild(operatorNode,left);
+        mLexer.nextToken(); // Hole den Operator
+        auto right = parseSimpleExpression();
+        ASTNode::addChild(operatorNode,right);
+        left = operatorNode;
+    }
+
+    return left;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -451,41 +462,52 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parsePrimary()
     if (!mLexer.token(token,tokenType))
         return onError("Primary expression expected");
 
+    bool hasUnaryOperator = (token == "+" || token == "-");
+    std::string unaryOperator = token;
+
+    if (hasUnaryOperator)
+        mLexer.nextToken();
+
+    if (!mLexer.token(token,tokenType))
+        return onError("Primary expression expected");
+
+    auto node = std::shared_ptr<NadaParser::ASTNode>();
+
     if (tokenType == NadaLexer::TokenType::Number) {
-        auto node = std::make_shared<ASTNode>(ASTNodeType::Number, token);
-        return node;
+        node = std::make_shared<ASTNode>(ASTNodeType::Number, token);
     } else if (tokenType == NadaLexer::TokenType::BooleanLiteral) {
-        auto node = std::make_shared<ASTNode>(ASTNodeType::BooleanLiteral, token);
-        return node;
+        node = std::make_shared<ASTNode>(ASTNodeType::BooleanLiteral, token);
     }else if (tokenType == NadaLexer::TokenType::String) {
-        auto node = std::make_shared<ASTNode>(ASTNodeType::Literal, token);
-        return node;
+        node = std::make_shared<ASTNode>(ASTNodeType::Literal, token);
     } else if (tokenType == NadaLexer::TokenType::Identifier) {
-        auto identifier = std::make_shared<ASTNode>(ASTNodeType::Identifier, token);
+        node = std::make_shared<ASTNode>(ASTNodeType::Identifier, token);
 
         if (mLexer.token(1) == "(") {
             mLexer.nextToken();
-            auto ret = parseFunctionCall(identifier);
-            return ret;
+            node = parseFunctionCall(node);
         }
-        return identifier;
+
     } else if (token == "(") {
         mLexer.nextToken(); // Überspringe '('
-        auto expresionNode = std::make_shared<ASTNode>(ASTNodeType::Expression);
+        node = std::make_shared<ASTNode>(ASTNodeType::Expression);
         auto expression = parseExpression();
-        ASTNode::addChild(expresionNode,expression);
+        ASTNode::addChild(node,expression);
 
         mLexer.nextToken();
         if (mLexer.token() != ")") {
             return onError("Expected ')' after expression");
         }
-        // mLexer.nextToken(); // Überspringe ')'
-        return expresionNode;
-
     } else
         return onError("Unknown primary expression: " + token);
 
-    return std::shared_ptr<NadaParser::ASTNode>();
+    if (hasUnaryOperator) {
+        // TODO: runtime error. Bool or Strings can't have unary operators!
+        auto term = node;
+        node = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator,unaryOperator);
+        ASTNode::addChild(node,term);
+    }
+
+    return node;
 }
 
 //-------------------------------------------------------------------------------------------------

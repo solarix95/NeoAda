@@ -356,6 +356,60 @@ bool NadaValue::equal(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaValue::logicalAnd(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+
+    bool done;
+    bool left = toBool(&done);
+    if (!done)
+        return false;
+
+    bool right = other.toBool(&done);
+    if (!done)
+        return false;
+
+    if (ok) *ok = true;
+    return left && right;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::logicalOr(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+
+    bool done;
+    bool left = toBool(&done);
+    if (!done)
+        return false;
+
+    bool right = other.toBool(&done);
+    if (!done)
+        return false;
+
+    if (ok) *ok = true;
+    return left || right;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::logicalXor(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+
+    bool done;
+    bool left = toBool(&done);
+    if (!done)
+        return false;
+
+    bool right = other.toBool(&done);
+    if (!done)
+        return false;
+
+    if (ok) *ok = true;
+    return left != right;
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
 {
     if (ok) *ok = false;
@@ -446,6 +500,66 @@ NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
     case Nada::Struct: {
         assert(0 && "not yet implemented");
         return NadaValue();
+    } break;
+    default:
+        break;
+    }
+
+    return NadaValue();
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::modulo(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+    if (mType != other.mType)
+        return NadaValue();
+
+    switch (mType) {
+    case Nada::Natural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uInt64 % other.mValue.uInt64);
+        return ret;
+    } break;
+    case Nada::Supernatural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uUInt64 % other.mValue.uUInt64);
+        return ret;
+    } break;
+    default:
+        break;
+    }
+
+    return NadaValue();
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::multiply(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+    if (mType != other.mType)
+        return NadaValue();
+
+    switch (mType) {
+    case Nada::Number: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uDouble * other.mValue.uDouble);
+        return ret;
+    } break;
+    case Nada::Natural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uInt64 * other.mValue.uInt64);
+        return ret;
+    } break;
+    case Nada::Supernatural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uUInt64 * other.mValue.uUInt64);
+        return ret;
     } break;
     default:
         break;

@@ -28,12 +28,20 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
 
     switch (node->type) {
     case NadaParser::ASTNodeType::Program:
-    case NadaParser::ASTNodeType::Block:
         for (auto &child : node->children) {
             ret = executeState(child, state);
             if (mExecState == ReturnState)
-                return ret;
+                break;
         }
+        break;
+    case NadaParser::ASTNodeType::Block:
+        state->pushScope();
+        for (auto &child : node->children) {
+            ret = executeState(child, state);
+            if (mExecState == ReturnState)
+                break;
+        }
+        state->popScope();
         break;
     case NadaParser::ASTNodeType::Expression: // just "()"
         assert(node->children.size() == 1);
@@ -110,7 +118,6 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         break;
     }
     return ret;
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -152,6 +159,44 @@ NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPars
         if (!done) // FIXME: runtime error!
             return NadaValue();
         return result;
+    }
+
+    if (node->value == "*") {
+        auto result = left.multiply(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        return result;
+    }
+
+    if (node->value == "mod") {
+        auto result = left.modulo(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        return result;
+    }
+
+    if (node->value == "and") {
+        bool result = left.logicalAnd(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        ret.fromBool(result);
+        return ret;
+    }
+
+    if (node->value == "or") {
+        bool result = left.logicalOr(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        ret.fromBool(result);
+        return ret;
+    }
+
+    if (node->value == "xor") {
+        bool result = left.logicalXor(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        ret.fromBool(result);
+        return ret;
     }
 
     assert(0 && "not yet implemented");

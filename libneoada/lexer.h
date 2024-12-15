@@ -18,18 +18,14 @@ public:
         Unknown        // Unerwartete oder nicht erkannte Token
     };
 
-    NadaLexer();
+    NadaLexer(int lookAhead = 2);
 
     // Hauptmethode: Skript analysieren und für jedes Token den Callback aufrufen
-    void setLookAhead(int lookAhead);
-    bool parse(const std::string& script, std::function<void(const std::string& token, NadaLexer::TokenType t)> callback);
-
     void setScript(const std::string& script);
     bool nextToken();
-    bool nextToken(std::string& token, NadaLexer::TokenType &t);
     bool token(std::string& token, NadaLexer::TokenType &t) const;
 
-    std::string token(int relativeIndex = 0) const;
+    std::string          token(int relativeIndex = 0) const;
     NadaLexer::TokenType tokenType(int relativeIndex = 0) const;
 
 private:
@@ -40,6 +36,12 @@ private:
     bool isIdentifierStart(char c) const;
     bool isIdentifierPart(char c) const;
     bool isDigit(char c) const;
+
+    // character-cursor
+    bool        shiftToNext(int step = 1);
+    bool        atEnd() const;
+    const char &currentChar() const;
+    char        nextChar() const;
 
     std::string mScript;
     size_t      mPos;

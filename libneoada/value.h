@@ -30,8 +30,13 @@ public:
     // NeoAda-Operators
     bool      assign(const NadaValue &other);
     bool      equal(const NadaValue &other, bool *ok) const;
+    bool      logicalAnd(const NadaValue &other, bool *ok) const;
+    bool      logicalOr(const NadaValue &other, bool *ok) const;
+    bool      logicalXor(const NadaValue &other, bool *ok) const;
     bool      greaterThen(const NadaValue &other, bool *ok) const;
     NadaValue concat(const NadaValue &other, bool *ok) const;
+    NadaValue modulo(const NadaValue &other, bool *ok) const;
+    NadaValue multiply(const NadaValue &other, bool *ok) const;
 
     void unaryOperator(const std::string &op, bool *ok);
 

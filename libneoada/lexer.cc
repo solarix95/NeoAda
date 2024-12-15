@@ -6,18 +6,12 @@
 #include "utils.h"
 
 //-------------------------------------------------------------------------------------------------
-NadaLexer::NadaLexer()
+NadaLexer::NadaLexer(int lookAhead)
     : mPos(-1)
-    , mReadAhead(2)
+    , mReadAhead(lookAhead)
     , mTokenIdx(-1)
 {
-}
-
-//-------------------------------------------------------------------------------------------------
-void NadaLexer::setLookAhead(int lookAhead)
-{
-    assert(lookAhead >= 0);
-    mReadAhead = lookAhead;
+    assert(mReadAhead >= 0);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -44,18 +38,6 @@ bool NadaLexer::nextToken()
 
     auto ret =  ++mTokenIdx < (int)mTokens.size();
     return ret;
-}
-
-//-------------------------------------------------------------------------------------------------
-bool NadaLexer::nextToken(std::string &tstring, TokenType &ttype)
-{
-    tstring = "";
-    ttype   = NadaLexer::TokenType::Unknown;
-
-    if (!nextToken())
-        return false;
-
-    return token(tstring,ttype);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -95,34 +77,32 @@ NadaLexer::TokenType NadaLexer::tokenType(int relativeIndex) const
 bool NadaLexer::parseNext()
 {
     mPos++;
-    while (mPos < mScript.size()) {
-        char c = mScript[mPos];
-        char cc = (mPos + 1 < mScript.size()) ? mScript[mPos + 1] : '\0';
+    while (!atEnd()) {
 
         // Whitespace überspringen
-        if (isWhitespace(c)) {
-            mPos++;
+        if (isWhitespace(currentChar())) {
+            shiftToNext();
             continue;
         }
 
-        if (c == '-' && cc == '-') {
-            mPos += 2; // "--" überspringen
-            while (mPos < mScript.size() && mScript[mPos] != '\n') {
-                mPos++;
+        if (currentChar() == '-' && nextChar() == '-') {
+            shiftToNext(2); // "--" überspringen
+            while (!atEnd() && currentChar() != '\n') {
+                shiftToNext();
             }
             continue;
         }
 
         // Schlüsselwörter, Identifikatoren oder Literale erkennen
-        if (isIdentifierStart(c)) {
+        if (isIdentifierStart(currentChar())) {
             size_t start = mPos;
-            while (mPos < mScript.size() && isIdentifierPart(mScript[mPos])) {
-                mPos++;
+            while (!atEnd() && isIdentifierPart(currentChar())) {
+                shiftToNext();
             }
 
             std::string token      = mScript.substr(start, mPos - start);
             std::string lowerToken = Nada::toLower(token);
-            mPos--; // 1 Character zuviel eingelesen..
+            shiftToNext(-1); // 1 Character zuviel eingelesen..
 
             const std::unordered_set<std::string> reservedWords = {
                 "declare", "if", "then", "else", "elsif", "end", "while", "loop", "exit", "procedure",
@@ -148,29 +128,30 @@ bool NadaLexer::parseNext()
         }
 
         // Strings erkennen
-        if (c == '"') {
-            size_t start = mPos++;  // Startposition des Strings
+        if (currentChar() == '"') {
+            size_t start = mPos;  // Startposition des Strings
+            shiftToNext();
             std::string stringLiteral;
             bool isValid = true;
 
-            while (mPos < mScript.size()) {
-                if (mScript[mPos] == '"') {
-                    if (mPos + 1 < mScript.size() && mScript[mPos + 1] == '"') {
+            while (!atEnd()) {
+                if (currentChar() == '"') {
+                    if (nextChar() == '"') {
                         // Doppelte Anführungszeichen innerhalb des Strings ("" -> ")
                         stringLiteral += '"';
-                        mPos += 2; // Überspringe beide Anführungszeichen
+                        shiftToNext(2); // Überspringe beide Anführungszeichen
                     } else {
                         // Abschluss des Strings
                         break;
                     }
                 } else {
                     // Normaler String-Inhalt
-                    stringLiteral += mScript[mPos];
-                    mPos++;
+                    stringLiteral += currentChar();
+                    shiftToNext();
                 }
             }
 
-            if (mPos > mScript.size() || mScript[start] != '"' || mScript[mPos] != '"') {
+            if (atEnd() || mScript[start] != '"' || currentChar() != '"') {
                 std::cerr << "Invalid string literal: " << mScript.substr(start, mPos + 1 - start) << "\n";
                 isValid = false;
             }
@@ -183,87 +164,87 @@ bool NadaLexer::parseNext()
         }
 
         // Zahlen erkennen
-        if (isDigit(c)) {
+        if (isDigit(currentChar())) {
             size_t start = mPos;
 
             // Schritt 1: Numeral oder Base erkennen
-            while (mPos < mScript.size() && (isDigit(mScript[mPos]) || mScript[mPos] == '_')) {
-                mPos++;
+            while (!atEnd() && (isDigit(currentChar()) || currentChar() == '_')) {
+                shiftToNext();
             }
 
             // Prüfe auf Base-Literal (z. B. "16#")
-            if (mPos < mScript.size() && mScript[mPos] == '#') {
-                mPos++;
+            if (!atEnd() && currentChar() == '#') {
+                shiftToNext();
                 // Schritt 2: Based Numeral verarbeiten
-                while (mPos < mScript.size() && (isDigit(mScript[mPos]) || (mScript[mPos] >= 'A' && mScript[mPos] <= 'F') || mScript[mPos] == '_')) {
-                    mPos++;
+                while (!atEnd() && (isDigit(currentChar()) || (currentChar() >= 'A' && currentChar() <= 'F') || currentChar() == '_')) {
+                    shiftToNext();
                 }
 
                 // Prüfe auf abschließendes "#" für Based Numeral
-                if (mPos >= mScript.size() || mScript[mPos] != '#') {
+                if (atEnd() || currentChar() != '#') {
                     std::cerr << "Invalid based literal: " << mScript.substr(start, mPos - start) << "\n";
                     return false;
                 }
-                mPos++; // Überspringe abschließendes "#"
+                shiftToNext(); // Überspringe abschließendes "#"
             } else {
                 // Schritt 3: Dezimalpunkt verarbeiten
-                if (mPos < mScript.size() && mScript[mPos] == '.') {
-                    mPos++;
-                    while (mPos < mScript.size() && (isDigit(mScript[mPos]) || mScript[mPos] == '_')) {
-                        mPos++;
+                if (!atEnd() && currentChar() == '.') {
+                    shiftToNext();
+                    while (!atEnd() && (isDigit(currentChar()) || currentChar() == '_')) {
+                        shiftToNext();
                     }
                 }
             }
 
             // Schritt 4: Exponent verarbeiten
-            if (mPos < mScript.size() && (mScript[mPos] == 'E' || mScript[mPos] == 'e')) {
-                mPos++;
-                if (mPos < mScript.size() && (mScript[mPos] == '+' || mScript[mPos] == '-')) {
-                    mPos++;
+            if (!atEnd() && (currentChar() == 'E' || currentChar() == 'e')) {
+                shiftToNext();
+                if (!atEnd() && (currentChar() == '+' || currentChar() == '-')) {
+                    shiftToNext();
                 }
-                if (mPos >= mScript.size() || !isDigit(mScript[mPos])) {
+                if (atEnd() || !isDigit(currentChar())) {
                     std::cerr << "Invalid exponent: " << mScript.substr(start, mPos - start) << "\n";
                     return false;
                 }
-                while (mPos < mScript.size() && (isDigit(mScript[mPos]) || mScript[mPos] == '_')) {
-                    mPos++;
+                while (!atEnd() && (isDigit(currentChar()) || currentChar() == '_')) {
+                    shiftToNext();
                 }
             }
 
             // Token zurückgeben
             mTokens.push_back(std::make_pair(mScript.substr(start, mPos - start),TokenType::Number));
-            mPos--;
+            shiftToNext(-1);
             return true;
         }
 
         // Mehrstellige Operatoren zuerst prüfen
         std::unordered_set<std::string> twoCharOperators = { ":=", "**", "/=", "<=", ">=" };
 
-        if (mPos + 1 < mScript.size()) {
+        if (nextChar() != '\0') {
             std::string twoCharOp = mScript.substr(mPos, 2);
             if (twoCharOperators.count(twoCharOp)) {
                 mTokens.push_back(std::make_pair(twoCharOp,TokenType::Operator));
-                mPos++;
+                shiftToNext();
                 return true;
             }
         }
 
         // Einfache einstellige Operatoren prüfen
         std::unordered_set<char> singleCharOperators = { '+', '-', '*', '/', '<', '>', '=', '&' };
-        if (singleCharOperators.count(c)) {
-            mTokens.push_back(std::make_pair(std::string(1, c),TokenType::Operator));
+        if (singleCharOperators.count(currentChar())) {
+            mTokens.push_back(std::make_pair(std::string(1, currentChar()),TokenType::Operator));
             return true;
         }
 
         // Einzelzeichen-Tokens (Operatoren, Separatoren, etc.)
         // Separatoren
-        if (c == ';' || c == ':' || c == '(' || c == ')') {
-            mTokens.push_back(std::make_pair(std::string(1, c),TokenType::Separator));
+        if (currentChar() == ';' || currentChar() == ':' || currentChar() == '(' || currentChar() == ')') {
+            mTokens.push_back(std::make_pair(std::string(1, currentChar()),TokenType::Separator));
             return true;
         }
 
         // Fehlerhafte Zeichen
-        std::cerr << "Unexpected character: '" << c << "' at position " << mPos << "\n";
+        std::cerr << "Unexpected character: '" << currentChar() << "' at position " << mPos << "\n";
         return false;
     }
 
@@ -285,4 +266,28 @@ bool NadaLexer::isIdentifierPart(char c) const {
 
 bool NadaLexer::isDigit(char c) const {
     return std::isdigit(c);
+}
+
+bool NadaLexer::shiftToNext(int step)
+{
+    if (atEnd())
+        return false;
+    mPos += step;
+    return atEnd();
+}
+
+bool NadaLexer::atEnd() const
+{
+    return mPos >= mScript.length();
+}
+
+const char &NadaLexer::currentChar() const
+{
+    assert(!atEnd());
+    return mScript[mPos];
+}
+
+char NadaLexer::nextChar() const
+{
+    return (mPos + 1 < mScript.size()) ? mScript[mPos + 1] : '\0';
 }

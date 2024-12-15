@@ -74,10 +74,15 @@ private slots:
     void test_parser_Primary1();
     void test_parser_Primary2();
 
+    void test_parser_Relation1();
+    void test_parser_Relation2();
+    void test_parser_Relation3();
+
     void test_parser_SimpleExpression1();
     void test_parser_SimpleExpression2();
     void test_parser_SimpleExpression3();
     void test_parser_SimpleExpression4();
+    void test_parser_SimpleExpression5();
 
     void test_parser_Expression1();
     void test_parser_Expression2();
@@ -121,6 +126,12 @@ private slots:
     void test_api_evaluateEqual();
     void test_api_evaluateNotEqual();
     void test_api_evaluateConcatString();
+    void test_api_evaluateModulo();
+    void test_api_evaluateMultiply();
+    void test_api_evaluateRelations();
+
+    void test_api_evaluateGlobalValue();
+    void test_api_evaluateScopeValue();
 };
 
 TstParser::TstParser() {}
@@ -560,6 +571,78 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Relation1()
+{
+    std::string script = R"(
+        x := a and b;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "and")
+      Node(Identifier, "a")
+      Node(Identifier, "b")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Relation2()
+{
+    std::string script = R"(
+        x := a and b and c;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "and")
+      Node(BinaryOperator, "and")
+        Node(Identifier, "a")
+        Node(Identifier, "b")
+      Node(Identifier, "c")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Relation3()
+{
+    std::string script = R"(
+        x := a and b or c xor d;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "xor")
+      Node(BinaryOperator, "or")
+        Node(BinaryOperator, "and")
+          Node(Identifier, "a")
+          Node(Identifier, "b")
+        Node(Identifier, "c")
+      Node(Identifier, "d")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_SimpleExpression1()
 {
     std::string script = R"(
@@ -647,6 +730,31 @@ Node(Program, "")
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
 
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_SimpleExpression5()
+{
+    std::string script = R"(
+        x := -1 * -2;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(UnaryOperator, "-")
+      Node(BinaryOperator, "*")
+        Node(Number, "1")
+        Node(UnaryOperator, "-")
+          Node(Number, "2")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
 
 }
 
@@ -1480,6 +1588,85 @@ void TstParser::test_api_evaluateConcatString()
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\";").toString()            == "NeoAda");
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \" \" & \"Ada\";").toString()    == "Neo Ada");
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\" = \"NeoAda\";").toBool() == true);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateModulo()
+{
+    QVERIFY(NeoAda::evaluate("return 42 mod 21;").toInt64() == 0);
+    QVERIFY(NeoAda::evaluate("return 42 mod 20;").toInt64() == 2);
+    QVERIFY(NeoAda::evaluate("return  5 mod 6;").toInt64()  == 5);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateMultiply()
+{
+    QVERIFY(NeoAda::evaluate("return 2   * 21;").toInt64()   == 42);
+    QVERIFY(NeoAda::evaluate("return 2.0 * 21.0;").toInt64() == 42);
+    QVERIFY(NeoAda::evaluate("return -42 * -1;").toInt64()   == 42);
+}
+
+void TstParser::test_api_evaluateRelations()
+{
+    // AND
+    QVERIFY(NeoAda::evaluate("return true  and true;").toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return false and true;").toBool()   == false);
+    QVERIFY(NeoAda::evaluate("return true  and false;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return false and false;").toBool()  == false);
+
+    // OR
+    QVERIFY(NeoAda::evaluate("return true  or true;").toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return false or true;").toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return true  or false;").toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return false or false;").toBool()  == false);
+
+    // XOR
+    QVERIFY(NeoAda::evaluate("return true  xor true;").toBool()   == false);
+    QVERIFY(NeoAda::evaluate("return false xor true;").toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return true  xor false;").toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return false xor false;").toBool()  == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateGlobalValue()
+{
+    std::string script = R"(
+
+    declare x : Natural := 42;
+
+    if x > 10 then
+        -- x is global scope
+        if x > 40 then
+            return true;
+        end if;
+    end if;
+
+    return false;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toBool() == true);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateScopeValue()
+{
+    std::string script = R"(
+
+    declare x : Natural := 42;
+
+    if x > 10 then
+        declare x : Natural := 10;
+        -- x is local scope... not nice.. but legal..
+        if x > 40 then
+            return true;
+        end if;
+    end if;
+
+    return false;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toBool() == false);
 }
 
 QTEST_APPLESS_MAIN(TstParser)
