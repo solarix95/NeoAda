@@ -21,24 +21,32 @@ public:
     bool fromNumber(uint64_t value);
     bool fromNumber(int64_t value);
     bool fromNumber(double value);
+    bool fromDoubleNan();
     bool fromBool(bool value);
 
     bool    toBool(bool *ok = nullptr) const;
     int64_t toInt64(bool *ok = nullptr) const;
+    bool    isNan() const;
 
 
     // NeoAda-Operators
     bool      assign(const NadaValue &other);
-    bool      equal(const NadaValue &other, bool *ok) const;
-    bool      logicalAnd(const NadaValue &other, bool *ok) const;
-    bool      logicalOr(const NadaValue &other, bool *ok) const;
-    bool      logicalXor(const NadaValue &other, bool *ok) const;
-    bool      greaterThen(const NadaValue &other, bool *ok) const;
-    NadaValue concat(const NadaValue &other, bool *ok) const;
-    NadaValue modulo(const NadaValue &other, bool *ok) const;
-    NadaValue multiply(const NadaValue &other, bool *ok) const;
+    bool      equal(const NadaValue &other, bool *ok = nullptr) const;
+    bool      logicalAnd(const NadaValue &other, bool *ok = nullptr) const;
+    bool      logicalOr(const NadaValue &other, bool *ok = nullptr) const;
+    bool      logicalXor(const NadaValue &other, bool *ok = nullptr) const;
+    bool      greaterThen(const NadaValue &other, bool *ok = nullptr) const;
+    bool      lessThen(const NadaValue &other, bool *ok = nullptr) const;
 
-    void unaryOperator(const std::string &op, bool *ok);
+    NadaValue spaceship(const NadaValue &other, bool *ok = nullptr) const;
+
+    NadaValue concat(const NadaValue &other, bool *ok = nullptr) const;
+    NadaValue subtract(const NadaValue &other, bool *ok= nullptr) const;
+    NadaValue add(const NadaValue &other, bool *ok= nullptr) const;
+    NadaValue modulo(const NadaValue &other, bool *ok= nullptr) const;
+    NadaValue multiply(const NadaValue &other, bool *ok= nullptr) const;
+
+    void unaryOperator(const std::string &op, bool *ok = nullptr);
 
 
     const std::string &cStringValue() const;

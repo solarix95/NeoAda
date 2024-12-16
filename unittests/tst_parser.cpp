@@ -83,6 +83,7 @@ private slots:
     void test_parser_SimpleExpression3();
     void test_parser_SimpleExpression4();
     void test_parser_SimpleExpression5();
+    void test_parser_SimpleExpression6();
 
     void test_parser_Expression1();
     void test_parser_Expression2();
@@ -118,6 +119,8 @@ private slots:
     void test_interpreter_Declarations();
     void test_interpreter_ProcedureCall();
     void test_interpreter_ifStatement();
+    void test_interpreter_ifElseStatement();
+    void test_interpreter_whileStatement();
     void test_interpreter_Return1();
     void test_interpreter_Return2();
     void test_interpreter_Return3();
@@ -125,6 +128,9 @@ private slots:
     void test_api_evaluateLiterals();
     void test_api_evaluateEqual();
     void test_api_evaluateNotEqual();
+    void test_api_evaluateLessThan();
+    void test_api_evaluateLessEqualThan();
+
     void test_api_evaluateConcatString();
     void test_api_evaluateModulo();
     void test_api_evaluateMultiply();
@@ -755,7 +761,28 @@ Node(Program, "")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_SimpleExpression6()
+{
+    std::string script = R"(
+        x := x - 1;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, "x")
+    Node(BinaryOperator, "-")
+      Node(Identifier, "x")
+      Node(Number, "1")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1485,7 +1512,69 @@ void TstParser::test_interpreter_ifStatement()
 
     QVERIFY(results.size() == 1);
     QVERIFY(results[0] == "x>5");
+}
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ifElseStatement()
+{
+    std::string script = R"(
+        declare x : Number := 4.0;
+        if x > 5 then
+            print("x>5");
+        else
+            print("x<=5");
+        end if;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 1);
+    QVERIFY(results[0] == "x<=5");
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_whileStatement()
+{
+    std::string script = R"(
+        declare x : Natural := 2;
+        while x > 0 loop
+            print(x);
+            x := x - 1;
+        end loop;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 2);
+    QVERIFY(results[0] == "2");
+    QVERIFY(results[1] == "1");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1583,6 +1672,36 @@ void TstParser::test_api_evaluateNotEqual()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateLessThan()
+{
+    // Natural
+    QVERIFY(NeoAda::evaluate("return 42 < 42;").toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23 < 42;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42 < 23;").toBool()      == false);
+
+    // Number
+    QVERIFY(NeoAda::evaluate("return 42.0 < 42.0;").toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23.0 < 42.0;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42.0 < 23.0;").toBool()      == false);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateLessEqualThan()
+{
+    // Natural
+    QVERIFY(NeoAda::evaluate("return 42 <= 42;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 23 <= 42;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42 <= 23;").toBool()      == false);
+
+    // Number
+    QVERIFY(NeoAda::evaluate("return 42.0 <= 42.0;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 23.0 <= 42.0;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42.0 <= 23.0;").toBool()      == false);
+
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluateConcatString()
 {
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\";").toString()            == "NeoAda");
@@ -1596,7 +1715,7 @@ void TstParser::test_api_evaluateModulo()
     QVERIFY(NeoAda::evaluate("return 42 mod 21;").toInt64() == 0);
     QVERIFY(NeoAda::evaluate("return 42 mod 20;").toInt64() == 2);
     QVERIFY(NeoAda::evaluate("return  5 mod 6;").toInt64()  == 5);
-
+    QVERIFY(NeoAda::evaluate("return  4 mod 4;").toInt64()  == 0);
 }
 
 //-------------------------------------------------------------------------------------------------

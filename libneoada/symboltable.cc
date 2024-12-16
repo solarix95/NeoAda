@@ -10,11 +10,11 @@ bool NadaSymbolTable::contains(const std::string& name) const {
 //-------------------------------------------------------------------------------------------------
 bool NadaSymbolTable::add(const NadaSymbol &symbol)
 {
-    if (contains(symbol.name.lowerName))
+    if (contains(symbol.name.lowerValue))
         return false;
-    mTable[symbol.name.lowerName] = symbol;
-    mTable[symbol.name.lowerName].value = new NadaValue();
-    mTable[symbol.name.lowerName].value->initType(symbol.type);
+    mTable[symbol.name.lowerValue] = symbol;
+    mTable[symbol.name.lowerValue].value = new NadaValue();
+    mTable[symbol.name.lowerValue].value->initType(symbol.type);
     return true;
 }
 

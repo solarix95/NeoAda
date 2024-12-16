@@ -11,7 +11,8 @@
 #include <stdexcept>
 #include <sstream>
 #include <limits>
-#include <regex>
+
+#define OP_SPACESHIP(v1, v2) ((int64_t)((v1) == (v2) ? 0 : ((v1) > (v2) ? +1 : -1)))
 
 //-------------------------------------------------------------------------------------------------
 NadaValue::NadaValue()
@@ -142,6 +143,12 @@ bool NadaValue::fromNumber(double value)
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaValue::fromDoubleNan()
+{
+    return fromNumber(std::numeric_limits<double>::quiet_NaN());
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::fromBool(bool value)
 {
     reset();
@@ -224,6 +231,12 @@ int64_t NadaValue::toInt64(bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaValue::isNan() const
+{
+    return (mType == Nada::Number) && std::isnan(mValue.uDouble);
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::assign(const NadaValue &other)
 {
     if (this == &other)
@@ -238,6 +251,10 @@ bool NadaValue::assign(const NadaValue &other)
     case Nada::Number: {
         if (other.mType == mType) {
             mValue.uDouble = other.mValue.uDouble;
+            return true;
+        }
+        if (other.type() == Nada::Natural) {
+            mValue.uDouble = (double)other.mValue.uInt64;
             return true;
         }
     } break;
@@ -285,74 +302,21 @@ bool NadaValue::assign(const NadaValue &other)
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::equal(const NadaValue &other, bool *ok) const
 {
+    bool done;
     if (ok) *ok = false;
 
-    switch (mType) {
-    case Nada::Undefined: return false;
-    case Nada::Any:       return false;
-    case Nada::Number:
-        if (std::isnan(mValue.uDouble )) {
-            if (ok) *ok = true;
-            return false;
-        }
-        if (other.mType != mType) {
-            int v1, v2;
-            bool v1IsInt = exact32BitInt(v1);
-            bool v2IsInt = other.exact32BitInt(v2);
-            if (v1IsInt && v2IsInt) {
-                if (ok) *ok = true;
-                return v1 == v2;
-            }
-            if (v2IsInt) {
-                if (ok) *ok = true;
-                return mValue.uDouble == (double)v2;
-            }
-            double otherVal = 0;
-            if (other.exact64BitDbl(otherVal)) {
-                if (ok) *ok = true;
-                return mValue.uDouble == otherVal;
-            }
+    auto res = spaceship(other, &done);
 
-            return false; // giving up...
-        }
+    if (!done)
+        return false;
+
+    if (res.isNan()) {
         if (ok) *ok = true;
-        return mValue.uDouble == other.mValue.uDouble;
-        break;
-    case Nada::Natural:
-        if (other.mType != mType)
-            return false;
-        if (ok) *ok = true;
-        return mValue.uInt64 == other.mValue.uInt64;
-        break;
-    case Nada::Supernatural:
-        if (other.mType != mType)
-            return false;
-        if (ok) *ok = true;
-        return mValue.uUInt64 > other.mValue.uUInt64;
-        break;
-    case Nada::Boolean:
-    case Nada::Byte:
-    case Nada::Character:
-        if (other.mType != mType)
-            return false;
-        if (ok) *ok = true;
-        return mValue.uByte == other.mValue.uByte;
-    case Nada::String:
-        if (other.mType != mType)
-            return false;
-        if (ok) *ok = true;
-        if (!mValue.uPtr && !other.mValue.uPtr) // both are empty
-            return false;
-        if (!mValue.uPtr)                      // I'm empty the other is not -> not greater
-            return false;
-        if (!other.mValue.uPtr)                //  I'm not empty the other is empty -> greater
-            return true;
-        return (cInternalString()->cValue() == other.cInternalString()->cValue());
-    case Nada::Struct:
-        assert(0 && "not implemented");
         return false;
     }
-    return false;
+
+    if (ok) *ok = true;
+    return res.toInt64() == 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -412,15 +376,58 @@ bool NadaValue::logicalXor(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
 {
+    bool done;
     if (ok) *ok = false;
 
+    auto res = spaceship(other, &done);
+
+    if (!done)
+        return false;
+
+    if (res.isNan()) {
+        if (ok) *ok = true;
+        return false;
+    }
+
+    if (ok) *ok = true;
+    return res.toInt64() > 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::lessThen(const NadaValue &other, bool *ok) const
+{
+    bool done;
+    if (ok) *ok = false;
+
+    auto res = spaceship(other, &done);
+
+    if (!done)
+        return false;
+
+    if (res.isNan()) {
+        if (ok) *ok = true;
+        return false;
+    }
+
+    if (ok) *ok = true;
+    return res.toInt64() < 0;
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::spaceship(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+
+    NadaValue ret;
+
     switch (mType) {
-    case Nada::Undefined: return false;
-    case Nada::Any:       return false;
+    case Nada::Undefined: return NadaValue();
+    case Nada::Any:       return NadaValue();
     case Nada::Number:
-        if (std::isnan(mValue.uDouble )) {
+        if (std::isnan(mValue.uDouble) || (other.type() == Nada::Number && std::isnan(other.mValue.uDouble))) {
             if (ok) *ok = true;
-            return false;
+            ret.fromDoubleNan();
+            return ret;
         }
         if (other.mType != mType) {
             int v1, v2;
@@ -428,60 +435,65 @@ bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
             bool v2IsInt = other.exact32BitInt(v2);
             if (v1IsInt && v2IsInt) {
                 if (ok) *ok = true;
-                return v1 > v2;
+                ret.fromNumber(OP_SPACESHIP(v1,v2));
+                return ret;
             }
             if (v2IsInt) {
                 if (ok) *ok = true;
-                return mValue.uDouble > (double)v2;
+                ret.fromNumber(OP_SPACESHIP(mValue.uDouble,(double)v2));
+                return ret;
             }
             double otherVal;
             if (other.exact64BitDbl(otherVal)) {
                 if (ok) *ok = true;
-                return mValue.uDouble > otherVal;
+                ret.fromNumber(OP_SPACESHIP(mValue.uDouble,otherVal));
+                return ret;
             }
-
-            return false; // giving up...
+            return ret; // giving up...
         }
         if (ok) *ok = true;
-        return mValue.uDouble > other.mValue.uDouble;
+        ret.fromNumber(OP_SPACESHIP(mValue.uDouble,other.mValue.uDouble));
         break;
     case Nada::Natural:
         if (other.mType != mType)
-            return false;
+            return ret;
         if (ok) *ok = true;
-        return mValue.uInt64 > other.mValue.uInt64;
+        ret.fromNumber(OP_SPACESHIP(mValue.uInt64,other.mValue.uInt64));
         break;
     case Nada::Supernatural:
         if (other.mType != mType)
-            return false;
+            return ret;
         if (ok) *ok = true;
-        return mValue.uUInt64 > other.mValue.uUInt64;
+        ret.fromNumber(OP_SPACESHIP(mValue.uUInt64,other.mValue.uUInt64));
         break;
     case Nada::Boolean:
     case Nada::Byte:
     case Nada::Character:
         if (other.mType != mType)
-            return false;
+            return ret;
         if (ok) *ok = true;
-        return mValue.uByte > other.mValue.uByte;
+        ret.fromNumber(OP_SPACESHIP(mValue.uByte,other.mValue.uByte));
+        break;
     case Nada::String:
         if (other.mType != mType)
-            return false;
+            return ret;
         if (ok) *ok = true;
-        if (!mValue.uPtr && !other.mValue.uPtr) // both are empty
-            return false;
-        if (!mValue.uPtr)                      // I'm empty the other is not -> not greater
-            return false;
+        if (!mValue.uPtr && !other.mValue.uPtr)   // both are empty
+            ret.fromNumber((int64_t)  0);
+        else if (!mValue.uPtr)                    // I'm empty the other is not -> not greater
+            ret.fromNumber((int64_t) -1);
         if (!other.mValue.uPtr)                //  I'm not empty the other is empty -> greater
-            return true;
-        return (cInternalString()->cValue() > other.cInternalString()->cValue());
+            ret.fromNumber((int64_t) +1);
+        else
+            ret.fromNumber(OP_SPACESHIP(cInternalString()->cValue(),other.cInternalString()->cValue()));
+        break;
     case Nada::Struct:
         assert(0 && "not implemented");
-        return false;
+        return ret;
     }
-    return false;
-
+    return ret;
 }
+
 
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
@@ -506,6 +518,73 @@ NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
     }
 
     return NadaValue();
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::subtract(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+    if (mType != other.mType)
+        return NadaValue();
+
+    switch (mType) {
+    case Nada::Number: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uDouble - other.mValue.uDouble);
+        return ret;
+    } break;
+    case Nada::Natural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uInt64 - other.mValue.uInt64);
+        return ret;
+    } break;
+    case Nada::Supernatural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uUInt64 - other.mValue.uUInt64);
+        return ret;
+    } break;
+    default:
+        break;
+    }
+
+    return NadaValue();
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::add(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+    if (mType != other.mType)
+        return NadaValue();
+
+    switch (mType) {
+    case Nada::Number: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uDouble + other.mValue.uDouble);
+        return ret;
+    } break;
+    case Nada::Natural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uInt64 + other.mValue.uInt64);
+        return ret;
+    } break;
+    case Nada::Supernatural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uUInt64 + other.mValue.uUInt64);
+        return ret;
+    } break;
+    default:
+        break;
+    }
+
+    return NadaValue();
+
 }
 
 //-------------------------------------------------------------------------------------------------

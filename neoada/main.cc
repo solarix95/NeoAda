@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
     // Hier kann nun "script" weiterverarbeitet werden.
     // Zum Testen geben wir es einfach aus.
-    std::cout << "Eingelesener Inhalt:\n" << script << "\n";
+    // std::cout << "Eingelesener Inhalt:\n" << script << "\n";
     
     NadaLexer       lexer;
     NadaParser      parser(lexer);

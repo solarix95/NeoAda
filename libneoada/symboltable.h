@@ -18,23 +18,10 @@ struct NadaFunction {
     std::function<NadaValue(const std::vector<NadaValue>&)> nativeImplementation; // Für eingebaute Funktionen
 };
 
-struct NadaSymbolName {
-    std::string displayName;
-    std::string lowerName;
-
-    NadaSymbolName(const std::string &n = "") : displayName(n), lowerName(Nada::toLower(n)) {}
-
-    NadaSymbolName& operator=(const std::string& n) {
-        displayName = n;
-        lowerName   = Nada::toLower(n);
-        return *this; // Ermöglicht a = b = c
-    }
-};
-
 struct NadaSymbol {
-    Nada::Type       type;
-    NadaSymbolName   name;
-    NadaValue       *value;
+    Nada::Type        type;
+    Nada::LowerString name;
+    NadaValue        *value;
 
     NadaSymbol() : type(Nada::Undefined),value(nullptr) {}
     NadaSymbol(Nada::Type t, const std::string &n) : type(t), name(n), value(nullptr) {}

@@ -27,7 +27,7 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parse(const std::string &script
 //-------------------------------------------------------------------------------------------------
 std::shared_ptr<NadaParser::ASTNode> NadaParser::onError(const std::string &msg)
 {
-    std::cerr << msg << std::endl;
+    std::cerr << msg << " " << mLexer.positionToText() << std::endl;
     return std::shared_ptr<NadaParser::ASTNode>();
 }
 
@@ -348,7 +348,7 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
 std::string NadaParser::ASTNode::serialize(int depth) const
 {
     std::string indent(depth * 2, ' '); // Einrückung
-    std::string result = indent + "Node(" + nodeTypeToString(type) + ", \"" + value + "\")\n";
+    std::string result = indent + "Node(" + nodeTypeToString(type) + ", \"" + value.displayValue + "\")\n";
     for (const auto& child : children) {
         result += child->serialize(depth + 1);
     }
@@ -404,7 +404,11 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseSimpleExpression()
         ASTNode::addChild(left,term);
     }
 
-    while (mLexer.token(1) == "=" || mLexer.token(1) == "/=" || mLexer.token(1) == "+" || mLexer.token(1) == "-" || mLexer.token(1) == "&" || mLexer.token(1) == "<" || mLexer.token(1) == ">") {
+    while (mLexer.token(1) == "="  || mLexer.token(1) == "/=" ||
+           mLexer.token(1) == "+"  || mLexer.token(1) == "-"  || mLexer.token(1) == "&" ||
+           mLexer.token(1) == "<"  || mLexer.token(1) == ">"  ||
+           mLexer.token(1) == "<=" || mLexer.token(1) == ">=")
+    {
         mLexer.nextToken();
         auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
         ASTNode::addChild(operatorNode,left);

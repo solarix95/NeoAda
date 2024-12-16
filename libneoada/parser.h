@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include "lexer.h"
+#include "utils.h"
 
 class NadaParser
 {
@@ -48,8 +49,8 @@ public:
     };
 
     struct ASTNode {        
-        ASTNodeType type;
-        std::string value; // Der Wert (z. B. Literal, Operator, Identifier)
+        ASTNodeType       type;
+        Nada::LowerString value; // Der Wert (z. B. Literal, Operator, Identifier)
         std::vector<std::shared_ptr<ASTNode>> children; // Unterknoten
         std::shared_ptr<ASTNode>              parent;
 

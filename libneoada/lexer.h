@@ -2,7 +2,6 @@
 #define LIB_NEOADA_LEXER_
 
 #include <string>
-#include <functional>
 #include <vector>
 
 class NadaLexer {
@@ -27,6 +26,8 @@ public:
 
     std::string          token(int relativeIndex = 0) const;
     NadaLexer::TokenType tokenType(int relativeIndex = 0) const;
+    bool                 tokenPosition(int &row, int &column, int relativeIndex = 0) const;
+    std::string          positionToText(int relativeIndex = 0) const;
 
 private:
     bool parseNext();
@@ -46,9 +47,20 @@ private:
     std::string mScript;
     size_t      mPos;
     int         mReadAhead;
+    int         mRow;
+    int         mColumn;
 
-    std::vector<std::pair<std::string,TokenType>> mTokens;
-    int                                           mTokenIdx;
+    struct Token {
+        std::string value;
+        TokenType   type;
+        int         row;
+        int         column;
+
+        Token(const std::string &v, TokenType t, int r, int c) : value(v), type(t), row(r), column(c - value.length()) {};
+    };
+
+    std::vector<Token> mTokens;
+    int                mTokenIdx;
 };
 
 #endif

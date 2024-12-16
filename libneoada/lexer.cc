@@ -22,6 +22,9 @@ void NadaLexer::setScript(const std::string &script)
 
     mTokens.clear();
     mTokenIdx = -1;
+
+    mRow    = 1;
+    mColumn = 1;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -46,8 +49,8 @@ bool NadaLexer::token(std::string &token, TokenType &t) const
     if (mTokens.empty() || (mTokenIdx >= (int)mTokens.size()))
         return false;
 
-    token = mTokens[mTokenIdx].first;
-    t     = mTokens[mTokenIdx].second;
+    token = mTokens[mTokenIdx].value;
+    t     = mTokens[mTokenIdx].type;
 
     return true;
 }
@@ -59,8 +62,8 @@ std::string NadaLexer::token(int relativeIndex) const
     if (mTokens.empty() || (absoluteIndex < 0) || (absoluteIndex >= (int)mTokens.size()))
         return std::string();
 
-    // std::cout << "TOKEN " << mTokens[absoluteIndex].first << std::endl;
-    return mTokens[absoluteIndex].first;
+    // std::cout << "TOKEN " << mTokens[absoluteIndex].value << " " << positionToText(relativeIndex) << std::endl;
+    return mTokens[absoluteIndex].value;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -70,7 +73,33 @@ NadaLexer::TokenType NadaLexer::tokenType(int relativeIndex) const
     if (mTokens.empty() || (absoluteIndex < 0) || (absoluteIndex >= (int)mTokens.size()))
         return NadaLexer::TokenType::Unknown;
 
-    return mTokens[absoluteIndex].second;
+    return mTokens[absoluteIndex].type;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaLexer::tokenPosition(int &row, int &column, int relativeIndex) const
+{
+    row    = 0;
+    column = 0;
+
+    int absoluteIndex = mTokenIdx + relativeIndex;
+    if (mTokens.empty() || (absoluteIndex < 0) || (absoluteIndex >= (int)mTokens.size()))
+        return false;
+
+    row    = mTokens[absoluteIndex].row;
+    column = mTokens[absoluteIndex].column;
+
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NadaLexer::positionToText(int relativeIndex) const
+{
+    int r, c;
+    if (!tokenPosition(r,c,relativeIndex))
+        return "";
+
+    return "at " + std::to_string(r) + "/" + std::to_string(c);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -115,13 +144,13 @@ bool NadaLexer::parseNext()
 
             // Prüfe, ob das Token ein reserviertes Wort ist
             if (reservedWords.count(lowerToken)) {
-                mTokens.push_back(std::make_pair(lowerToken,TokenType::Keyword));
+                mTokens.push_back(Token(lowerToken,TokenType::Keyword, mRow, mColumn));
                 return true;
             } else if (booleanLiteral.count(lowerToken)) {
-                mTokens.push_back(std::make_pair(lowerToken,TokenType::BooleanLiteral));
+                mTokens.push_back(Token(lowerToken,TokenType::BooleanLiteral, mRow,mColumn));
                 return true;
             }else {
-                mTokens.push_back(std::make_pair(token,TokenType::Identifier));
+                mTokens.push_back(Token(token,TokenType::Identifier, mRow,mColumn));
                 return true;
             }
             continue;
@@ -157,7 +186,7 @@ bool NadaLexer::parseNext()
             }
 
             if (isValid) {
-                mTokens.push_back(std::make_pair(stringLiteral,TokenType::String));
+                mTokens.push_back(Token(stringLiteral,TokenType::String, mColumn, mRow));
                 return true;
             }
             continue;
@@ -212,7 +241,7 @@ bool NadaLexer::parseNext()
             }
 
             // Token zurückgeben
-            mTokens.push_back(std::make_pair(mScript.substr(start, mPos - start),TokenType::Number));
+            mTokens.push_back(Token(mScript.substr(start, mPos - start),TokenType::Number, mRow, mColumn));
             shiftToNext(-1);
             return true;
         }
@@ -223,7 +252,7 @@ bool NadaLexer::parseNext()
         if (nextChar() != '\0') {
             std::string twoCharOp = mScript.substr(mPos, 2);
             if (twoCharOperators.count(twoCharOp)) {
-                mTokens.push_back(std::make_pair(twoCharOp,TokenType::Operator));
+                mTokens.push_back(Token(twoCharOp,TokenType::Operator, mRow, mColumn));
                 shiftToNext();
                 return true;
             }
@@ -232,14 +261,14 @@ bool NadaLexer::parseNext()
         // Einfache einstellige Operatoren prüfen
         std::unordered_set<char> singleCharOperators = { '+', '-', '*', '/', '<', '>', '=', '&' };
         if (singleCharOperators.count(currentChar())) {
-            mTokens.push_back(std::make_pair(std::string(1, currentChar()),TokenType::Operator));
+            mTokens.push_back(Token(std::string(1, currentChar()),TokenType::Operator, mRow, mColumn));
             return true;
         }
 
         // Einzelzeichen-Tokens (Operatoren, Separatoren, etc.)
         // Separatoren
         if (currentChar() == ';' || currentChar() == ':' || currentChar() == '(' || currentChar() == ')') {
-            mTokens.push_back(std::make_pair(std::string(1, currentChar()),TokenType::Separator));
+            mTokens.push_back(Token(std::string(1, currentChar()),TokenType::Separator, mRow, mColumn));
             return true;
         }
 
@@ -270,9 +299,18 @@ bool NadaLexer::isDigit(char c) const {
 
 bool NadaLexer::shiftToNext(int step)
 {
+    assert(step != 0);
+
     if (atEnd())
         return false;
     mPos += step;
+
+    if (mPos >= 0 && mPos < mScript.length() && mScript[mPos] == '\n') {
+        mRow += step > 0 ? +1 : -1;
+        mColumn = 1;
+    } else if (!atEnd())
+        mColumn++;
+
     return atEnd();
 }
 
