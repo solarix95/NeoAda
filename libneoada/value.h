@@ -45,6 +45,7 @@ public:
     NadaValue add(const NadaValue &other, bool *ok= nullptr) const;
     NadaValue modulo(const NadaValue &other, bool *ok= nullptr) const;
     NadaValue multiply(const NadaValue &other, bool *ok= nullptr) const;
+    NadaValue division(const NadaValue &other, bool *ok= nullptr) const;
 
     void unaryOperator(const std::string &op, bool *ok = nullptr);
 

@@ -42,6 +42,10 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseStatement()
         return parseSeparator(parseIfStatement());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "return") {
         return parseSeparator(parseReturn());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "break") {
+        return parseSeparator(parseBreak());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "continue") {
+        return parseSeparator(parseContinue());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Identifier) {
         return parseSeparator(parseIdentifier());
     }
@@ -248,6 +252,18 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseReturn()
 
     ASTNode::addChild(returnNode,expression);
     return returnNode;
+}
+
+//-------------------------------------------------------------------------------------------------
+std::shared_ptr<NadaParser::ASTNode> NadaParser::parseBreak()
+{
+    return std::make_shared<ASTNode>(ASTNodeType::Break);
+}
+
+//-------------------------------------------------------------------------------------------------
+std::shared_ptr<NadaParser::ASTNode> NadaParser::parseContinue()
+{
+    return std::make_shared<ASTNode>(ASTNodeType::Continue);
 }
 
 //-------------------------------------------------------------------------------------------------

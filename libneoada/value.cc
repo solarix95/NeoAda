@@ -648,6 +648,40 @@ NadaValue NadaValue::multiply(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::division(const NadaValue &other, bool *ok) const
+{
+    if (ok) *ok = false;
+    if (mType != other.mType)
+        return NadaValue();
+
+    switch (mType) {
+    case Nada::Number: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uDouble / other.mValue.uDouble);
+        return ret;
+    } break;
+    case Nada::Natural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uInt64 / other.mValue.uInt64);
+        return ret;
+    } break;
+    case Nada::Supernatural: {
+        NadaValue ret;
+        if (ok) *ok = true;
+        ret.fromNumber(mValue.uUInt64 / other.mValue.uUInt64);
+        return ret;
+    } break;
+    default:
+        break;
+    }
+
+    return NadaValue();
+
+}
+
+//-------------------------------------------------------------------------------------------------
 void NadaValue::unaryOperator(const std::string &op, bool *ok)
 {
     if (ok) *ok = false;

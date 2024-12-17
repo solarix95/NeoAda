@@ -34,7 +34,10 @@ public:
     void               pushStack();
     void               popStack();
 
+    inline NadaValue  &ret() { return mRetValue; }
+
 private:
+    NadaValue          mRetValue;
     NadaSymbolTables   mGlobals;
     NadaFunctionTable  mFunctions;
 

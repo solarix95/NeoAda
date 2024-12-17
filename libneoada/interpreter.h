@@ -19,7 +19,9 @@ private:
 
     enum ExecState {
         RunState,
-        ReturnState
+        ReturnState,
+        BreakState,
+        ContinueState
     };
 
     ExecState  mExecState;

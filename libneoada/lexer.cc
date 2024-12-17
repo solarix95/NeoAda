@@ -134,8 +134,10 @@ bool NadaLexer::parseNext()
             shiftToNext(-1); // 1 Character zuviel eingelesen..
 
             const std::unordered_set<std::string> reservedWords = {
-                "declare", "if", "then", "else", "elsif", "end", "while", "loop", "exit", "procedure",
-                "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
+                "declare",
+                "if", "then", "else", "elsif", "end",
+                "while", "loop", "break", "continue",
+                "procedure", "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 
             const std::unordered_set<std::string> booleanLiteral = {

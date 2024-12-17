@@ -138,6 +138,9 @@ private slots:
 
     void test_api_evaluateGlobalValue();
     void test_api_evaluateScopeValue();
+    void test_api_evaluateWhileBreak();
+    void test_api_evaluateWhileContinue();
+
 };
 
 TstParser::TstParser() {}
@@ -1786,6 +1789,58 @@ void TstParser::test_api_evaluateScopeValue()
     )";
 
     QVERIFY(NeoAda::evaluate(script).toBool() == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateWhileBreak()
+{
+    std::string script = R"(
+
+    declare x : Natural := 3;
+
+    while x > 0 loop
+        if x = 2 then
+            break;
+        end if;
+        x := x - 1;
+    end loop;
+
+    if x = 2 then
+        return true;
+    end if;
+
+    return false;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toBool() == true);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateWhileContinue()
+{
+    std::string script = R"(
+
+    declare x : Natural := 3;
+    declare y : Natural := 3;
+
+    while x > 0 loop
+        if x > 1 then
+            x := x - 1;
+            continue;
+        end if;
+        x := x - 1;
+        y := y - 1;
+    end loop;
+
+    if x = 0 and y = 2 then
+        return true;
+    end if;
+
+    return false;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toBool() == true);
+
 }
 
 QTEST_APPLESS_MAIN(TstParser)

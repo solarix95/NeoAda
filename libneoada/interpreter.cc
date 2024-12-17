@@ -41,6 +41,10 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
             ret = executeState(child, state);
             if (mExecState == ReturnState)
                 break;
+            if (mExecState == BreakState)
+                break;
+            if (mExecState == ContinueState)
+                break;
         }
         state->popScope();
         break;
@@ -88,6 +92,13 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
             condition = executeState(node->children[0], state).toBool(&conditionValid);
             if (condition)
                 executeState(node->children[1],state);
+            if (mExecState == BreakState) {
+                mExecState = RunState;
+                break;
+            }
+            if (mExecState == ContinueState) {
+                mExecState = RunState;
+            }
         } while (condition && conditionValid);
     } break;
     case NadaParser::ASTNodeType::Return: {
@@ -96,6 +107,14 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         auto returnValue = executeState(node->children[0], state);
         mExecState = ReturnState;
         return returnValue;
+    } break;
+    case NadaParser::ASTNodeType::Break: {
+        mExecState = BreakState;
+        return NadaValue();
+    } break;
+    case NadaParser::ASTNodeType::Continue: {
+        mExecState = ContinueState;
+        return NadaValue();
     } break;
     case NadaParser::ASTNodeType::FunctionCall: {
 
@@ -247,6 +266,12 @@ NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPars
 
     if (node->value.lowerValue == "*") {
         auto result = left.multiply(right, &done);
+        if (!done) // FIXME: runtime error!
+            return NadaValue();
+        return result;
+    }
+    if (node->value.lowerValue == "/") {
+        auto result = left.division(right, &done);
         if (!done) // FIXME: runtime error!
             return NadaValue();
         return result;
