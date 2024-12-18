@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include <libneoada/exception.h>
 #include <libneoada/lexer.h>
 #include <libneoada/parser.h>
 #include <libneoada/state.h>
@@ -140,6 +141,10 @@ private slots:
     void test_api_evaluateScopeValue();
     void test_api_evaluateWhileBreak();
     void test_api_evaluateWhileContinue();
+
+    // ERROR HANDLING
+    void test_error_lexer_invalidCharacter();
+    void test_error_lexer_invalidString();
 
 };
 
@@ -1402,12 +1407,12 @@ void TstParser::test_state_GlobalScope()
     QCOMPARE(state.typeOf("a"), Nada::Number);
 
     // level "1" variable;
-    state.pushScope(); // enter "if"
+    state.pushScope(NadaSymbolTable::ConditionalScope); // enter "if"
     QCOMPARE(state.define("a", "String"), true);
     QCOMPARE(state.typeOf("a"), Nada::String);
 
     // level "2" variable
-    state.pushScope(); // enter "if"
+    state.pushScope(NadaSymbolTable::ConditionalScope); // enter "if"
     QCOMPARE(state.typeOf("a"), Nada::String);    // found level 1 "a"
     QCOMPARE(state.define("a", "Natural"), true);
     QCOMPARE(state.typeOf("a"), Nada::Natural);
@@ -1841,6 +1846,55 @@ void TstParser::test_api_evaluateWhileContinue()
 
     QVERIFY(NeoAda::evaluate(script).toBool() == true);
 
+}
+
+//-------------------------------------------------------------------------------------------------
+//                                       ERROR HANDLING
+//-------------------------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_lexer_invalidCharacter()
+{
+    NadaLexer lexer;
+    NadaException ex;
+
+    lexer.setScript("$");
+    try {
+        while (lexer.nextToken());
+    } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::InvalidCharacter);
+    QVERIFY(ex.line()   == 1);
+    QVERIFY(ex.column() == 1);
+
+    lexer.setScript("declare \n $");
+    try {
+        while (lexer.nextToken());
+    } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::InvalidCharacter);
+    QVERIFY(ex.line()   == 2);
+    QVERIFY(ex.column() == 2);
+    // std::cout << ex.what() << std::endl;
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_lexer_invalidString()
+{
+    NadaLexer lexer;
+    NadaException ex;
+
+    lexer.setScript("\"23456789");
+    try {
+        while (lexer.nextToken());
+    } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+    QVERIFY(ex.line()   == 1);
+    QVERIFY(ex.column() == 9);
 }
 
 QTEST_APPLESS_MAIN(TstParser)

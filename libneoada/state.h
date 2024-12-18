@@ -1,7 +1,6 @@
 #ifndef STATE_H
 #define STATE_H
 
-#include <memory>
 #include <string>
 #include "symboltable.h"
 #include "functiontable.h"
@@ -29,12 +28,16 @@ public:
 
 
     // local scope.. as if/while/for/..
-    void               pushScope();
+    void               pushScope(NadaSymbolTable::Scope s);
     void               popScope();
 
     // callstack.. enter and leave function/procedure/method
-    void               pushStack();
+    void               pushStack(NadaSymbolTable::Scope s);
     void               popStack();
+
+    bool               inLoopScope() const;
+    bool               inLoopScope(const NadaSymbolTables &tables) const;
+
 
     inline NadaValue  &ret() { return mRetValue; }
 

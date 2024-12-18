@@ -18,7 +18,7 @@ void NadaState::reset()
 {
     mGlobals.clear();
     mCallStack.clear();
-    mGlobals.push_back(std::make_shared<NadaSymbolTable>());
+    mGlobals.push_back(new NadaSymbolTable(NadaSymbolTable::GlobalScope));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ bool NadaState::define(const std::string &name, const std::string &typeName)
 
     if (mCallStack.empty())
         return mGlobals.back()->add(NadaSymbol(t,Nada::toLower(name)));
-    return mCallStack.back().back()->add(NadaSymbol(t,Nada::toLower(name)));
+    return mCallStack.back()->back()->add(NadaSymbol(t,Nada::toLower(name)));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ bool NadaState::find(const std::string &symbolName,NadaSymbol &symbol) const
     // First priority: current function scope:
     if (!mCallStack.empty()) {
         const auto& currentFrame = mCallStack.back();
-        for (auto it = currentFrame.rbegin(); it != currentFrame.rend(); ++it) {
+        for (auto it = currentFrame->rbegin(); it != currentFrame->rend(); ++it) {
             if ((*it)->get(symbolName,symbol)) {
                 return true;
             }
@@ -111,11 +111,11 @@ NadaValue *NadaState::valuePtr(const std::string &symbolName)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaState::pushStack()
+void NadaState::pushStack(NadaSymbolTable::Scope s)
 //                            enter Function/Procedure/Method
 {
-    mCallStack.push_back(NadaSymbolTables());
-    mCallStack.back().push_back(std::make_shared<NadaSymbolTable>()); // TODO: Performance.. maybe only on new local symbol?
+    mCallStack.push_back(new NadaSymbolTables());
+    mCallStack.back()->push_back(new NadaSymbolTable(s)); // TODO: Performance.. maybe only on new local symbol?
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -127,13 +127,31 @@ void NadaState::popStack()
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaState::pushScope()
+bool NadaState::inLoopScope() const
+{
+    if (!mCallStack.empty())
+        return inLoopScope(*mCallStack.back());
+    return inLoopScope(mGlobals);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaState::inLoopScope(const NadaSymbolTables &tables) const
+{
+    for (auto it = tables.rbegin(); it != tables.rend(); ++it) {
+        if ((*it) && (*it)->scope() == NadaSymbolTable::LoopScope)
+            return true;
+    }
+    return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaState::pushScope(NadaSymbolTable::Scope s)
 //                            enter block (if/while/...)
 {
     if (mCallStack.empty())
-        mGlobals.push_back(std::make_shared<NadaSymbolTable>());
+        mGlobals.push_back(new NadaSymbolTable(s));
     else
-        mCallStack.back().push_back(std::make_shared<NadaSymbolTable>());
+        mCallStack.back()->push_back(new NadaSymbolTable(s));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -142,9 +160,15 @@ void NadaState::popScope()
 {
     if (mCallStack.empty()) {
         assert(mGlobals.size() > 1); // globals are never empty..
+        delete mGlobals.back();
         mGlobals.pop_back();
     } else {
-        assert(mCallStack.back().size() > 0);
-        mCallStack.back().pop_back();
+        assert(mCallStack.back()->size() > 0);
+        auto *frame = mCallStack.back();
+        for (auto *table : (*frame)) {
+            delete table;
+        }
+        delete frame;
+        mCallStack.back()->pop_back();
     }
 }

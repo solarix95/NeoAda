@@ -36,7 +36,7 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
         }
         break;
     case NadaParser::ASTNodeType::Block:
-        state->pushScope();
+        state->pushScope(node->parent->type == NadaParser::ASTNodeType::WhileLoop ? NadaSymbolTable::LoopScope : NadaSymbolTable::ConditionalScope);
         for (const auto &child : node->children) {
             executeState(child, state);
             if (mExecState == ReturnState)
@@ -112,11 +112,17 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
         return state->ret();
     } break;
     case NadaParser::ASTNodeType::Break: {
-        mExecState = BreakState;
+        if (state->inLoopScope())
+            mExecState = BreakState;
+        else
+            std::cerr << "INVALID BREAK ignored!"; // FIXME: runtime error
         return state->ret();
     } break;
     case NadaParser::ASTNodeType::Continue: {
-        mExecState = ContinueState;
+        if (state->inLoopScope())
+            mExecState = ContinueState;
+        else
+            std::cerr << "INVALID CONTINUE ignored!"; // FIXME: runtime error
         return state->ret();
     } break;
     case NadaParser::ASTNodeType::FunctionCall: {
@@ -143,14 +149,11 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
             assert(0 && "runtime error");
         }
 
-        if (!node->handle)
-            node->handle = state->valuePtr(node->value.lowerValue);
 
-        // auto &value = state->valueRef(node->value.lowerValue);
+        auto &value = state->valueRef(node->value.lowerValue);
 
         executeState(node->children[0], state);
-        // value.assign(state->ret());
-        ((NadaValue*)node->handle)->assign(state->ret());
+        value.assign(state->ret());
 
         // FIXME: runtime error.. if (!value.assign(newValue))
     }   break;
@@ -171,11 +174,7 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
         return evaluateUnaryOperator(node, state);
     }   break;
     case NadaParser::ASTNodeType::Identifier: {
-        if (!node->handle)
-            node->handle = state->valuePtr(node->value.lowerValue);
-
-        // state->ret() = state->value(node->value.lowerValue);
-        state->ret() = *((NadaValue*)node->handle);
+        state->ret() = state->value(node->value.lowerValue);
     }   break;
     default:
         assert(0 && "not yet implemented");

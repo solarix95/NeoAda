@@ -21,12 +21,22 @@ std::string NadaNumericParser::removeSeparators(const std::string &str)
 
 bool NadaNumericParser::isFloatingPointLiteral(const std::string &str)
 {
+    if (str.length() <= 1)
+        return false;
+    if (str.find('.') == std::string::npos)
+        return false;
+
     static const std::regex floatRegex(R"(^\d+\.\d*([eE][-+]?\d+)?$|^\d+[eE][-+]?\d+$)");
     return std::regex_match(str, floatRegex);
 }
 
 bool NadaNumericParser::isBasedLiteral(const std::string &str)
 {
+    if (str.length() <= 1)
+        return false;
+    if (str.find('#') == std::string::npos)
+        return false;
+
     static const std::regex basedRegex(R"(^\d+#([0-9A-Fa-f_]+)#([eE][-+]?\d+)?$)");
     return std::regex_match(str, basedRegex);
 }

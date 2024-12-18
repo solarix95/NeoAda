@@ -1,0 +1,50 @@
+#include "exception.h"
+
+//-------------------------------------------------------------------------------------------------
+NadaException::NadaException()
+    : mCode(Nada::Error::NoError)
+    , mLine(0)
+    , mColumn(0)
+{
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaException::NadaException(Nada::Error code, int line, int column, const std::string &extraInfo)
+    : mCode(code)
+    , mLine(line)
+    , mColumn(column)
+    , mExtra(extraInfo)
+{
+    if (mCode == Nada::Error::NoError) {
+        mMessage = "No Error";
+    } else {
+        mMessage = "Error: " + messageByCode() + extraMsg() + " at line " + std::to_string(mLine) + ", column " + std::to_string(mColumn);
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+const char *NadaException::what() const noexcept
+{
+    return mMessage.c_str();
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NadaException::messageByCode() const
+{
+    switch (mCode) {
+    case Nada::Error::NoError: return "";
+    case Nada::Error::InvalidCharacter:     return "Invalid character";
+    case Nada::Error::InvalidStringLiteral: return "Invalid string literal";
+    case Nada::Error::InvalidExponent:      return "Invalid numeric exponent";
+    case Nada::Error::UnexpectedEof:        return "Unexpected end-of-file";
+    case Nada::Error::InvalidToken:         return "Invalid token";
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NadaException::extraMsg() const
+{
+    if (mExtra.empty())
+        return "";
+    return " ('" + mExtra + "') ";
+}

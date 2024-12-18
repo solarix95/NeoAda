@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <unordered_set>
 
+#include "exception.h"
 #include "utils.h"
 
 //-------------------------------------------------------------------------------------------------
@@ -183,7 +184,12 @@ bool NadaLexer::parseNext()
             }
 
             if (atEnd() || mScript[start] != '"' || currentChar() != '"') {
-                std::cerr << "Invalid string literal: " << mScript.substr(start, mPos + 1 - start) << "\n";
+                if (atEnd())
+                    throw NadaException(Nada::Error::UnexpectedEof, mRow, mColumn);
+                else
+                    throw NadaException(Nada::Error::InvalidStringLiteral, mRow, mColumn);
+
+                // std::cerr << "Invalid string literal: " << mScript.substr(start, mPos + 1 - start) << "\n";
                 isValid = false;
             }
 
@@ -212,10 +218,10 @@ bool NadaLexer::parseNext()
                 }
 
                 // Prüfe auf abschließendes "#" für Based Numeral
-                if (atEnd() || currentChar() != '#') {
-                    std::cerr << "Invalid based literal: " << mScript.substr(start, mPos - start) << "\n";
-                    return false;
-                }
+                if (atEnd())
+                    throw NadaException(Nada::Error::UnexpectedEof, mRow, mColumn);
+                if (currentChar() != '#')
+                    throw NadaException(Nada::Error::InvalidBasedLiteral, mRow, mColumn, mScript.substr(start, mPos - start));
                 shiftToNext(); // Überspringe abschließendes "#"
             } else {
                 // Schritt 3: Dezimalpunkt verarbeiten
@@ -233,10 +239,12 @@ bool NadaLexer::parseNext()
                 if (!atEnd() && (currentChar() == '+' || currentChar() == '-')) {
                     shiftToNext();
                 }
-                if (atEnd() || !isDigit(currentChar())) {
-                    std::cerr << "Invalid exponent: " << mScript.substr(start, mPos - start) << "\n";
-                    return false;
-                }
+                if (atEnd())
+                    throw NadaException(Nada::Error::UnexpectedEof, mRow, mColumn);
+
+                if (!isDigit(currentChar()))
+                    // std::cerr << "Invalid exponent: " << mScript.substr(start, mPos - start) << "\n";
+                    throw NadaException(Nada::Error::InvalidExponent, mRow, mColumn, mScript.substr(start, mPos - start));
                 while (!atEnd() && (isDigit(currentChar()) || currentChar() == '_')) {
                     shiftToNext();
                 }
@@ -275,7 +283,8 @@ bool NadaLexer::parseNext()
         }
 
         // Fehlerhafte Zeichen
-        std::cerr << "Unexpected character: '" << currentChar() << "' at position " << mPos << "\n";
+        throw NadaException(Nada::Error::InvalidCharacter, mRow, mColumn, std::string(1, currentChar()));
+        // std::cerr << "Unexpected character: '" << currentChar() << "' at position " << mPos << "\n";
         return false;
     }
 
@@ -313,7 +322,7 @@ bool NadaLexer::shiftToNext(int step)
 
     if (mPos >= 0 && mPos < mScript.length() && mScript[mPos] == '\n') {
         mRow += step > 0 ? +1 : -1;
-        mColumn = 1;
+        mColumn = 0;
     } else if (!atEnd())
         mColumn++;
 

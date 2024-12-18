@@ -17,7 +17,8 @@ HEADERS += \
     $$NEOADA_PATH/shareddata.h \
     $$NEOADA_PATH/sharedstring.h \
     $$NEOADA_PATH/numericparser.h \
-    $$NEOADA_PATH/neoadaapi.h
+    $$NEOADA_PATH/neoadaapi.h \
+    $$NEOADA_PATH/exception.h
 
 
 SOURCES += \
@@ -33,4 +34,5 @@ SOURCES += \
     $$NEOADA_PATH/shareddata.cc \
     $$NEOADA_PATH/sharedstring.cc \
     $$NEOADA_PATH/numericparser.cc \
-    $$NEOADA_PATH/neoadaapi.cc
+    $$NEOADA_PATH/neoadaapi.cc \
+    $$NEOADA_PATH/exception.cc

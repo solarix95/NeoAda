@@ -30,7 +30,15 @@ struct NadaSymbol {
 class NadaSymbolTable
 {
 public:
-    NadaSymbolTable();
+    enum Scope {
+        GlobalScope,
+        LocalScope,         // Function-Call
+        LoopScope,          // Enter While/For
+        ConditionalScope    // Enter if..
+    };
+    NadaSymbolTable(Scope s);
+
+    inline Scope scope() const { return mScope; }
 
     bool contains(const std::string& name) const;
 
@@ -40,10 +48,11 @@ public:
 
 private:
     std::unordered_map<std::string, NadaSymbol> mTable;
+    Scope                                       mScope;
 };
 
-using NadaSymbolTables = std::vector<std::shared_ptr<NadaSymbolTable> >;
-using NadaStackFrames  = std::vector<NadaSymbolTables>;
+using NadaSymbolTables = std::vector<NadaSymbolTable*>;
+using NadaStackFrames  = std::vector<NadaSymbolTables*>;
 
 
 #endif // SYMBOLTABLE_H

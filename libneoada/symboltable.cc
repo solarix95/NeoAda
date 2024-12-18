@@ -1,6 +1,9 @@
 #include "symboltable.h"
 
-NadaSymbolTable::NadaSymbolTable() {}
+//-------------------------------------------------------------------------------------------------
+NadaSymbolTable::NadaSymbolTable(Scope s)
+    : mScope(s)
+{}
 
 //-------------------------------------------------------------------------------------------------
 bool NadaSymbolTable::contains(const std::string& name) const {
