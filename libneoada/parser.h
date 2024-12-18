@@ -55,13 +55,14 @@ public:
         Nada::LowerString value; // Der Wert (z. B. Literal, Operator, Identifier)
         std::vector<std::shared_ptr<ASTNode>> children; // Unterknoten
         std::shared_ptr<ASTNode>              parent;
+        void *                                handle;
 
         ASTNode(ASTNodeType type, const std::string& value = "")
-            : type(type), value(value) {}
+            : type(type), value(value), handle(nullptr) {}
         ASTNode(ASTNodeType type, std::shared_ptr<ASTNode> p, const std::string& value = "")
-            : type(type), value(value), parent(p) {}
+            : type(type), value(value), parent(p), handle(nullptr) {}
         ASTNode(ASTNodeType type, const std::string& value, std::shared_ptr<ASTNode> p)
-            : type(type), value(value), parent(p) {}
+            : type(type), value(value), parent(p), handle(nullptr) {}
 
         std::string serialize(int depth = 0) const;
         static void addChild(std::shared_ptr<ASTNode> parent, std::shared_ptr<ASTNode> child);

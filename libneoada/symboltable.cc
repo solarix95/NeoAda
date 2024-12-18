@@ -21,9 +21,16 @@ bool NadaSymbolTable::add(const NadaSymbol &symbol)
 //-------------------------------------------------------------------------------------------------
 bool NadaSymbolTable::get(const std::string &name, NadaSymbol &symbol) const
 {
-    if (!contains(name))
+    if (mTable.empty())
         return false;
-    symbol = mTable.at(name);
+
+    try {
+        symbol = mTable.at(name);
+        return true;
+    } catch(...) {
+        return false;
+    }
+
     return true;
 }
 

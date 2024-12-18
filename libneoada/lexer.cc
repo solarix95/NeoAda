@@ -133,14 +133,14 @@ bool NadaLexer::parseNext()
             std::string lowerToken = Nada::toLower(token);
             shiftToNext(-1); // 1 Character zuviel eingelesen..
 
-            const std::unordered_set<std::string> reservedWords = {
+            static const std::unordered_set<std::string> reservedWords = {
                 "declare",
                 "if", "then", "else", "elsif", "end",
                 "while", "loop", "break", "continue",
                 "procedure", "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 
-            const std::unordered_set<std::string> booleanLiteral = {
+            static const std::unordered_set<std::string> booleanLiteral = {
                 "true", "false"
             };
 
@@ -249,7 +249,7 @@ bool NadaLexer::parseNext()
         }
 
         // Mehrstellige Operatoren zuerst prüfen
-        std::unordered_set<std::string> twoCharOperators = { ":=", "**", "/=", "<=", ">=" };
+        static const std::unordered_set<std::string> twoCharOperators = { ":=", "**", "/=", "<=", ">=" };
 
         if (nextChar() != '\0') {
             std::string twoCharOp = mScript.substr(mPos, 2);
@@ -261,7 +261,7 @@ bool NadaLexer::parseNext()
         }
 
         // Einfache einstellige Operatoren prüfen
-        std::unordered_set<char> singleCharOperators = { '+', '-', '*', '/', '<', '>', '=', '&' };
+        static const std::unordered_set<char> singleCharOperators = { '+', '-', '*', '/', '<', '>', '=', '&' };
         if (singleCharOperators.count(currentChar())) {
             mTokens.push_back(Token(std::string(1, currentChar()),TokenType::Operator, mRow, mColumn));
             return true;
@@ -282,23 +282,27 @@ bool NadaLexer::parseNext()
     return false;
 }
 
-// Hilfsmethoden
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::isWhitespace(char c) const {
     return std::isspace(c);
 }
 
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::isIdentifierStart(char c) const {
     return std::isalpha(c) || c == '_'; // Buchstaben oder Unterstrich
 }
 
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::isIdentifierPart(char c) const {
     return std::isalnum(c) || c == '_'; // Buchstaben, Ziffern oder Unterstrich
 }
 
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::isDigit(char c) const {
     return std::isdigit(c);
 }
 
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::shiftToNext(int step)
 {
     assert(step != 0);
@@ -316,17 +320,20 @@ bool NadaLexer::shiftToNext(int step)
     return atEnd();
 }
 
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::atEnd() const
 {
     return mPos >= mScript.length();
 }
 
+//-------------------------------------------------------------------------------------------------
 const char &NadaLexer::currentChar() const
 {
     assert(!atEnd());
     return mScript[mPos];
 }
 
+//-------------------------------------------------------------------------------------------------
 char NadaLexer::nextChar() const
 {
     return (mPos + 1 < mScript.size()) ? mScript[mPos + 1] : '\0';

@@ -499,14 +499,15 @@ NadaValue NadaValue::spaceship(const NadaValue &other, bool *ok) const
 NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
 {
     if (ok) *ok = false;
-    if (mType != other.mType)
-        return NadaValue();
 
     switch (mType) {
     case Nada::String: {
         NadaValue ret;
         if (ok) *ok = true;
-        ret.fromString(cInternalString()->cValue() + other.cInternalString()->cValue());
+        if (other.type() == Nada::String)
+            ret.fromString(cInternalString()->cValue() + other.cInternalString()->cValue());
+        else
+            ret.fromString(cInternalString()->cValue() + other.toString());
         return ret;
     } break;
     case Nada::Struct: {

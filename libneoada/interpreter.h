@@ -13,9 +13,9 @@ public:
     NadaValue execute(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state = nullptr);
 
 private:
-    NadaValue  executeState(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state);
-    NadaValue  evaluateBinaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state);
-    NadaValue  evaluateUnaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state);
+    NadaValue  &executeState(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state);
+    NadaValue  &evaluateBinaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state);
+    NadaValue  &evaluateUnaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state);
 
     enum ExecState {
         RunState,

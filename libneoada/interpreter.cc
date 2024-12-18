@@ -16,29 +16,29 @@ NadaValue NadaInterpreter::execute(const std::shared_ptr<NadaParser::ASTNode> &n
         return NadaValue();
 
     mExecState = RunState;
-    return executeState(node, state ? state : mState);
+    executeState(node, state ? state : mState);
+
+    return (state ? state : mState)->ret();
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
 {
     assert(state);
     assert(node);
 
-    NadaValue ret;
-
     switch (node->type) {
     case NadaParser::ASTNodeType::Program:
-        for (auto &child : node->children) {
-            ret = executeState(child, state);
+        for (const auto &child : node->children) {
+            executeState(child, state);
             if (mExecState == ReturnState)
                 break;
         }
         break;
     case NadaParser::ASTNodeType::Block:
         state->pushScope();
-        for (auto &child : node->children) {
-            ret = executeState(child, state);
+        for (const auto &child : node->children) {
+            executeState(child, state);
             if (mExecState == ReturnState)
                 break;
             if (mExecState == BreakState)
@@ -51,10 +51,13 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
     case NadaParser::ASTNodeType::Expression: // just "()"
         assert(node->children.size() == 1);
         return executeState(node->children[0],state);
+        break;
     case NadaParser::ASTNodeType::Declaration:
         assert(node->children.size() >= 1);
-        if (!state->define(node->value.lowerValue, node->children[0]->value.lowerValue))
-            return NadaValue(); // FIXME: Runtime-Error
+        if (!state->define(node->value.lowerValue, node->children[0]->value.lowerValue)) {
+            state->ret().reset();
+            return state->ret(); // FIXME: Runtime-Error
+        }
         if (node->children.size() == 2) {
             auto &value = state->valueRef(node->value.lowerValue);
             NadaValue initialValue;
@@ -89,7 +92,8 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         bool conditionValid;
         bool condition;
         do {
-            condition = executeState(node->children[0], state).toBool(&conditionValid);
+            executeState(node->children[0], state);
+            condition = state->ret().toBool(&conditionValid);
             if (condition)
                 executeState(node->children[1],state);
             if (mExecState == BreakState) {
@@ -103,18 +107,17 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
     } break;
     case NadaParser::ASTNodeType::Return: {
         assert(node->children.size() == 1);
-
-        auto returnValue = executeState(node->children[0], state);
+        executeState(node->children[0], state);
         mExecState = ReturnState;
-        return returnValue;
+        return state->ret();
     } break;
     case NadaParser::ASTNodeType::Break: {
         mExecState = BreakState;
-        return NadaValue();
+        return state->ret();
     } break;
     case NadaParser::ASTNodeType::Continue: {
         mExecState = ContinueState;
-        return NadaValue();
+        return state->ret();
     } break;
     case NadaParser::ASTNodeType::FunctionCall: {
 
@@ -123,36 +126,42 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
             values.push_back(executeState(node, state));
         }
 
-        if (!state->hasFunction(node->value.lowerValue,values))
-            return NadaValue(); // TODO: ERROR
+        if (!state->hasFunction(node->value.lowerValue,values)) {
+            state->ret().reset();
+            return state->ret(); // TODO: ERROR
+        }
 
         auto &fnc = state->function(node->value.lowerValue,values);
 
-        return fnc.nativeCallback(fnc.fncValues(values));
+        fnc.nativeCallback(fnc.fncValues(values));
     }   break;
     case NadaParser::ASTNodeType::Assignment: {
         assert(node->children.size() == 1);
-
         if (state->typeOf(node->value.lowerValue) == Nada::Undefined) {
             std::cerr << node->value.displayValue << std::endl;
             state->typeOf(node->value.lowerValue);
             assert(0 && "runtime error");
         }
-        auto &value = state->valueRef(node->value.lowerValue);
-        auto newValue = executeState(node->children[0], state);
 
-        value.assign(newValue);
+        if (!node->handle)
+            node->handle = state->valuePtr(node->value.lowerValue);
+
+        // auto &value = state->valueRef(node->value.lowerValue);
+
+        executeState(node->children[0], state);
+        // value.assign(state->ret());
+        ((NadaValue*)node->handle)->assign(state->ret());
 
         // FIXME: runtime error.. if (!value.assign(newValue))
     }   break;
     case NadaParser::ASTNodeType::Literal:
-        ret.fromString(node->value.displayValue);
+        state->ret().fromString(node->value.displayValue);
         break;
     case NadaParser::ASTNodeType::BooleanLiteral:
-        ret.fromBool(node->value.lowerValue == "true");
+        state->ret().fromBool(node->value.lowerValue == "true");
         break;
     case NadaParser::ASTNodeType::Number: {
-        auto done = ret.fromNumber(node->value.lowerValue);
+        auto done = state->ret().fromNumber(node->value.lowerValue);
         // FIXME: Error-Handling? done?
     }   break;
     case NadaParser::ASTNodeType::BinaryOperator: {
@@ -162,21 +171,27 @@ NadaValue NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNod
         return evaluateUnaryOperator(node, state);
     }   break;
     case NadaParser::ASTNodeType::Identifier: {
-        return state->value(node->value.lowerValue);
+        if (!node->handle)
+            node->handle = state->valuePtr(node->value.lowerValue);
+
+        // state->ret() = state->value(node->value.lowerValue);
+        state->ret() = *((NadaValue*)node->handle);
     }   break;
     default:
         assert(0 && "not yet implemented");
         break;
     }
-    return ret;
+
+    return state->ret();
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue &NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
 {
-    NadaValue ret;
-
     assert(node->children.size() == 2);
+    // static NadaValue left;
+    // static NadaValue right;
+
     auto left  = executeState(node->children[0],state);
     auto right = executeState(node->children[1],state);
     bool done;
@@ -184,17 +199,17 @@ NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPars
     if (node->value.lowerValue == ">") {
         bool result = left.greaterThen(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        ret.fromBool(result);
-        return ret;
+            return state->ret();
+        state->ret().fromBool(result);
+        return state->ret();
     }
 
     if (node->value.lowerValue == "<") {
         bool result = left.lessThen(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        ret.fromBool(result);
-        return ret;
+            return state->ret();
+        state->ret().fromBool(result);
+        return state->ret();
     }
 
     if (node->value.lowerValue == ">=") {
@@ -202,14 +217,14 @@ NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPars
         bool result2 = result1 || left.equal(right);
 
         if (result1 || result2) {
-            ret.fromBool(result1);
-            return ret;
+            state->ret().fromBool(result1);
+            return state->ret();
         }
         if (!done) // FIXME: runtime error!
-            return NadaValue();
+            return state->ret();
 
-        ret.fromBool(false);
-        return ret;
+        state->ret().fromBool(false);
+        return state->ret();
     }
 
     if (node->value.lowerValue == "<=") {
@@ -217,111 +232,110 @@ NadaValue NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPars
         bool result2 = result1 || left.equal(right);
 
         if (result1 || result2) {
-            ret.fromBool(result1 || result2);
-            return ret;
+            state->ret().fromBool(result1 || result2);
+            return state->ret();
         }
         if (!done) // FIXME: runtime error!
-            return NadaValue();
+            return state->ret();
 
-        ret.fromBool(false);
-        return ret;
+        state->ret().fromBool(false);
+        return state->ret();
     }
 
     if (node->value.lowerValue == "=") {
         bool result = left.equal(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        ret.fromBool(result);
-        return ret;
+            return state->ret();
+        state->ret().fromBool(result);
+        return state->ret();
     }
 
     if (node->value.lowerValue == "/=") {
         bool result = !left.equal(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        ret.fromBool(result);
-        return ret;
+            return state->ret();
+        state->ret().fromBool(result);
+        return state->ret();
     }
 
     if (node->value.lowerValue == "&") {
-        auto result = left.concat(right, &done);
+        state->ret() = left.concat(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        return result;
+            return state->ret();
+        return state->ret();
     }
 
     if (node->value.lowerValue == "-") {
-        auto result = left.subtract(right, &done);
+        state->ret() = left.subtract(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        return result;
+            return state->ret();
+        return state->ret();
     }
 
     if (node->value.lowerValue == "+") {
-        auto result = left.add(right, &done);
+        state->ret() = left.add(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        return result;
+            return state->ret();
+        return state->ret();
     }
 
     if (node->value.lowerValue == "*") {
-        auto result = left.multiply(right, &done);
+        state->ret() = left.multiply(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        return result;
+            return state->ret();
+        return state->ret();
     }
     if (node->value.lowerValue == "/") {
-        auto result = left.division(right, &done);
+        state->ret() = left.division(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        return result;
+            return state->ret();
+        return state->ret();
     }
 
     if (node->value.lowerValue == "mod") {
-        auto result = left.modulo(right, &done);
+        state->ret() = left.modulo(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        return result;
+            return state->ret();
+        return state->ret();
     }
 
     if (node->value.lowerValue == "and") {
         bool result = left.logicalAnd(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        ret.fromBool(result);
-        return ret;
+            return state->ret();
+        state->ret().fromBool(result);
+        return state->ret();
     }
 
     if (node->value.lowerValue == "or") {
         bool result = left.logicalOr(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        ret.fromBool(result);
-        return ret;
+            return state->ret();
+        state->ret().fromBool(result);
+        return state->ret();
     }
 
     if (node->value.lowerValue == "xor") {
         bool result = left.logicalXor(right, &done);
         if (!done) // FIXME: runtime error!
-            return NadaValue();
-        ret.fromBool(result);
-        return ret;
+            return state->ret();
+        state->ret().fromBool(result);
+        return state->ret();
     }
 
     assert(0 && "not yet implemented");
-    return ret;
+    return state->ret();
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaInterpreter::evaluateUnaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue &NadaInterpreter::evaluateUnaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
 {
     assert(node->children.size() == 1);
 
-    auto expressionResult  = executeState(node->children[0],state);
     bool done;
-    expressionResult.unaryOperator(node->value.lowerValue,&done);
+    executeState(node->children[0],state).unaryOperator(node->value.lowerValue,&done);
 
     // FIXME: runtime error
     // if (!done)
-    return expressionResult;
+    return state->ret();
 }

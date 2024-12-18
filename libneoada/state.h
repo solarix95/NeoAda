@@ -25,6 +25,8 @@ public:
 
     NadaValue          value(const std::string &symbolName) const;
     NadaValue         &valueRef(const std::string &symbolName);
+    NadaValue         *valuePtr(const std::string &symbolName);
+
 
     // local scope.. as if/while/for/..
     void               pushScope();

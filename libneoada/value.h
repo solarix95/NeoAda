@@ -14,6 +14,7 @@ public:
     NadaValue(const NadaValue &other);
     ~NadaValue();
 
+    void reset();
     void initAny();
     void initType(Nada::Type t);
     bool fromString(const std::string &value);
@@ -63,7 +64,7 @@ public:
 
 
 private:
-    void reset();
+
     void assignOther(const NadaValue &other);
     void assignOtherString(const NadaValue &other);
 

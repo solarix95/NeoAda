@@ -102,6 +102,15 @@ NadaValue &NadaState::valueRef(const std::string &symbolName)
 }
 
 //-------------------------------------------------------------------------------------------------
+NadaValue *NadaState::valuePtr(const std::string &symbolName)
+{
+    NadaSymbol symbol;
+    bool done = find(symbolName,symbol);
+    assert(done);
+    return symbol.value;
+}
+
+//-------------------------------------------------------------------------------------------------
 void NadaState::pushStack()
 //                            enter Function/Procedure/Method
 {
