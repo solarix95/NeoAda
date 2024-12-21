@@ -39,7 +39,6 @@ bool NadaLexer::nextToken()
     if (mTokenIdx >= (int)mTokens.size())
         return false;
 
-
     auto ret =  ++mTokenIdx < (int)mTokens.size();
     return ret;
 }
@@ -155,7 +154,7 @@ bool NadaLexer::parseNext()
             static const std::unordered_set<std::string> reservedWords = {
                 "declare",
                 "if", "then", "else", "elsif", "end",
-                "while", "loop", "break", "continue",
+                "while", "loop", "break", "continue", "when"
                 "procedure", "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 

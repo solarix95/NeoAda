@@ -94,10 +94,6 @@ private:
     std::shared_ptr<ASTNode> parseFunctionCall(std::shared_ptr<ASTNode> &funcNode);       // a()
 
 
-    void stepBack();
-    void stepBack(NadaLexer::TokenType currentTokenType, const std::string &token);
-
-
     static std::string nodeTypeToString(ASTNodeType type);
 
     NadaLexer               &mLexer;

@@ -105,6 +105,9 @@ private slots:
 
     void test_parser_FunctionCall1();
     void test_parser_WhileLoop();
+    void test_parser_WhileLoopBreak1();
+    void test_parser_WhileLoopBreak2();
+
     void test_parser_If();
     void test_parser_IfElse();
     void test_parser_ElseIf1();
@@ -122,6 +125,9 @@ private slots:
     void test_interpreter_ifStatement();
     void test_interpreter_ifElseStatement();
     void test_interpreter_whileStatement();
+    void test_interpreter_whileBreak();
+    void test_interpreter_whileBreakWhen();
+    void test_interpreter_whileContinue();
     void test_interpreter_Return1();
     void test_interpreter_Return2();
     void test_interpreter_Return3();
@@ -1156,7 +1162,66 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_WhileLoopBreak1()
+{
+    std::string script = R"(
+
+while x < 10 loop
+    break;
+end loop;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(WhileLoop, "")
+    Node(BinaryOperator, "<")
+      Node(Identifier, "x")
+      Node(Number, "10")
+    Node(Block, "")
+      Node(Break, "")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+void TstParser::test_parser_WhileLoopBreak2()
+{
+    std::string script = R"(
+
+while x < 10 loop
+    break when x < 2;
+end loop;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(WhileLoop, "")
+    Node(BinaryOperator, "<")
+      Node(Identifier, "x")
+      Node(Number, "10")
+    Node(Block, "")
+      Node(Assignment, "x")
+        Node(BinaryOperator, "+")
+          Node(Identifier, "x")
+          Node(Number, "1")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1595,6 +1660,106 @@ void TstParser::test_interpreter_whileStatement()
     QVERIFY(results.size() == 2);
     QVERIFY(results[0] == "2");
     QVERIFY(results[1] == "1");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_whileBreak()
+{
+    std::string script = R"(
+        declare x : Natural := 10;
+        while x > 0 loop
+            print(x);
+            x := x - 1;
+            if x < 9 then
+                break;
+            end if;
+        end loop;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 2);
+    QVERIFY(results[0] == "10");
+    QVERIFY(results[1] == "9");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_whileBreakWhen()
+{
+    std::string script = R"(
+        declare x : Natural := 10;
+        while x > 0 loop
+            print(x);
+            x := x - 1;
+            break when x < 9;
+        end loop;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 2);
+    QVERIFY(results[0] == "10");
+    QVERIFY(results[1] == "9");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_whileContinue()
+{
+    std::string script = R"(
+        declare x : Natural := 10;
+        while x > 0 loop
+            x := x - 1;
+
+            if x > 0 then
+                continue;
+            end if;
+            print(x);
+        end loop;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 1);
+    QVERIFY(results[0] == "0");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2166,8 +2331,6 @@ void TstParser::test_error_parser_ifElse1()
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::NoError);
-
-
 }
 
 

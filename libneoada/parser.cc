@@ -1,4 +1,4 @@
-#include <iostream>
+
 #include "parser.h"
 #include "exception.h"
 
@@ -249,8 +249,23 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseReturn()
 
 //-------------------------------------------------------------------------------------------------
 std::shared_ptr<NadaParser::ASTNode> NadaParser::parseBreak()
+//             break [when expression]
 {
-    return std::make_shared<ASTNode>(ASTNodeType::Break);
+    auto breakNode = std::make_shared<ASTNode>(ASTNodeType::Break);
+    if (mLexer.token(1) != "when")
+        return breakNode;
+
+    mLexer.nextToken();        // step to   "when"
+    if (!mLexer.nextToken())   // step over "when
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+
+    auto expression = parseExpression();
+
+    if (!expression) // assert?
+        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+
+    ASTNode::addChild(breakNode,expression);
+    return breakNode;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -295,35 +310,6 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseSeparator(const std::share
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaParser::stepBack()
-{
-    std::cerr << "NOT IMPLEMENTED" << std::endl;
-    /*
-    switch (mCurrentNode->type) {
-    case ASTNodeType::FunctionCall:
-        switch (mCurrentNode->parent->type) {
-        case ASTNodeType::Expression:
-
-        }
-    }
-    */
-
-
-}
-
-//-------------------------------------------------------------------------------------------------
-void NadaParser::stepBack(NadaLexer::TokenType currentTokenType, const std::string &token)
-{
-    switch (mCurrentNode->type) {
-    case ASTNodeType::ExpressionList:
-        if (token == ")") { // functioncall beendet
-            mCurrentNode = mCurrentNode->parent;
-            stepBack();
-        }
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
 std::string NadaParser::nodeTypeToString(ASTNodeType type)
 {
     switch (type) {
@@ -344,6 +330,8 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::WhileLoop: return "WhileLoop";
     case ASTNodeType::Loop:   return "Loop";
     case ASTNodeType::Block:  return "Block";
+    case ASTNodeType::Break:  return "Break";
+    case ASTNodeType::Continue:  return "Continue";
     case ASTNodeType::Return: return "Return";
     default: return "Unknown";
     }

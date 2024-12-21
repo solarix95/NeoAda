@@ -18,7 +18,8 @@ while n <= max loop
         divisor := 2;
 
         -- limit ~ sqrt(n), hier vereinfacht als divisor*divisor <= n
-        while (divisor * divisor) <= n and isPrime = 1 loop
+        while (divisor <= n/2) and isPrime = 1 loop
+        -- while (divisor * divisor) <= n and isPrime = 1 loop
             if (n mod divisor) = 0 then
                 -- Wenn ein Teiler gefunden wird, ist n nicht prim
                 isPrime := 0;

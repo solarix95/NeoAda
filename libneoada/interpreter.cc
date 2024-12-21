@@ -112,9 +112,16 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
         return state->ret();
     } break;
     case NadaParser::ASTNodeType::Break: {
-        if (state->inLoopScope())
+        if (state->inLoopScope()) {
+            if (node->children.size() == 1) { // when condition
+                bool conditionValid;
+                bool condition = executeState(node->children[0], state).toBool(&conditionValid);
+                // if (!conditionValid) // TODO: runtime error
+                if (!condition)
+                    return state->ret();
+            }
             mExecState = BreakState;
-        else
+        } else
             std::cerr << "INVALID BREAK ignored!"; // FIXME: runtime error
         return state->ret();
     } break;
