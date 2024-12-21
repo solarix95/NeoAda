@@ -16,10 +16,15 @@ enum Error {
     InvalidExponent,
     InvalidBasedLiteral,
     UnexpectedEof,
+    UnexpectedStructure,  // assert?
 
 
     // Parser
+    InvalidStatement,
+    IdentifierExpected,
+    KeywordExpected,
     InvalidToken,
+    UnexpectedClosure,
 
     // Runtime Exceptions
     // ----------------------------------------------

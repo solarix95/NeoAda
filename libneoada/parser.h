@@ -72,7 +72,6 @@ public:
     std::shared_ptr<ASTNode> parse(const std::string &script);
 
 private:
-    std::shared_ptr<ASTNode> onError(const std::string &msg);
     std::shared_ptr<ASTNode> parseStatement();
     std::shared_ptr<ASTNode> parseDeclaration();
     std::shared_ptr<ASTNode> parseIdentifier();  // "call()" or "var :="

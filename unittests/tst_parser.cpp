@@ -142,9 +142,21 @@ private slots:
     void test_api_evaluateWhileBreak();
     void test_api_evaluateWhileContinue();
 
-    // ERROR HANDLING
+    // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
     void test_error_lexer_invalidString();
+    void test_error_lexer_invalidBasedLiteral();
+
+    void test_error_parser_declaration1();
+    void test_error_parser_declaration2();
+    void test_error_parser_declaration3();
+    void test_error_parser_declaration4();
+
+    void test_error_parser_if1();
+    void test_error_parser_ifElse1();
+
+    // runtime ERROR HANDLING
+
 
 };
 
@@ -1896,6 +1908,268 @@ void TstParser::test_error_lexer_invalidString()
     QVERIFY(ex.line()   == 1);
     QVERIFY(ex.column() == 9);
 }
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_lexer_invalidBasedLiteral()
+{
+    NadaLexer lexer;
+    NadaException ex;
+
+    //               2#1000_0100#
+    lexer.setScript("2#1000_0100 ");
+    try {
+        while (lexer.nextToken());
+    } catch (NadaException &e) {
+        ex = e;
+    }
+    // std::cout << ex.what() << std::endl;
+    QVERIFY(ex.code()   == Nada::Error::InvalidBasedLiteral);
+    QVERIFY(ex.line()   == 1);
+    QVERIFY(ex.column() == 12);
+
+    lexer.setScript("5,5 ");
+    try {
+        while (lexer.nextToken());
+    } catch (NadaException &e) {
+        ex = e;
+    }
+    // std::cout << ex.what() << std::endl;
+    QVERIFY(ex.code()   == Nada::Error::InvalidCharacter);
+
+    lexer.setScript("16#FFG ");
+    try {
+        while (lexer.nextToken());
+    } catch (NadaException &e) {
+        ex = e;
+    }
+    // std::cout << ex.what() << std::endl;
+    QVERIFY(ex.code()   == Nada::Error::InvalidBasedLiteral);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_declaration1()
+{
+    std::string script = R"(
+        declare 23
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    NadaException ex;
+
+    try {
+        parser.parse(script);
+    } catch (NadaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code()   == Nada::Error::IdentifierExpected);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_declaration2()
+{
+    std::string script = R"(
+        declare x =
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    NadaException ex;
+
+    try {
+        parser.parse(script);
+    } catch (NadaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code()   == Nada::Error::InvalidToken);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_declaration3()
+{
+    std::string script = R"(
+        declare x : 23
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    NadaException ex;
+
+    try {
+        parser.parse(script);
+    } catch (NadaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code()   == Nada::Error::IdentifierExpected);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_declaration4()
+{
+    std::string script = R"(
+        declare x : Number :=
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    NadaException ex;
+
+    try {
+        parser.parse(script);
+    } catch (NadaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_if1()
+{
+    std::string script = R"(
+        if x
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    NadaException ex;
+
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code()   == Nada::Error::KeywordExpected);
+
+    script = "if x then";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+    script = "if x then y";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::InvalidToken);
+
+    script = "if x then y()";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+    script = "if x then y() end";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::InvalidToken);
+
+    script = "if x then y(); end";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+    script = "if x then y(); end if";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+    script = "if x then y(); end if;";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::NoError);
+
+}
+
+void TstParser::test_error_parser_ifElse1()
+{
+    std::string script = R"(
+        if x then f(); else
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    NadaException ex;
+
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+    script = "if x then f(); else y";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::InvalidToken);
+
+    script = "if x then f(); else y()";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+
+    script = "if x then f(); else y() end";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::InvalidToken);
+
+    script = "if x then f(); else y(); end";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+    script = "if x then f(); else y(); end;";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::KeywordExpected);
+
+    script = "if x then f(); else y(); end while;";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::KeywordExpected);
+
+    script = "if x then f(); else y(); end if";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
+
+    script = "if x then f(); else y(); end if;";
+    ex = NadaException();
+    try { parser.parse(script); } catch (NadaException &e) {
+        ex = e;
+    }
+    QVERIFY(ex.code()   == Nada::Error::NoError);
+
+
+}
+
 
 QTEST_APPLESS_MAIN(TstParser)
 

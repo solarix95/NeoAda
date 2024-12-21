@@ -33,12 +33,19 @@ std::string NadaException::messageByCode() const
 {
     switch (mCode) {
     case Nada::Error::NoError: return "";
+    case Nada::Error::InvalidStatement:     return "Invalid statement";
     case Nada::Error::InvalidCharacter:     return "Invalid character";
     case Nada::Error::InvalidStringLiteral: return "Invalid string literal";
+    case Nada::Error::InvalidBasedLiteral:  return "Invalid numeric literal";
     case Nada::Error::InvalidExponent:      return "Invalid numeric exponent";
     case Nada::Error::UnexpectedEof:        return "Unexpected end-of-file";
+    case Nada::Error::UnexpectedStructure:  return "Invalid code structure";  // probably an assert..
+    case Nada::Error::IdentifierExpected:   return "Identifier expected";
+    case Nada::Error::KeywordExpected:      return "Keyword expected";
     case Nada::Error::InvalidToken:         return "Invalid token";
+    case Nada::Error::UnexpectedClosure:    return "Unexpected closure";
     }
+    return "";
 }
 
 //-------------------------------------------------------------------------------------------------

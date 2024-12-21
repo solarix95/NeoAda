@@ -104,6 +104,24 @@ std::string NadaLexer::positionToText(int relativeIndex) const
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaLexer::tokenIsValid() const
+{
+    return mTokenIdx >= 0 && mTokenIdx < mTokens.size();
+}
+
+//-------------------------------------------------------------------------------------------------
+int NadaLexer::line() const
+{
+    return tokenIsValid() ? mTokens[mTokenIdx].row : mRow;
+}
+
+//-------------------------------------------------------------------------------------------------
+int NadaLexer::column() const
+{
+    return tokenIsValid() ? mTokens[mTokenIdx].column : mColumn;
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::parseNext()
 {
     mPos++;

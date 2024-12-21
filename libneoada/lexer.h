@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+class NadaException;
 class NadaLexer {
 public:
     enum class TokenType {
@@ -29,6 +30,11 @@ public:
     bool                 tokenPosition(int &row, int &column, int relativeIndex = 0) const;
     std::string          positionToText(int relativeIndex = 0) const;
 
+    bool                 atEnd() const;
+    bool                 tokenIsValid() const;
+    int                  line() const;
+    int                  column() const;
+
 private:
     bool parseNext();
 
@@ -40,7 +46,7 @@ private:
 
     // character-cursor
     bool        shiftToNext(int step = 1);
-    bool        atEnd() const;
+
     const char &currentChar() const;
     char        nextChar() const;
 
