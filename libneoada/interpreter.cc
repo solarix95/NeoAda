@@ -105,6 +105,12 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
             }
         } while (condition && conditionValid);
     } break;
+    case NadaParser::ASTNodeType::ForLoop: {
+        assert(node->children.size() == 2); // range + body
+        if (node->children[0]->type == NadaParser::ASTNodeType::Range)
+            executeForLoopRange(node,state);
+        return state->ret();
+    } break;
     case NadaParser::ASTNodeType::Return: {
         assert(node->children.size() == 1);
         executeState(node->children[0], state);
@@ -126,9 +132,16 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
         return state->ret();
     } break;
     case NadaParser::ASTNodeType::Continue: {
-        if (state->inLoopScope())
+        if (state->inLoopScope()) {
+            if (node->children.size() == 1) { // when condition
+                bool conditionValid;
+                bool condition = executeState(node->children[0], state).toBool(&conditionValid);
+                // if (!conditionValid) // TODO: runtime error
+                if (!condition)
+                    return state->ret();
+            }
             mExecState = ContinueState;
-        else
+        } else
             std::cerr << "INVALID CONTINUE ignored!"; // FIXME: runtime error
         return state->ret();
     } break;
@@ -188,6 +201,61 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
         break;
     }
 
+    return state->ret();
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue &NadaInterpreter::executeForLoopRange(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+{
+    assert(node->children.size() == 2);
+
+    std::string varName = node->value.displayValue;
+    assert(varName.length() > 0);
+
+    assert(node->children[0]->children.size() == 2); // from .. to
+
+    int64_t from,to;
+
+    // TODO: runtime error handling
+    NadaValue::fromNumber(node->children[0]->children[0]->value.lowerValue,from);
+    NadaValue::fromNumber(node->children[0]->children[1]->value.lowerValue,to);
+
+    state->pushScope(NadaSymbolTable::LoopScope);
+    state->define(varName,"Natural");
+    auto &valueRef = state->valueRef(varName);
+    for (int64_t i = from; i<=to; i++) {
+        valueRef.fromNumber(i);
+        executeState(node->children[1],state);
+
+        if (mExecState == BreakState) {
+            mExecState = RunState;
+            break;
+        }
+        if (mExecState == ContinueState) {
+            mExecState = RunState;
+        }
+    }
+
+    state->popScope();
+
+    /*
+    bool conditionValid;
+    bool condition;
+    do {
+        executeState(node->children[0], state);
+        condition = state->ret().toBool(&conditionValid);
+        if (condition)
+            executeState(node->children[1],state);
+        if (mExecState == BreakState) {
+            mExecState = RunState;
+            break;
+        }
+        if (mExecState == ContinueState) {
+            mExecState = RunState;
+        }
+    } while (condition && conditionValid);
+
+    */
     return state->ret();
 }
 

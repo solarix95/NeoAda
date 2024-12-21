@@ -866,6 +866,16 @@ int NadaValue::refCount() const
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaValue::fromNumber(const std::string &value, int64_t &ret)
+{
+    std::string cleanLiteral = NadaNumericParser::removeSeparators(value);
+
+    ret = std::stoll(cleanLiteral, nullptr, 0);
+
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
 void NadaValue::reset()
 {
     switch (mType) {

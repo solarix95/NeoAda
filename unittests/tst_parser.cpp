@@ -150,6 +150,9 @@ private slots:
     void test_api_evaluateScopeValue();
     void test_api_evaluateWhileBreak();
     void test_api_evaluateWhileContinue();
+    void test_api_evaluateForLoop();
+    void test_api_evaluateForLoopBreak();
+    void test_api_evaluateForLoopContinue();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -2074,6 +2077,60 @@ void TstParser::test_api_evaluateWhileContinue()
     QVERIFY(NeoAda::evaluate(script).toBool() == true);
 
 }
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateForLoop()
+{
+    std::string script = R"(
+
+    declare x : Natural := 0;
+
+    for i in 1..10 loop
+        x := x + 1;
+    end loop;
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toInt64() == 10);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateForLoopBreak()
+{
+    std::string script = R"(
+
+    declare x : Natural := 0;
+
+    for i in 1..10 loop
+        x := x + 1;
+        break when i > 5;
+    end loop;
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toInt64() == 6);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluateForLoopContinue()
+{
+    std::string script = R"(
+
+    declare x : Natural := 0;
+
+    for i in 1..10 loop
+        continue when i > 5;
+        x := x + 1;
+    end loop;
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toInt64() == 5);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 //                                       ERROR HANDLING

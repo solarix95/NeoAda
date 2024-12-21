@@ -62,6 +62,7 @@ public:
     // Unit-Test only
     int         refCount() const;
 
+    static bool fromNumber(const std::string &value, int64_t &ret);
 
 private:
 

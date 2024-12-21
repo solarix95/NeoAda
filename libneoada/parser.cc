@@ -326,7 +326,23 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseBreak()
 //-------------------------------------------------------------------------------------------------
 std::shared_ptr<NadaParser::ASTNode> NadaParser::parseContinue()
 {
-    return std::make_shared<ASTNode>(ASTNodeType::Continue);
+    auto contNode = std::make_shared<ASTNode>(ASTNodeType::Continue);
+
+    if (mLexer.token(1) != "when")
+        return contNode;
+
+    mLexer.nextToken();        // step to   "when"
+    if (!mLexer.nextToken())   // step over "when
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+
+    auto expression = parseExpression();
+
+    if (!expression) // assert?
+        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+
+    ASTNode::addChild(contNode,expression);
+
+    return contNode;
 }
 
 //-------------------------------------------------------------------------------------------------
