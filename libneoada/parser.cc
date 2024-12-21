@@ -31,6 +31,8 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseStatement()
         return parseSeparator(parseDeclaration());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "while") {
         return parseSeparator(parseWhileLoop());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "for") {
+        return parseSeparator(parseForLoop());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "if") {
         return parseSeparator(parseIfStatement());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "return") {
@@ -148,6 +150,59 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseWhileLoop()
     mLexer.nextToken(); // Überspringe end 'loop'
 
     return whileNode;
+}
+
+//-------------------------------------------------------------------------------------------------
+std::shared_ptr<NadaParser::ASTNode> NadaParser::parseForLoop()
+{
+    auto forNode = std::make_shared<ASTNode>(ASTNodeType::ForLoop);
+
+    // consume "for"
+    if (!mLexer.nextToken())
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
+        throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+    std::string loopVar = mLexer.token();
+
+    if (!mLexer.nextToken())
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.token() != "in")
+        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"in");
+
+    if (!mLexer.nextToken())
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    auto iterableOrRangeNode = parseIterableOrRange();
+    if (!iterableOrRangeNode)
+        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+
+    mLexer.nextToken();
+    if (mLexer.token() != "loop")
+        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"loop");
+
+    mLexer.nextToken(); // Consume "loop"
+
+    auto bodyNode = parseBlockEnd("end");
+    if (!bodyNode)
+        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+
+    if (mLexer.token() != "end")
+        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"end");
+    mLexer.nextToken(); // Consume "end"
+
+    if (mLexer.token() != "loop")
+        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"loop");
+
+    // "loop" consumed by "parseSeparator()"
+
+    forNode->value = loopVar;
+    ASTNode::addChild(forNode,iterableOrRangeNode);
+    ASTNode::addChild(forNode,bodyNode);
+
+    return forNode;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -329,6 +384,8 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Elsif: return "ElseIf";
     case ASTNodeType::WhileLoop: return "WhileLoop";
     case ASTNodeType::Loop:   return "Loop";
+    case ASTNodeType::ForLoop:return "ForLoop";
+    case ASTNodeType::Range:  return "Range";
     case ASTNodeType::Block:  return "Block";
     case ASTNodeType::Break:  return "Break";
     case ASTNodeType::Continue:  return "Continue";
@@ -541,5 +598,27 @@ std::shared_ptr<NadaParser::ASTNode> NadaParser::parseFunctionCall(std::shared_p
     }
 
     return funcNode;
+}
+
+//-------------------------------------------------------------------------------------------------
+std::shared_ptr<NadaParser::ASTNode> NadaParser::parseIterableOrRange()
+{
+    if (mLexer.tokenType() == NadaLexer::TokenType::Number || mLexer.tokenType()  == NadaLexer::TokenType::Identifier) {
+        auto start = parseExpression();
+
+        if (mLexer.token(1) == "..") {
+            mLexer.nextToken(); // step to   ".."
+            mLexer.nextToken(); // step over ".."
+            auto end = parseExpression();
+            auto rangeNode = std::make_shared<ASTNode>(ASTNodeType::Range);
+            rangeNode->children.push_back(start);
+            rangeNode->children.push_back(end);
+            return rangeNode;
+        }
+        return start; // Es ist eine Iterable (z.B. anArray)
+    }
+
+    throw NadaException(Nada::Error::InvalidRangeOrIterable,mLexer.line(), mLexer.column(),mLexer.token());
+    return std::shared_ptr<NadaParser::ASTNode>();
 }
 

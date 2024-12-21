@@ -27,10 +27,12 @@ public:
         Else,
         Elsif,
         WhileLoop,
+        ForLoop,
         Loop,
         Return,
         Break,
         Continue,
+        Range,
     };
 
     enum class ParserState {
@@ -76,6 +78,7 @@ private:
     std::shared_ptr<ASTNode> parseDeclaration();
     std::shared_ptr<ASTNode> parseIdentifier();  // "call()" or "var :="
     std::shared_ptr<ASTNode> parseWhileLoop();
+    std::shared_ptr<ASTNode> parseForLoop();
     std::shared_ptr<ASTNode> parseIfStatement();
     std::shared_ptr<ASTNode> parseReturn();
     std::shared_ptr<ASTNode> parseBreak();
@@ -92,7 +95,7 @@ private:
     std::shared_ptr<ASTNode> parseFactor();             // a**b
     std::shared_ptr<ASTNode> parsePrimary();            // a
     std::shared_ptr<ASTNode> parseFunctionCall(std::shared_ptr<ASTNode> &funcNode);       // a()
-
+    std::shared_ptr<ASTNode> parseIterableOrRange();    // for x in [IterableOrRange]
 
     static std::string nodeTypeToString(ASTNodeType type);
 

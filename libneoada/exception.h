@@ -24,6 +24,7 @@ enum Error {
     IdentifierExpected,
     KeywordExpected,
     InvalidToken,
+    InvalidRangeOrIterable,
     UnexpectedClosure,
 
     // Runtime Exceptions

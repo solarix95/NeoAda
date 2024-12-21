@@ -62,6 +62,7 @@ private slots:
     void test_lexer_Identifiers();
     void test_lexer_Boolean();
     void test_lexer_Strings();
+    void test_lexer_Range();
     void test_lexer_Comments();
     void test_lexer_Expression1();
     void test_lexer_Expression2();
@@ -107,6 +108,8 @@ private slots:
     void test_parser_WhileLoop();
     void test_parser_WhileLoopBreak1();
     void test_parser_WhileLoopBreak2();
+
+    void test_parser_ForLoopRange();
 
     void test_parser_If();
     void test_parser_IfElse();
@@ -388,6 +391,22 @@ void TstParser::test_lexer_Strings()
     QVERIFY(results[1] == "NeoAda");
     QVERIFY(results[2] == "Test String");
     QVERIFY(results[3] == "Double\"Quotes");
+}
+
+void TstParser::test_lexer_Range()
+{
+    NadaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("1..10");
+
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 3);
+    QVERIFY(results[0] == "1");
+    QVERIFY(results[1] == "..");
+    QVERIFY(results[2] == "10");
 }
 
 void TstParser::test_lexer_Comments() {
@@ -1214,14 +1233,45 @@ Node(Program, "")
       Node(Identifier, "x")
       Node(Number, "10")
     Node(Block, "")
-      Node(Assignment, "x")
-        Node(BinaryOperator, "+")
+      Node(Break, "")
+        Node(BinaryOperator, "<")
           Node(Identifier, "x")
-          Node(Number, "1")
+          Node(Number, "2")
 )";
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_ForLoopRange()
+{
+    std::string script = R"(
+
+for x in 1..10 loop
+    print(x);
+end loop;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(ForLoop, "x")
+    Node(Range, "")
+      Node(Number, "1")
+      Node(Number, "10")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Identifier, "x")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -154,7 +154,8 @@ bool NadaLexer::parseNext()
             static const std::unordered_set<std::string> reservedWords = {
                 "declare",
                 "if", "then", "else", "elsif", "end",
-                "while", "loop", "break", "continue", "when"
+                "while", "loop", "break", "continue", "when",
+                "for", "in", "reverse"
                 "procedure", "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 
@@ -242,7 +243,7 @@ bool NadaLexer::parseNext()
                 shiftToNext(); // Überspringe abschließendes "#"
             } else {
                 // Schritt 3: Dezimalpunkt verarbeiten
-                if (!atEnd() && currentChar() == '.') {
+                if (!atEnd() && currentChar() == '.' && nextChar() != '.' /* Range Operator */) {
                     shiftToNext();
                     while (!atEnd() && (isDigit(currentChar()) || currentChar() == '_')) {
                         shiftToNext();
@@ -274,7 +275,7 @@ bool NadaLexer::parseNext()
         }
 
         // Mehrstellige Operatoren zuerst prüfen
-        static const std::unordered_set<std::string> twoCharOperators = { ":=", "**", "/=", "<=", ">=" };
+        static const std::unordered_set<std::string> twoCharOperators = { ":=", "**", "/=", "<=", ">=", ".." };
 
         if (nextChar() != '\0') {
             std::string twoCharOp = mScript.substr(mPos, 2);
