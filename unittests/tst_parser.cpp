@@ -119,8 +119,8 @@ private slots:
 
     void test_parser_return();
 
-    void test_parser_procedure1();
-
+    void test_parser_Procedure1();
+    void test_parser_Procedure2();
 
     void test_state_Declarations();
     void test_state_GlobalScope();
@@ -137,26 +137,27 @@ private slots:
     void test_interpreter_Return2();
     void test_interpreter_Return3();
 
-    void test_api_evaluateLiterals();
-    void test_api_evaluateEqual();
-    void test_api_evaluateNotEqual();
-    void test_api_evaluateLessThan();
-    void test_api_evaluateLessEqualThan();
+    void test_api_evaluate_Literals();
+    void test_api_evaluate_Equal();
+    void test_api_evaluate_NotEqual();
+    void test_api_evaluate_LessThan();
+    void test_api_evaluate_LessEqualThan();
 
-    void test_api_evaluateConcatString();
-    void test_api_evaluateModulo();
-    void test_api_evaluateMultiply();
-    void test_api_evaluateRelations();
+    void test_api_evaluate_ConcatString();
+    void test_api_evaluate_Modulo();
+    void test_api_evaluate_Multiply();
+    void test_api_evaluate_Relations();
 
-    void test_api_evaluateGlobalValue();
-    void test_api_evaluateScopeValue();
-    void test_api_evaluateWhileBreak();
-    void test_api_evaluateWhileContinue();
-    void test_api_evaluateForLoop();
-    void test_api_evaluateForLoopBreak();
-    void test_api_evaluateForLoopContinue();
+    void test_api_evaluate_GlobalValue();
+    void test_api_evaluate_ScopeValue();
+    void test_api_evaluate_WhileBreak();
+    void test_api_evaluate_WhileContinue();
+    void test_api_evaluate_ForLoop();
+    void test_api_evaluate_ForLoopBreak();
+    void test_api_evaluate_ForLoopContinue();
 
     void test_api_evaluate_Procedure1();
+    void test_api_evaluate_Procedure2();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -239,6 +240,7 @@ void TstParser::test_core_SharedString()
     QCOMPARE(s1.refCount(), 1);
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_core_NumericValues()
 {
     NadaValue v;
@@ -266,8 +268,6 @@ void TstParser::test_core_NumericValues()
 
     QCOMPARE(v.fromNumber("InvalidLiteral"),false);
     QCOMPARE(v.type(), Nada::Undefined);
-
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -297,7 +297,6 @@ void TstParser::test_core_Assignment()
     v2.fromString("neoAda");
     QCOMPARE(v1.assign(v2),true);
     QCOMPARE(v1.toString(), v2.toString());
-
 }
 
 /*-----------------------------------------------------------------------------------------------*\
@@ -1514,7 +1513,7 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_parser_procedure1()
+void TstParser::test_parser_Procedure1()
 {
     std::string script = R"(
 
@@ -1540,7 +1539,37 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Procedure2()
+{
+    std::string script = R"(
+
+procedure HelloWorld(msg : any) is
+begin
+    print(msg);
+end;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Procedure, "HelloWorld")
+    Node(Parameters, "")
+      Node(Parameter, "msg")
+        Node(Identifier, "any")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Identifier, "msg")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1903,7 +1932,7 @@ void TstParser::test_interpreter_Return3()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateLiterals()
+void TstParser::test_api_evaluate_Literals()
 {
     QVERIFY(NeoAda::evaluate("return true;").toBool() == true);
     QVERIFY(NeoAda::evaluate("return false;").toBool() == false);
@@ -1913,7 +1942,7 @@ void TstParser::test_api_evaluateLiterals()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateEqual()
+void TstParser::test_api_evaluate_Equal()
 {
     QVERIFY(NeoAda::evaluate("return true = true;").toBool()  == true);
     QVERIFY(NeoAda::evaluate("return true = false;").toBool() == false);
@@ -1930,7 +1959,7 @@ void TstParser::test_api_evaluateEqual()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateNotEqual()
+void TstParser::test_api_evaluate_NotEqual()
 {
     QVERIFY(NeoAda::evaluate("return true /= true;").toBool()  == false);
     QVERIFY(NeoAda::evaluate("return true /= false;").toBool() == true);
@@ -1943,7 +1972,7 @@ void TstParser::test_api_evaluateNotEqual()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateLessThan()
+void TstParser::test_api_evaluate_LessThan()
 {
     // Natural
     QVERIFY(NeoAda::evaluate("return 42 < 42;").toBool()      == false);
@@ -1958,7 +1987,7 @@ void TstParser::test_api_evaluateLessThan()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateLessEqualThan()
+void TstParser::test_api_evaluate_LessEqualThan()
 {
     // Natural
     QVERIFY(NeoAda::evaluate("return 42 <= 42;").toBool()      == true);
@@ -1973,7 +2002,7 @@ void TstParser::test_api_evaluateLessEqualThan()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateConcatString()
+void TstParser::test_api_evaluate_ConcatString()
 {
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\";").toString()            == "NeoAda");
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \" \" & \"Ada\";").toString()    == "Neo Ada");
@@ -1981,7 +2010,7 @@ void TstParser::test_api_evaluateConcatString()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateModulo()
+void TstParser::test_api_evaluate_Modulo()
 {
     QVERIFY(NeoAda::evaluate("return 42 mod 21;").toInt64() == 0);
     QVERIFY(NeoAda::evaluate("return 42 mod 20;").toInt64() == 2);
@@ -1990,14 +2019,15 @@ void TstParser::test_api_evaluateModulo()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateMultiply()
+void TstParser::test_api_evaluate_Multiply()
 {
     QVERIFY(NeoAda::evaluate("return 2   * 21;").toInt64()   == 42);
     QVERIFY(NeoAda::evaluate("return 2.0 * 21.0;").toInt64() == 42);
     QVERIFY(NeoAda::evaluate("return -42 * -1;").toInt64()   == 42);
 }
 
-void TstParser::test_api_evaluateRelations()
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Relations()
 {
     // AND
     QVERIFY(NeoAda::evaluate("return true  and true;").toBool()   == true);
@@ -2019,7 +2049,7 @@ void TstParser::test_api_evaluateRelations()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateGlobalValue()
+void TstParser::test_api_evaluate_GlobalValue()
 {
     std::string script = R"(
 
@@ -2039,7 +2069,7 @@ void TstParser::test_api_evaluateGlobalValue()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateScopeValue()
+void TstParser::test_api_evaluate_ScopeValue()
 {
     std::string script = R"(
 
@@ -2060,7 +2090,7 @@ void TstParser::test_api_evaluateScopeValue()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateWhileBreak()
+void TstParser::test_api_evaluate_WhileBreak()
 {
     std::string script = R"(
 
@@ -2084,7 +2114,7 @@ void TstParser::test_api_evaluateWhileBreak()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateWhileContinue()
+void TstParser::test_api_evaluate_WhileContinue()
 {
     std::string script = R"(
 
@@ -2112,7 +2142,7 @@ void TstParser::test_api_evaluateWhileContinue()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateForLoop()
+void TstParser::test_api_evaluate_ForLoop()
 {
     std::string script = R"(
 
@@ -2129,7 +2159,7 @@ void TstParser::test_api_evaluateForLoop()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateForLoopBreak()
+void TstParser::test_api_evaluate_ForLoopBreak()
 {
     std::string script = R"(
 
@@ -2147,7 +2177,7 @@ void TstParser::test_api_evaluateForLoopBreak()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluateForLoopContinue()
+void TstParser::test_api_evaluate_ForLoopContinue()
 {
     std::string script = R"(
 
@@ -2183,6 +2213,26 @@ void TstParser::test_api_evaluate_Procedure1()
     )";
 
     QVERIFY(NeoAda::evaluate(script).toInt64() == 2*42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Procedure2()
+{
+    std::string script = R"(
+
+    declare x : Natural := 1;
+
+    procedure multiply(factor : any) is
+    begin
+        x := x * factor;
+    end;
+
+    multiply(42);
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
 }
 
 

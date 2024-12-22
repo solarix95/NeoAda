@@ -136,7 +136,7 @@ NadaParser::ASTNodePtr NadaParser::parseProcedure()
     if (!mLexer.nextToken())
         throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
-    auto parameterNode = std::make_shared<ASTNode>(ASTNodeType::FormalParameters);
+    auto parameterNode = parseFormalParameterList();
     ASTNode::addChild(procedureNode,parameterNode);
 
     if (mLexer.token() != "is")
@@ -426,6 +426,63 @@ NadaParser::ASTNodePtr NadaParser::parseSeparator(const std::shared_ptr<ASTNode>
 }
 
 //-------------------------------------------------------------------------------------------------
+NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
+{
+    auto parametersNode = std::make_shared<ASTNode>(ASTNodeType::FormalParameters);
+
+    if (mLexer.token() != "(")
+        return parametersNode;
+
+    while (mLexer.token() != ")") {
+        mLexer.nextToken();
+
+        if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
+            throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+        std::string paramName = mLexer.token();
+        mLexer.nextToken(); // Consume name
+
+        if (mLexer.token() != ":")
+            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        if (!mLexer.nextToken()) // Consume ":"
+            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+
+        std::string paramMode; // "in" / "out"
+        if (mLexer.tokenType() == NadaLexer::TokenType::Keyword) {
+            paramMode = mLexer.token();
+            mLexer.nextToken();
+        }
+
+        // Parameter Type e.g. "Natural",..
+        if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
+            throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+        std::string paramType = mLexer.token();
+
+        auto parameterNode = std::make_shared<ASTNode>(ASTNodeType::FormalParameter, paramName);
+        auto parameterType = std::make_shared<ASTNode>(ASTNodeType::Identifier,      paramType);
+        ASTNode::addChild(parameterNode,parameterType);
+
+        if (!paramMode.empty()) {
+            auto parameterMode = std::make_shared<ASTNode>(ASTNodeType::FormalParameterMode, paramMode);
+            ASTNode::addChild(parameterNode,parameterMode);
+        }
+
+        mLexer.nextToken();     // Consume parameterType
+
+        ASTNode::addChild(parametersNode,parameterNode);
+
+        if (mLexer.token() == ",")
+            mLexer.nextToken(); // Consume ","
+
+
+    }
+
+     mLexer.nextToken(); // Consume ")"
+    return parametersNode;
+}
+
+//-------------------------------------------------------------------------------------------------
 std::string NadaParser::nodeTypeToString(ASTNodeType type)
 {
     switch (type) {
@@ -433,6 +490,7 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Procedure: return "Procedure";
     case ASTNodeType::Function:  return "Function";
     case ASTNodeType::FormalParameters:  return "Parameters";
+    case ASTNodeType::FormalParameter :  return "Parameter";
     case ASTNodeType::Declaration: return "Declaration";
     case ASTNodeType::Assignment: return "Assignment";
     case ASTNodeType::Expression: return "Expression";

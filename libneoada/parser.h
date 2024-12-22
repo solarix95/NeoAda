@@ -12,7 +12,9 @@ public:
     enum class ASTNodeType {
         Program,
         Procedure,
-        FormalParameters, // procedure/function declaration
+        FormalParameters,    // procedure/function declaration: call(FormalParameters)
+        FormalParameter,     // procedure/function declaration: call(FormalParameter, FormalParameter, FormalParameter)
+        FormalParameterMode, // procedure/function declaration: call(x : [in/out] Natural)
         Function,
         Declaration,
         Assignment,
@@ -89,9 +91,13 @@ private:
     NadaParser::ASTNodePtr parseReturn();
     NadaParser::ASTNodePtr parseBreak();
     NadaParser::ASTNodePtr parseContinue();
+
+    // Parse Sub-Elements
     NadaParser::ASTNodePtr parseBlockEnd(const std::string& endToken1,
-                                           const std::string& endToken2 = "");   // von "if"/"else"/"elsif" bis "end"
+                                           const std::string& endToken2 = "");         // block/scope from "if"/"else"/"elsif" to "end"
     NadaParser::ASTNodePtr parseSeparator(const NadaParser::ASTNodePtr &currentNode);
+
+    NadaParser::ASTNodePtr parseFormalParameterList();                                 // procedure/function parameters;
 
 
     NadaParser::ASTNodePtr parseExpression();

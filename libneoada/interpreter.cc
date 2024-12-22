@@ -162,9 +162,27 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
 
         auto &fnc = state->function(node->value.lowerValue,values);
 
-        if (fnc.block)
+        if (fnc.block) {
+            state->pushStack(NadaSymbolTable::LocalScope);
+            assert(values.size() == fnc.parameters.size());
+
+            /*
+                parameter: "x"  : "any"
+                value:     "42" : Type = Natural
+
+                Push to stack   : declare x : Natural := 42;
+            */
+
+            for (int i = 0; i< fnc.parameters.size(); i++) {
+                state->define(fnc.parameters[i].first, fnc.parameters[i].second);
+                // TODO: if !define -> runtime error!
+                NadaValue &valueRef = state->valueRef(fnc.parameters[i].first);
+                valueRef.assign(values[i]);
+            }
+
             executeState(fnc.block, state);
-        else
+            state->popStack();
+        } else
             fnc.nativeCallback(fnc.fncValues(values));
     }   break;
     case NadaParser::ASTNodeType::Assignment: {
@@ -432,5 +450,11 @@ void NadaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NadaSt
     assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
     assert(block->type      == NadaParser::ASTNodeType::Block);
 
-    state->bind(node->value.lowerValue,NadaFncParameters(),block);
+    NadaFncParameters fncParameters;
+    for (const auto &p : parameters->children) {
+        assert(p->children.size() >= 1); // TODO: in/out, child # 2
+        fncParameters.push_back(std::make_pair(p->value.lowerValue,p->children[0]->value.lowerValue));
+    }
+
+    state->bind(node->value.lowerValue,fncParameters,block);
 }
