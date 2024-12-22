@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "value.h"
+#include "parser.h"
 
 using NadaFncParameters = std::vector<std::pair<std::string, std::string>>;
 using NadaFncValues     = std::unordered_map<std::string, NadaValue>;
@@ -16,7 +17,8 @@ struct NadaFunctionEntry {
     std::string       returnType;
     NadaFncParameters parameters;
 
-    NadaFncCallback   nativeCallback; // Built-in
+    std::shared_ptr<NadaParser::ASTNode> block;          // NeoAda-Code
+    NadaFncCallback                      nativeCallback; // c++ Built-in
 
     NadaFncValues     fncValues(const NadaValues &values) const;
 };
@@ -33,6 +35,7 @@ public:
 
     // Init/Setup
     bool              bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb); // c++ callback :)
+    bool              bind(const std::string &name, const NadaFncParameters &parameters, const NadaParser::ASTNodePtr &block);
 
     // Runtime
     bool              contains(const std::string &name, const NadaValues &parameters);

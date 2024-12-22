@@ -4,6 +4,7 @@
 #include <string>
 #include "symboltable.h"
 #include "functiontable.h"
+#include "parser.h"
 
 class NadaState
 {
@@ -17,6 +18,7 @@ public:
     Nada::Type typeOf(const std::string &name) const;
 
     bool               bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
+    bool               bind(const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
     bool               hasFunction(const std::string &name, const NadaValues &parameters);
     NadaFunctionEntry &function(const std::string &name, const NadaValues &parameters);
 

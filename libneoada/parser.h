@@ -11,6 +11,9 @@ class NadaParser
 public:
     enum class ASTNodeType {
         Program,
+        Procedure,
+        FormalParameters, // procedure/function declaration
+        Function,
         Declaration,
         Assignment,
         Expression,
@@ -69,39 +72,42 @@ public:
         static void addChild(std::shared_ptr<ASTNode> parent, std::shared_ptr<ASTNode> child);
     };
 
+    using ASTNodePtr = std::shared_ptr<ASTNode>;
+
     NadaParser(NadaLexer &lexer);
 
-    std::shared_ptr<ASTNode> parse(const std::string &script);
+    NadaParser::ASTNodePtr parse(const std::string &script);
 
 private:
-    std::shared_ptr<ASTNode> parseStatement();
-    std::shared_ptr<ASTNode> parseDeclaration();
-    std::shared_ptr<ASTNode> parseIdentifier();  // "call()" or "var :="
-    std::shared_ptr<ASTNode> parseWhileLoop();
-    std::shared_ptr<ASTNode> parseForLoop();
-    std::shared_ptr<ASTNode> parseIfStatement();
-    std::shared_ptr<ASTNode> parseReturn();
-    std::shared_ptr<ASTNode> parseBreak();
-    std::shared_ptr<ASTNode> parseContinue();
-    std::shared_ptr<ASTNode> parseBlockEnd(const std::string& endToken1,
+    NadaParser::ASTNodePtr parseStatement();
+    NadaParser::ASTNodePtr parseDeclaration();
+    NadaParser::ASTNodePtr parseIdentifier();  // "call()" or "var :="
+    NadaParser::ASTNodePtr parseProcedure();
+    NadaParser::ASTNodePtr parseWhileLoop();
+    NadaParser::ASTNodePtr parseForLoop();
+    NadaParser::ASTNodePtr parseIfStatement();
+    NadaParser::ASTNodePtr parseReturn();
+    NadaParser::ASTNodePtr parseBreak();
+    NadaParser::ASTNodePtr parseContinue();
+    NadaParser::ASTNodePtr parseBlockEnd(const std::string& endToken1,
                                            const std::string& endToken2 = "");   // von "if"/"else"/"elsif" bis "end"
-    std::shared_ptr<ASTNode> parseSeparator(const std::shared_ptr<ASTNode> &currentNode);
+    NadaParser::ASTNodePtr parseSeparator(const NadaParser::ASTNodePtr &currentNode);
 
 
-    std::shared_ptr<ASTNode> parseExpression();
+    NadaParser::ASTNodePtr parseExpression();
 
-    std::shared_ptr<ASTNode> parseSimpleExpression();   // a > b
-    std::shared_ptr<ASTNode> parseTerm();               // a * b
-    std::shared_ptr<ASTNode> parseFactor();             // a**b
-    std::shared_ptr<ASTNode> parsePrimary();            // a
-    std::shared_ptr<ASTNode> parseFunctionCall(std::shared_ptr<ASTNode> &funcNode);       // a()
-    std::shared_ptr<ASTNode> parseIterableOrRange();    // for x in [IterableOrRange]
+    NadaParser::ASTNodePtr parseSimpleExpression();   // a > b
+    NadaParser::ASTNodePtr parseTerm();               // a * b
+    NadaParser::ASTNodePtr parseFactor();             // a**b
+    NadaParser::ASTNodePtr parsePrimary();            // a
+    NadaParser::ASTNodePtr parseFunctionCall(NadaParser::ASTNodePtr &funcNode);       // a()
+    NadaParser::ASTNodePtr parseIterableOrRange();    // for x in [IterableOrRange]
 
     static std::string nodeTypeToString(ASTNodeType type);
 
     NadaLexer               &mLexer;
     ParserState              mState;
-    std::shared_ptr<ASTNode> mCurrentNode;
+    NadaParser::ASTNodePtr mCurrentNode;
 };
 
 

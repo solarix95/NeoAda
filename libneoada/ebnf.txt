@@ -1,0 +1,22 @@
+
+
+
+rocedure_declaration    ::= "procedure" identifier formal_parameter_list "is" "begin" statement_list "end" ";"
+
+formal_parameter_list   ::= "(" parameter { "," parameter } ")"
+parameter               ::= identifier ":" "in" type
+
+statement_list          ::= { statement }
+statement               ::= assignment_statement
+                            | procedure_call
+                            | if_statement
+                            | loop_statement
+                            | while_statement
+                            | for_statement
+                            | declare_statement
+                            | break_statement
+                            | continue_statement
+                            | ...
+
+
+declare_statement ::= "declare" identifier ":" type [ ":=" expression ] ";"

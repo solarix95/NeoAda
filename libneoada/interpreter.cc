@@ -9,7 +9,7 @@ NadaInterpreter::NadaInterpreter(NadaState *state)
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaInterpreter::execute(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue NadaInterpreter::execute(const NadaParser::ASTNodePtr &node, NadaState *state)
 {
     assert(node);
     if (!state && !mState)
@@ -22,7 +22,7 @@ NadaValue NadaInterpreter::execute(const std::shared_ptr<NadaParser::ASTNode> &n
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, NadaState *state)
 {
     assert(state);
     assert(node);
@@ -34,6 +34,9 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
             if (mExecState == ReturnState)
                 break;
         }
+        break;
+    case NadaParser::ASTNodeType::Procedure:
+        defineProcedure(node,state);
         break;
     case NadaParser::ASTNodeType::Block:
         state->pushScope(node->parent->type == NadaParser::ASTNodeType::WhileLoop ? NadaSymbolTable::LoopScope : NadaSymbolTable::ConditionalScope);
@@ -159,7 +162,10 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
 
         auto &fnc = state->function(node->value.lowerValue,values);
 
-        fnc.nativeCallback(fnc.fncValues(values));
+        if (fnc.block)
+            executeState(fnc.block, state);
+        else
+            fnc.nativeCallback(fnc.fncValues(values));
     }   break;
     case NadaParser::ASTNodeType::Assignment: {
         assert(node->children.size() == 1);
@@ -205,7 +211,7 @@ NadaValue &NadaInterpreter::executeState(const std::shared_ptr<NadaParser::ASTNo
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue &NadaInterpreter::executeForLoopRange(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue &NadaInterpreter::executeForLoopRange(const NadaParser::ASTNodePtr &node, NadaState *state)
 {
     assert(node->children.size() == 2);
 
@@ -260,7 +266,7 @@ NadaValue &NadaInterpreter::executeForLoopRange(const std::shared_ptr<NadaParser
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue &NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue &NadaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr &node, NadaState *state)
 {
     assert(node->children.size() == 2);
     // static NadaValue left;
@@ -402,7 +408,7 @@ NadaValue &NadaInterpreter::evaluateBinaryOperator(const std::shared_ptr<NadaPar
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue &NadaInterpreter::evaluateUnaryOperator(const std::shared_ptr<NadaParser::ASTNode> &node, NadaState *state)
+NadaValue &NadaInterpreter::evaluateUnaryOperator(const NadaParser::ASTNodePtr &node, NadaState *state)
 {
     assert(node->children.size() == 1);
 
@@ -412,4 +418,19 @@ NadaValue &NadaInterpreter::evaluateUnaryOperator(const std::shared_ptr<NadaPars
     // FIXME: runtime error
     // if (!done)
     return state->ret();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NadaState *state)
+{
+    assert(node->type == NadaParser::ASTNodeType::Procedure);
+    assert(node->children.size() == 2);
+
+    auto parameters = node->children[0];
+    auto block      = node->children[1];
+
+    assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
+    assert(block->type      == NadaParser::ASTNodeType::Block);
+
+    state->bind(node->value.lowerValue,NadaFncParameters(),block);
 }

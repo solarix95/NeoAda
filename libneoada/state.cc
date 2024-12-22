@@ -49,6 +49,12 @@ bool NadaState::bind(const std::string &name, const NadaFncParameters &parameter
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaState::bind(const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block)
+{
+    return mFunctions.bind(name,parameters,block);
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaState::hasFunction(const std::string &name, const NadaValues &parameters)
 {
     return mFunctions.contains(name,parameters);

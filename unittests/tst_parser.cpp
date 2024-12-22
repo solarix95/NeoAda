@@ -119,6 +119,8 @@ private slots:
 
     void test_parser_return();
 
+    void test_parser_procedure1();
+
 
     void test_state_Declarations();
     void test_state_GlobalScope();
@@ -153,6 +155,8 @@ private slots:
     void test_api_evaluateForLoop();
     void test_api_evaluateForLoopBreak();
     void test_api_evaluateForLoopContinue();
+
+    void test_api_evaluate_Procedure1();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -783,8 +787,6 @@ Node(Program, "")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
-
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -994,6 +996,7 @@ Node(Program, "")
     QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_Expression6()
 {
     std::string script = R"(
@@ -1017,6 +1020,7 @@ Node(Program, "")
     QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_Expression7()
 {
     std::string script = R"(
@@ -1040,7 +1044,7 @@ Node(Program, "")
     QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
-
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_Expression8()
 {
     std::string script = R"(
@@ -1060,6 +1064,7 @@ Node(Program, "")
     QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_Expression9()
 {
     std::string script = R"(
@@ -1215,6 +1220,7 @@ Node(Program, "")
     QCOMPARE_TRIM(currentAST, expectedAST);
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_WhileLoopBreak2()
 {
     std::string script = R"(
@@ -1274,7 +1280,6 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1431,7 +1436,6 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1486,7 +1490,6 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1508,6 +1511,36 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_procedure1()
+{
+    std::string script = R"(
+
+procedure HelloWorld is
+begin
+    print("Hello, World!");
+end;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Procedure, "HelloWorld")
+    Node(Parameters, "")
+    Node(Block, "")
+      Node(FunctionCall, "print")
+        Node(Literal, "Hello, World!")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2131,6 +2164,27 @@ void TstParser::test_api_evaluateForLoopContinue()
     QVERIFY(NeoAda::evaluate(script).toInt64() == 5);
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Procedure1()
+{
+    std::string script = R"(
+
+    declare x : Natural := 0;
+
+    procedure HelloWorld is
+    begin
+        x := x + 42;
+    end;
+
+    HelloWorld();
+    HelloWorld();
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toInt64() == 2*42);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 //                                       ERROR HANDLING
@@ -2364,9 +2418,9 @@ void TstParser::test_error_parser_if1()
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::NoError);
-
 }
 
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_error_parser_ifElse1()
 {
     std::string script = R"(

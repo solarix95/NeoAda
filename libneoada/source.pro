@@ -36,3 +36,6 @@ SOURCES += \
     $$NEOADA_PATH/numericparser.cc \
     $$NEOADA_PATH/neoadaapi.cc \
     $$NEOADA_PATH/exception.cc
+
+DISTFILES += \
+    $$NEOADA_PATH/ebnf.txt
