@@ -295,7 +295,7 @@ bool NadaLexer::parseNext()
 
         // Einzelzeichen-Tokens (Operatoren, Separatoren, etc.)
         // Separatoren
-        if (currentChar() == ';' || currentChar() == ':' || currentChar() == '(' || currentChar() == ')') {
+        if (currentChar() == ';' || currentChar() == ',' || currentChar() == ':' || currentChar() == '(' || currentChar() == ')') {
             mTokens.push_back(Token(std::string(1, currentChar()),TokenType::Separator, mRow, mColumn));
             return true;
         }

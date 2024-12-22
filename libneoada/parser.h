@@ -35,6 +35,7 @@ public:
         ForLoop,
         Loop,
         Return,
+        ReturnType,
         Break,
         Continue,
         Range,
@@ -84,7 +85,7 @@ private:
     NadaParser::ASTNodePtr parseStatement();
     NadaParser::ASTNodePtr parseDeclaration();
     NadaParser::ASTNodePtr parseIdentifier();  // "call()" or "var :="
-    NadaParser::ASTNodePtr parseProcedure();
+    NadaParser::ASTNodePtr parseProcedureOrFunction();
     NadaParser::ASTNodePtr parseWhileLoop();
     NadaParser::ASTNodePtr parseForLoop();
     NadaParser::ASTNodePtr parseIfStatement();

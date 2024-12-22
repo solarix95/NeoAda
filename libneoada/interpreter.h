@@ -25,6 +25,7 @@ private:
     NadaValue  &evaluateUnaryOperator(const NadaParser::ASTNodePtr &node, NadaState *state);
 
     void        defineProcedure(const NadaParser::ASTNodePtr &node, NadaState *state);
+    void        defineFunction(const NadaParser::ASTNodePtr &node, NadaState *state);
 
     enum ExecState {
         RunState,

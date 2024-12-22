@@ -38,6 +38,9 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
     case NadaParser::ASTNodeType::Procedure:
         defineProcedure(node,state);
         break;
+    case NadaParser::ASTNodeType::Function:
+        defineFunction(node,state);
+        break;
     case NadaParser::ASTNodeType::Block:
         state->pushScope(node->parent->type == NadaParser::ASTNodeType::WhileLoop ? NadaSymbolTable::LoopScope : NadaSymbolTable::ConditionalScope);
         for (const auto &child : node->children) {
@@ -446,6 +449,28 @@ void NadaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NadaSt
 
     auto parameters = node->children[0];
     auto block      = node->children[1];
+
+    assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
+    assert(block->type      == NadaParser::ASTNodeType::Block);
+
+    NadaFncParameters fncParameters;
+    for (const auto &p : parameters->children) {
+        assert(p->children.size() >= 1); // TODO: in/out, child # 2
+        fncParameters.push_back(std::make_pair(p->value.lowerValue,p->children[0]->value.lowerValue));
+    }
+
+    state->bind(node->value.lowerValue,fncParameters,block);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaInterpreter::defineFunction(const NadaParser::ASTNodePtr &node, NadaState *state)
+{
+    assert(node->type == NadaParser::ASTNodeType::Function);
+    assert(node->children.size() == 3);
+
+    auto parameters = node->children[0];
+    auto returntype = node->children[1];
+    auto block      = node->children[2];
 
     assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
     assert(block->type      == NadaParser::ASTNodeType::Block);

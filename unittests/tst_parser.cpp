@@ -122,6 +122,8 @@ private slots:
     void test_parser_Procedure1();
     void test_parser_Procedure2();
 
+    void test_parser_Function1();
+
     void test_state_Declarations();
     void test_state_GlobalScope();
 
@@ -158,6 +160,7 @@ private slots:
 
     void test_api_evaluate_Procedure1();
     void test_api_evaluate_Procedure2();
+    void test_api_evaluate_Function1();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -1573,6 +1576,43 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Function1()
+{
+    std::string script = R"(
+
+function Add(a : Natural; b : Natural) return Natural is
+begin
+    return a + b;
+end;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Function, "Add")
+    Node(Parameters, "")
+      Node(Parameter, "a")
+        Node(Identifier, "Natural")
+      Node(Parameter, "b")
+        Node(Identifier, "Natural")
+    Node(ReturnType, "Natural")
+    Node(Block, "")
+      Node(Return, "")
+        Node(BinaryOperator, "+")
+          Node(Identifier, "a")
+          Node(Identifier, "b")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_state_Declarations()
 {
     NadaState state;
@@ -2235,6 +2275,26 @@ void TstParser::test_api_evaluate_Procedure2()
     QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Function1()
+{
+    std::string script = R"(
+
+    declare x : Natural;
+
+    function Add(a : Natural; b : Natural) return Natural is
+    begin
+        return a + b;
+    end;
+
+    x := Add(40, 2);
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 //                                       ERROR HANDLING
@@ -2303,7 +2363,7 @@ void TstParser::test_error_lexer_invalidBasedLiteral()
     QVERIFY(ex.line()   == 1);
     QVERIFY(ex.column() == 12);
 
-    lexer.setScript("5,5 ");
+    lexer.setScript("5%5 ");
     try {
         while (lexer.nextToken());
     } catch (NadaException &e) {

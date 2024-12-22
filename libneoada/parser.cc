@@ -42,8 +42,10 @@ NadaParser::ASTNodePtr NadaParser::parseStatement()
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "continue") {
         return parseSeparator(parseContinue());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "procedure") {
-        return parseSeparator(parseProcedure());
-    }else if (mLexer.tokenType() == NadaLexer::TokenType::Identifier) {
+        return parseSeparator(parseProcedureOrFunction());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "function") {
+        return parseSeparator(parseProcedureOrFunction());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Identifier) {
         return parseSeparator(parseIdentifier());
     }
 
@@ -121,9 +123,16 @@ NadaParser::ASTNodePtr NadaParser::parseIdentifier()
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaParser::ASTNodePtr NadaParser::parseProcedure()
+NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
+
+//                         for procedures AND functions
+
 {
-    auto procedureNode = std::make_shared<ASTNode>(ASTNodeType::Procedure,mLexer.token());
+    bool isFunction = mLexer.token() == "function";
+
+    auto procedureNode = std::make_shared<ASTNode>(isFunction ? ASTNodeType::Function :
+                                                                ASTNodeType::Procedure,
+                                                    mLexer.token());
 
     if (!mLexer.nextToken())
         throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
@@ -138,6 +147,22 @@ NadaParser::ASTNodePtr NadaParser::parseProcedure()
 
     auto parameterNode = parseFormalParameterList();
     ASTNode::addChild(procedureNode,parameterNode);
+
+    if (isFunction) {
+        // function Add(a : in Natural; b : in Natural) return Natural is
+        //                                                |       |
+        if (mLexer.token() != "return")
+            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        mLexer.nextToken();
+
+        if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
+            throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+        auto returnNode = std::make_shared<ASTNode>(ASTNodeType::ReturnType, mLexer.token());
+        ASTNode::addChild(procedureNode,returnNode);
+
+        mLexer.nextToken();
+    }
 
     if (mLexer.token() != "is")
         throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
@@ -433,8 +458,10 @@ NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
     if (mLexer.token() != "(")
         return parametersNode;
 
+    if (!mLexer.nextToken())
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+
     while (mLexer.token() != ")") {
-        mLexer.nextToken();
 
         if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
             throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
@@ -472,10 +499,8 @@ NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
 
         ASTNode::addChild(parametersNode,parameterNode);
 
-        if (mLexer.token() == ",")
+        if (mLexer.token() == ";")
             mLexer.nextToken(); // Consume ","
-
-
     }
 
      mLexer.nextToken(); // Consume ")"
@@ -486,32 +511,33 @@ NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
 std::string NadaParser::nodeTypeToString(ASTNodeType type)
 {
     switch (type) {
-    case ASTNodeType::Program: return "Program";
-    case ASTNodeType::Procedure: return "Procedure";
-    case ASTNodeType::Function:  return "Function";
+    case ASTNodeType::Program:      return "Program";
+    case ASTNodeType::Procedure:    return "Procedure";
+    case ASTNodeType::Function:     return "Function";
     case ASTNodeType::FormalParameters:  return "Parameters";
     case ASTNodeType::FormalParameter :  return "Parameter";
-    case ASTNodeType::Declaration: return "Declaration";
-    case ASTNodeType::Assignment: return "Assignment";
-    case ASTNodeType::Expression: return "Expression";
+    case ASTNodeType::Declaration:  return "Declaration";
+    case ASTNodeType::Assignment:   return "Assignment";
+    case ASTNodeType::Expression:   return "Expression";
     case ASTNodeType::ExpressionList: return "ExpressionList";
-    case ASTNodeType::Literal: return "Literal";
-    case ASTNodeType::Number: return "Number";
-    case ASTNodeType::Identifier: return "Identifier";
+    case ASTNodeType::Literal:      return "Literal";
+    case ASTNodeType::Number:       return  "Number";
+    case ASTNodeType::Identifier:   return "Identifier";
     case ASTNodeType::UnaryOperator:  return "UnaryOperator";
     case ASTNodeType::BinaryOperator: return "BinaryOperator";
     case ASTNodeType::FunctionCall: return "FunctionCall";
-    case ASTNodeType::IfStatement: return "If";
-    case ASTNodeType::Else:  return "Else";
-    case ASTNodeType::Elsif: return "ElseIf";
-    case ASTNodeType::WhileLoop: return "WhileLoop";
-    case ASTNodeType::Loop:   return "Loop";
-    case ASTNodeType::ForLoop:return "ForLoop";
-    case ASTNodeType::Range:  return "Range";
-    case ASTNodeType::Block:  return "Block";
-    case ASTNodeType::Break:  return "Break";
-    case ASTNodeType::Continue:  return "Continue";
-    case ASTNodeType::Return: return "Return";
+    case ASTNodeType::IfStatement:  return "If";
+    case ASTNodeType::Else:         return "Else";
+    case ASTNodeType::Elsif:        return "ElseIf";
+    case ASTNodeType::WhileLoop:    return "WhileLoop";
+    case ASTNodeType::Loop:         return "Loop";
+    case ASTNodeType::ForLoop:      return "ForLoop";
+    case ASTNodeType::Range:        return "Range";
+    case ASTNodeType::Block:        return "Block";
+    case ASTNodeType::Break:        return "Break";
+    case ASTNodeType::Continue:     return "Continue";
+    case ASTNodeType::Return:       return "Return";
+    case ASTNodeType::ReturnType:   return "ReturnType";
     default: return "Unknown";
     }
 }
@@ -630,7 +656,6 @@ NadaParser::ASTNodePtr NadaParser::parseFactor()
     }
 
     return left;
-
 }
 
 //-------------------------------------------------------------------------------------------------
