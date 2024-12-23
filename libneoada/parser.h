@@ -64,12 +64,12 @@ public:
         std::vector<std::shared_ptr<ASTNode>> children; // Unterknoten
         std::shared_ptr<ASTNode>              parent;
 
-        ASTNode(ASTNodeType type, const std::string& value = "")
-            : type(type), value(value) {}
-        ASTNode(ASTNodeType type, std::shared_ptr<ASTNode> p, const std::string& value = "")
-            : type(type), value(value), parent(p){}
-        ASTNode(ASTNodeType type, const std::string& value, std::shared_ptr<ASTNode> p)
-            : type(type), value(value), parent(p) {}
+        int                                   line;
+        int                                   column;
+
+        ASTNode(ASTNodeType type, int l, int c, const std::string& value = "")
+            : type(type), value(value), line(l), column(c) {}
+
 
         std::string serialize(int depth = 0) const;
         static void addChild(std::shared_ptr<ASTNode> parent, std::shared_ptr<ASTNode> child);

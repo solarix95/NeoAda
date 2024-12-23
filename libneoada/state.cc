@@ -129,6 +129,14 @@ void NadaState::popStack()
 //                            leave Function/Procedure/Method
 {
     assert(mCallStack.size() > 0);
+    assert(mCallStack.back()->size() == 1);
+
+    auto *topTable = mCallStack.back()->back();
+    delete topTable;
+    mCallStack.back()->pop_back();
+
+    auto *topFrame = mCallStack.back();
+    delete topFrame;
     mCallStack.pop_back();
 }
 
@@ -171,10 +179,8 @@ void NadaState::popScope()
     } else {
         assert(mCallStack.back()->size() > 0);
         auto *frame = mCallStack.back();
-        for (auto *table : (*frame)) {
-            delete table;
-        }
-        delete frame;
-        mCallStack.back()->pop_back();
+        auto *scope = frame->back();
+        delete scope;
+        frame->pop_back();
     }
 }

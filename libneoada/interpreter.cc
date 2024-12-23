@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <iostream>
 #include "interpreter.h"
+#include "exception.h"
 
 //-------------------------------------------------------------------------------------------------
 NadaInterpreter::NadaInterpreter(NadaState *state)
@@ -68,14 +69,22 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
             auto &value = state->valueRef(node->value.lowerValue);
             NadaValue initialValue;
 
+            state->ret().reset();
+            executeState(node->children[1],state);
+            if (!value.assign(state->ret()))
+                throw NadaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
+
+            /*
             if (node->children[1]->type == NadaParser::ASTNodeType::Number)
                 initialValue.fromNumber(node->children[1]->value.lowerValue);
             else if (node->children[1]->type == NadaParser::ASTNodeType::Literal)
                 initialValue.fromString(node->children[1]->value.displayValue);
+
             else assert(0 && "unsupported type");
 
             if (initialValue.type() != Nada::Undefined)
                 value.assign(initialValue);
+            */
         }
         break;
     case NadaParser::ASTNodeType::IfStatement: {
@@ -118,8 +127,8 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
         return state->ret();
     } break;
     case NadaParser::ASTNodeType::Return: {
-        assert(node->children.size() == 1);
-        executeState(node->children[0], state);
+        if (node->children.size() == 1)
+            executeState(node->children[0], state);
         mExecState = ReturnState;
         return state->ret();
     } break;
@@ -184,6 +193,9 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
             }
 
             executeState(fnc.block, state);
+
+            if (mExecState == ReturnState)
+                mExecState = RunState;
             state->popStack();
         } else
             fnc.nativeCallback(fnc.fncValues(values));
@@ -196,11 +208,11 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
             assert(0 && "runtime error");
         }
 
-
         auto &value = state->valueRef(node->value.lowerValue);
 
         executeState(node->children[0], state);
-        value.assign(state->ret());
+        if (!value.assign(state->ret()))
+            throw NadaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
 
         // FIXME: runtime error.. if (!value.assign(newValue))
     }   break;
@@ -299,16 +311,16 @@ NadaValue &NadaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
 
     if (node->value.lowerValue == ">") {
         bool result = left.greaterThen(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
         state->ret().fromBool(result);
         return state->ret();
     }
 
     if (node->value.lowerValue == "<") {
         bool result = left.lessThen(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
         state->ret().fromBool(result);
         return state->ret();
     }
@@ -321,8 +333,8 @@ NadaValue &NadaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
             state->ret().fromBool(result1);
             return state->ret();
         }
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
 
         state->ret().fromBool(false);
         return state->ret();
@@ -330,14 +342,18 @@ NadaValue &NadaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
 
     if (node->value.lowerValue == "<=") {
         bool result1 = left.lessThen(right, &done);
-        bool result2 = result1 || left.equal(right);
+        if (!done)
+            throw NadaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
+
+        bool result2 = result1 || left.equal(right, &done);
+        if (!done)
+            throw NadaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
 
         if (result1 || result2) {
             state->ret().fromBool(result1 || result2);
             return state->ret();
         }
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+
 
         state->ret().fromBool(false);
         return state->ret();
@@ -345,81 +361,81 @@ NadaValue &NadaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
 
     if (node->value.lowerValue == "=") {
         bool result = left.equal(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
         state->ret().fromBool(result);
         return state->ret();
     }
 
     if (node->value.lowerValue == "/=") {
         bool result = !left.equal(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         state->ret().fromBool(result);
         return state->ret();
     }
 
     if (node->value.lowerValue == "&") {
         state->ret() = left.concat(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         return state->ret();
     }
 
     if (node->value.lowerValue == "-") {
         state->ret() = left.subtract(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         return state->ret();
     }
 
     if (node->value.lowerValue == "+") {
         state->ret() = left.add(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         return state->ret();
     }
 
     if (node->value.lowerValue == "*") {
         state->ret() = left.multiply(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         return state->ret();
     }
     if (node->value.lowerValue == "/") {
         state->ret() = left.division(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         return state->ret();
     }
 
     if (node->value.lowerValue == "mod") {
         state->ret() = left.modulo(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         return state->ret();
     }
 
     if (node->value.lowerValue == "and") {
         bool result = left.logicalAnd(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         state->ret().fromBool(result);
         return state->ret();
     }
 
     if (node->value.lowerValue == "or") {
         bool result = left.logicalOr(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         state->ret().fromBool(result);
         return state->ret();
     }
 
     if (node->value.lowerValue == "xor") {
         bool result = left.logicalXor(right, &done);
-        if (!done) // FIXME: runtime error!
-            return state->ret();
+        if (!done)
+            throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
         state->ret().fromBool(result);
         return state->ret();
     }

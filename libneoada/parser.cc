@@ -14,7 +14,7 @@ NadaParser::ASTNodePtr NadaParser::parse(const std::string &script) {
 
     mLexer.setScript(script);
 
-    auto programNode = std::make_shared<ASTNode>(ASTNodeType::Program);
+    auto programNode = std::make_shared<ASTNode>(ASTNodeType::Program, mLexer.line(), mLexer.column());
     while (mLexer.nextToken()) {
         auto declarationNode = parseStatement();
         if (declarationNode)
@@ -58,7 +58,7 @@ NadaParser::ASTNodePtr NadaParser::parseStatement()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseDeclaration()
 {
-    auto declarationNode = std::make_shared<ASTNode>(ASTNodeType::Declaration);
+    auto declarationNode = std::make_shared<ASTNode>(ASTNodeType::Declaration, mLexer.line(), mLexer.column());
 
     mLexer.nextToken(); // skip "declare"
 
@@ -77,7 +77,7 @@ NadaParser::ASTNodePtr NadaParser::parseDeclaration()
     if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
         throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
-    auto typeNode = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.token());
+    auto typeNode = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), mLexer.token());
     ASTNode::addChild(declarationNode,typeNode);
 
     // Erwarte ";" oder ":="
@@ -98,7 +98,7 @@ NadaParser::ASTNodePtr NadaParser::parseDeclaration()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseIdentifier()
 {
-    auto identifierNode = std::make_shared<ASTNode>(ASTNodeType::Identifier,mLexer.token());
+    auto identifierNode = std::make_shared<ASTNode>(ASTNodeType::Identifier,mLexer.line(), mLexer.column(), mLexer.token());
 
     mLexer.nextToken();
 
@@ -132,6 +132,7 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
 
     auto procedureNode = std::make_shared<ASTNode>(isFunction ? ASTNodeType::Function :
                                                                 ASTNodeType::Procedure,
+                                                    mLexer.line(), mLexer.column(),
                                                     mLexer.token());
 
     if (!mLexer.nextToken())
@@ -158,7 +159,7 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
         if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
             throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
-        auto returnNode = std::make_shared<ASTNode>(ASTNodeType::ReturnType, mLexer.token());
+        auto returnNode = std::make_shared<ASTNode>(ASTNodeType::ReturnType, mLexer.line(), mLexer.column(), mLexer.token());
         ASTNode::addChild(procedureNode,returnNode);
 
         mLexer.nextToken();
@@ -175,7 +176,7 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
         throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     mLexer.nextToken();
 
-    auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block);
+    auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block, mLexer.line(), mLexer.column());
     while (mLexer.token() != "end") {
         auto nextStatement = parseStatement();
         if (nextStatement)
@@ -191,7 +192,7 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseWhileLoop()
 {
-    auto whileNode = std::make_shared<ASTNode>(ASTNodeType::WhileLoop);
+    auto whileNode = std::make_shared<ASTNode>(ASTNodeType::WhileLoop, mLexer.line(), mLexer.column());
     if (!mLexer.nextToken())
         throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
@@ -208,7 +209,7 @@ NadaParser::ASTNodePtr NadaParser::parseWhileLoop()
     mLexer.nextToken();
 
     // 3. Parse den Block (Statements zwischen 'loop' und 'end loop')
-    auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block);
+    auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block, mLexer.line(), mLexer.column());
     ASTNode::addChild(whileNode,blockNode);
 
     while (mLexer.token() != "end") {
@@ -225,7 +226,7 @@ NadaParser::ASTNodePtr NadaParser::parseWhileLoop()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseForLoop()
 {
-    auto forNode = std::make_shared<ASTNode>(ASTNodeType::ForLoop);
+    auto forNode = std::make_shared<ASTNode>(ASTNodeType::ForLoop, mLexer.line(), mLexer.column());
 
     // consume "for"
     if (!mLexer.nextToken())
@@ -298,7 +299,7 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
     mLexer.nextToken(); // Consume "then"
 
     // Erstelle den IfStatement-Knoten
-    auto ifNode = std::make_shared<ASTNode>(ASTNodeType::IfStatement);
+    auto ifNode = std::make_shared<ASTNode>(ASTNodeType::IfStatement, mLexer.line(), mLexer.column());
     ASTNode::addChild(ifNode,conditionNode);
 
     // 2. Parse den "then"-Block
@@ -325,7 +326,7 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
         if (!elsifBlock)
             throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
-        auto elsifNode = std::make_shared<ASTNode>(ASTNodeType::Elsif);
+        auto elsifNode = std::make_shared<ASTNode>(ASTNodeType::Elsif, mLexer.line(), mLexer.column());
         ASTNode::addChild(elsifNode,elsifCondition);
         ASTNode::addChild(elsifNode,elsifBlock);
         ASTNode::addChild(ifNode,elsifNode);
@@ -339,7 +340,7 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
         if (!elseBlock)
             throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
-        auto elseNode = std::make_shared<ASTNode>(ASTNodeType::Else);
+        auto elseNode = std::make_shared<ASTNode>(ASTNodeType::Else, mLexer.line(), mLexer.column());
         ASTNode::addChild(elseNode,elseBlock);
         ASTNode::addChild(ifNode,elseNode);
     }
@@ -359,16 +360,21 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseReturn()
 {
-    auto returnNode = std::make_shared<ASTNode>(ASTNodeType::Return);
-    if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+    auto returnNode = std::make_shared<ASTNode>(ASTNodeType::Return, mLexer.line(), mLexer.column());
 
-    auto expression = parseExpression();
+    if (mLexer.token(1) != ";") { // optional expression present?
 
-    if (!expression) // assert?
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+        if (!mLexer.nextToken())
+                throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
-    ASTNode::addChild(returnNode,expression);
+        auto expression = parseExpression();
+
+        if (!expression) // assert?
+            throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+
+        ASTNode::addChild(returnNode,expression);
+    }
+
     return returnNode;
 }
 
@@ -376,7 +382,7 @@ NadaParser::ASTNodePtr NadaParser::parseReturn()
 NadaParser::ASTNodePtr NadaParser::parseBreak()
 //             break [when expression]
 {
-    auto breakNode = std::make_shared<ASTNode>(ASTNodeType::Break);
+    auto breakNode = std::make_shared<ASTNode>(ASTNodeType::Break, mLexer.line(), mLexer.column());
     if (mLexer.token(1) != "when")
         return breakNode;
 
@@ -396,7 +402,7 @@ NadaParser::ASTNodePtr NadaParser::parseBreak()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseContinue()
 {
-    auto contNode = std::make_shared<ASTNode>(ASTNodeType::Continue);
+    auto contNode = std::make_shared<ASTNode>(ASTNodeType::Continue, mLexer.line(), mLexer.column());
 
     if (mLexer.token(1) != "when")
         return contNode;
@@ -418,7 +424,7 @@ NadaParser::ASTNodePtr NadaParser::parseContinue()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseBlockEnd(const std::string &endToken1, const std::string &endToken2)
 {
-    auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block);
+    auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block, mLexer.line(), mLexer.column());
 
     while (mLexer.token() != "end" && mLexer.token() != endToken1 && (endToken2.empty() || mLexer.token() != endToken2)) {
         auto statementNode = parseStatement();
@@ -453,7 +459,7 @@ NadaParser::ASTNodePtr NadaParser::parseSeparator(const std::shared_ptr<ASTNode>
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
 {
-    auto parametersNode = std::make_shared<ASTNode>(ASTNodeType::FormalParameters);
+    auto parametersNode = std::make_shared<ASTNode>(ASTNodeType::FormalParameters, mLexer.line(), mLexer.column());
 
     if (mLexer.token() != "(")
         return parametersNode;
@@ -486,12 +492,12 @@ NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
 
         std::string paramType = mLexer.token();
 
-        auto parameterNode = std::make_shared<ASTNode>(ASTNodeType::FormalParameter, paramName);
-        auto parameterType = std::make_shared<ASTNode>(ASTNodeType::Identifier,      paramType);
+        auto parameterNode = std::make_shared<ASTNode>(ASTNodeType::FormalParameter, mLexer.line(), mLexer.column(), paramName);
+        auto parameterType = std::make_shared<ASTNode>(ASTNodeType::Identifier,      mLexer.line(), mLexer.column(), paramType);
         ASTNode::addChild(parameterNode,parameterType);
 
         if (!paramMode.empty()) {
-            auto parameterMode = std::make_shared<ASTNode>(ASTNodeType::FormalParameterMode, paramMode);
+            auto parameterMode = std::make_shared<ASTNode>(ASTNodeType::FormalParameterMode, mLexer.line(), mLexer.column(), paramMode);
             ASTNode::addChild(parameterNode,parameterMode);
         }
 
@@ -572,7 +578,7 @@ NadaParser::ASTNodePtr NadaParser::parseExpression()
 
     while (mLexer.token(1) == "and" || mLexer.token(1) == "or" || mLexer.token(1) == "xor") {
         mLexer.nextToken();
-        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
+        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.line(), mLexer.column(), mLexer.token());
         ASTNode::addChild(operatorNode,left);
         mLexer.nextToken(); // Hole den Operator
         auto right = parseSimpleExpression();
@@ -602,7 +608,7 @@ NadaParser::ASTNodePtr NadaParser::parseSimpleExpression()
 
     if (hasUnaryOperator) {
         auto term = left;
-        left = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator,unaryOperator);
+        left = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator, mLexer.line(), mLexer.column(),unaryOperator);
         ASTNode::addChild(left,term);
     }
 
@@ -612,7 +618,7 @@ NadaParser::ASTNodePtr NadaParser::parseSimpleExpression()
            mLexer.token(1) == "<=" || mLexer.token(1) == ">=")
     {
         mLexer.nextToken();
-        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
+        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.line(), mLexer.column(), mLexer.token());
         ASTNode::addChild(operatorNode,left);
         mLexer.nextToken(); // Hole den Operator
         auto right = parseTerm();
@@ -630,7 +636,7 @@ NadaParser::ASTNodePtr NadaParser::parseTerm()
 
     while (mLexer.token(1) == "*" || mLexer.token(1) == "/" || mLexer.token(1) == "mod" || mLexer.token(1) == "rem") {
         mLexer.nextToken();
-        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
+        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.line(), mLexer.column(), mLexer.token());
         ASTNode::addChild(operatorNode,left);
         mLexer.nextToken(); // Hole den Operator
         auto right = parseFactor();
@@ -647,7 +653,7 @@ NadaParser::ASTNodePtr NadaParser::parseFactor()
     auto left = parsePrimary();
     if (mLexer.token(1) == "**") {
         mLexer.nextToken();
-        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.token());
+        auto operatorNode = std::make_shared<ASTNode>(ASTNodeType::BinaryOperator, mLexer.line(), mLexer.column(), mLexer.token());
         ASTNode::addChild(operatorNode,left);
         mLexer.nextToken(); // Hole den Potenzierungsoperator
         auto right = parsePrimary();
@@ -679,13 +685,13 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
     auto node = NadaParser::ASTNodePtr();
 
     if (tokenType == NadaLexer::TokenType::Number) {
-        node = std::make_shared<ASTNode>(ASTNodeType::Number, token);
+        node = std::make_shared<ASTNode>(ASTNodeType::Number, mLexer.line(), mLexer.column(), token);
     } else if (tokenType == NadaLexer::TokenType::BooleanLiteral) {
-        node = std::make_shared<ASTNode>(ASTNodeType::BooleanLiteral, token);
+        node = std::make_shared<ASTNode>(ASTNodeType::BooleanLiteral, mLexer.line(), mLexer.column(), token);
     }else if (tokenType == NadaLexer::TokenType::String) {
-        node = std::make_shared<ASTNode>(ASTNodeType::Literal, token);
+        node = std::make_shared<ASTNode>(ASTNodeType::Literal, mLexer.line(), mLexer.column(), token);
     } else if (tokenType == NadaLexer::TokenType::Identifier) {
-        node = std::make_shared<ASTNode>(ASTNodeType::Identifier, token);
+        node = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), token);
 
         if (mLexer.token(1) == "(") {
             mLexer.nextToken();
@@ -696,7 +702,7 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
         if (!mLexer.nextToken()) // Überspringe '('
             throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
-        node = std::make_shared<ASTNode>(ASTNodeType::Expression);
+        node = std::make_shared<ASTNode>(ASTNodeType::Expression, mLexer.line(), mLexer.column());
         auto expression = parseExpression();
         ASTNode::addChild(node,expression);
 
@@ -712,7 +718,7 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
     if (hasUnaryOperator) {
         // hmm: runtime error? Bool or Strings can't have unary operators!
         auto term = node;
-        node = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator,unaryOperator);
+        node = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator, mLexer.line(), mLexer.column(),unaryOperator);
         ASTNode::addChild(node,term);
     }
 
@@ -757,7 +763,7 @@ NadaParser::ASTNodePtr NadaParser::parseIterableOrRange()
             mLexer.nextToken(); // step to   ".."
             mLexer.nextToken(); // step over ".."
             auto end = parseExpression();
-            auto rangeNode = std::make_shared<ASTNode>(ASTNodeType::Range);
+            auto rangeNode = std::make_shared<ASTNode>(ASTNodeType::Range, mLexer.line(), mLexer.column());
             rangeNode->children.push_back(start);
             rangeNode->children.push_back(end);
             return rangeNode;

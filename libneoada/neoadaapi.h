@@ -3,9 +3,12 @@
 
 #include "value.h"
 
+class NadaException;
 namespace NeoAda
 {
-    NadaValue evaluate(const std::string &shortScript);
+using Exception = NadaException;
+
+NadaValue evaluate(const std::string &shortScript, Exception *exception = nullptr);
 }
 
 

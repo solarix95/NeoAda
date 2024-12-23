@@ -160,7 +160,10 @@ private slots:
 
     void test_api_evaluate_Procedure1();
     void test_api_evaluate_Procedure2();
+    void test_api_evaluate_Procedure3_Return();
     void test_api_evaluate_Function1();
+    void test_api_evaluate_Function2();
+    void test_api_evaluate_Function2_Uppercase();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -176,6 +179,8 @@ private slots:
     void test_error_parser_ifElse1();
 
     // runtime ERROR HANDLING
+    void test_error_interpreter_stringAssignment();
+    void test_error_interpreter_boolAssignment();
 
 
 };
@@ -1978,6 +1983,13 @@ void TstParser::test_api_evaluate_Literals()
     QVERIFY(NeoAda::evaluate("return false;").toBool() == false);
     QVERIFY(NeoAda::evaluate("return 42;").toInt64() == 42);
     QVERIFY(NeoAda::evaluate("return -1;").toInt64() == -1);
+
+    QVERIFY(NeoAda::evaluate("return  10_000;").toInt64() == +10000);
+    QVERIFY(NeoAda::evaluate("return -10_000;").toInt64() == -10000);
+    QVERIFY(NeoAda::evaluate("return +10_000;").toInt64() == +10000);
+
+    QVERIFY(NeoAda::evaluate("return  2#1001_1000#;").toInt64() ==  152);
+
     QVERIFY(NeoAda::evaluate("return \"NeoAda\";").toString() == "NeoAda");
 }
 
@@ -2276,6 +2288,30 @@ void TstParser::test_api_evaluate_Procedure2()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Procedure3_Return()
+{
+    std::string script = R"(
+
+    declare x : Natural := 1;
+
+    procedure multiply(factor : any) is
+    begin
+        if factor > 50 then
+            return;
+        end if;
+        x := x * factor;
+    end;
+
+    multiply(42);
+    multiply(52);
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Function1()
 {
     std::string script = R"(
@@ -2295,6 +2331,41 @@ void TstParser::test_api_evaluate_Function1()
     QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Function2()
+{
+    std::string script = R"(
+
+    function CreateHelloWorld() return any is
+    begin
+        return "Hello, World";
+    end;
+
+    declare x : any := CreateHelloWorld();
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Function2_Uppercase()
+{
+    std::string script = R"(
+
+    FUNCTION CreateHelloWorld() RETURN Any IS
+    BEGIN
+        RETURN "Hello, World";
+    END;
+
+    DECLARE x : Any := CreateHelloWorld();
+
+    RETURN x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+}
 
 //-------------------------------------------------------------------------------------------------
 //                                       ERROR HANDLING
@@ -2602,6 +2673,87 @@ void TstParser::test_error_parser_ifElse1()
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::NoError);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_interpreter_stringAssignment()
+{
+    {
+        std::string script = R"(
+
+    declare x : string := 42;
+
+    )";
+
+        NeoAda::Exception ex;
+        NeoAda::evaluate(script, &ex);
+        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    }
+
+    {
+        std::string script = R"(
+
+    declare x : string;
+    x := 42;
+
+    )";
+
+        NeoAda::Exception ex;
+        NeoAda::evaluate(script, &ex);
+        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    }
+
+    {
+        std::string script = R"(
+
+    declare x : string := true;
+
+    )";
+
+        NeoAda::Exception ex;
+        NeoAda::evaluate(script, &ex);
+        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    }
+
+    {
+        std::string script = R"(
+
+    declare x : string := 1.23;
+
+    )";
+
+        NeoAda::Exception ex;
+        NeoAda::evaluate(script, &ex);
+        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    }
+}
+
+void TstParser::test_error_interpreter_boolAssignment()
+{
+    {
+        std::string script = R"(
+
+    declare x : boolean := 42;
+
+    )";
+
+        NeoAda::Exception ex;
+        NeoAda::evaluate(script, &ex);
+        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    }
+
+    {
+        std::string script = R"(
+
+    declare x : boolean := "true";
+
+    )";
+
+        NeoAda::Exception ex;
+        NeoAda::evaluate(script, &ex);
+        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    }
+
 }
 
 

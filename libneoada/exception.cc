@@ -45,6 +45,10 @@ std::string NadaException::messageByCode() const
     case Nada::Error::InvalidToken:           return "Invalid token";
     case Nada::Error::InvalidRangeOrIterable: return "Invalid Range or Iterable";
     case Nada::Error::UnexpectedClosure:      return "Unexpected closure";
+    case Nada::Error::AssignmentError:        return "Incompatible datatype";
+    case Nada::Error::IllegalComparison:      return "Illegal comparison";
+    case Nada::Error::OperatorTypeError:      return "Unsupported operand type(s)";
+
     }
     return "";
 }

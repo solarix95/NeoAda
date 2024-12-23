@@ -29,7 +29,9 @@ enum Error {
 
     // Runtime Exceptions
     // ----------------------------------------------
-
+    AssignmentError,
+    IllegalComparison,
+    OperatorTypeError,
 };
 }
 
