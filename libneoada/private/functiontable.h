@@ -12,6 +12,14 @@
 using NadaFncParameters = std::vector<std::pair<std::string, std::string>>;
 using NadaFncValues     = std::unordered_map<std::string, NadaValue>;
 using NadaFncCallback   = std::function<NadaValue(const NadaFncValues&)>;
+using NadaPrcCallback   = std::function<void     (const NadaFncValues&)>;
+
+// Volatile Callbacks
+using NadaCtorCallback  = std::function<void     (const std::string &symbolName, NadaValue &value)>;
+using NadaDtorCallback  = std::function<void     (const std::string &symbolName, NadaValue &value)>;
+using NadaReadCallback  = std::function<void     (const std::string &symbolName, NadaValue &value)>;
+
+
 
 struct NadaFunctionEntry {
     std::string       returnType;

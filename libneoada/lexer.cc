@@ -4,7 +4,7 @@
 #include <unordered_set>
 
 #include "exception.h"
-#include "utils.h"
+#include "private/utils.h"
 
 //-------------------------------------------------------------------------------------------------
 NadaLexer::NadaLexer(int lookAhead)
@@ -152,7 +152,7 @@ bool NadaLexer::parseNext()
             shiftToNext(-1); // 1 Character zuviel eingelesen..
 
             static const std::unordered_set<std::string> reservedWords = {
-                "declare",
+                "declare", "volatile",
                 "if", "then", "else", "elsif", "end",
                 "while", "loop", "break", "continue", "when",
                 "for", "in", "reverse",

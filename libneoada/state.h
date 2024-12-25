@@ -2,8 +2,8 @@
 #define STATE_H
 
 #include <string>
-#include "symboltable.h"
-#include "functiontable.h"
+#include "private/symboltable.h"
+#include "private/functiontable.h"
 #include "parser.h"
 
 class NadaState

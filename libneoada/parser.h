@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 #include "lexer.h"
-#include "utils.h"
+#include "private/utils.h"
 
 class NadaParser
 {
@@ -17,6 +17,7 @@ public:
         FormalParameterMode, // procedure/function declaration: call(x : [in/out] Natural)
         Function,
         Declaration,
+        VolatileDeclaration,
         Assignment,
         Expression,
         ExpressionList,

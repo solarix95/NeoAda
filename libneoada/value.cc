@@ -1,6 +1,6 @@
 #include "value.h"
-#include "sharedstring.h"
-#include "numericparser.h"
+#include "private/sharedstring.h"
+#include "private/numericparser.h"
 
 #include <cassert>
 #include <cmath>

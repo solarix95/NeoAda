@@ -29,7 +29,9 @@ NadaParser::ASTNodePtr NadaParser::parseStatement()
 {
     if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "declare") {
         return parseSeparator(parseDeclaration());
-    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "while") {
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "volatile") {
+        return parseSeparator(parseDeclaration());
+    }else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "while") {
         return parseSeparator(parseWhileLoop());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "for") {
         return parseSeparator(parseForLoop());
@@ -58,7 +60,10 @@ NadaParser::ASTNodePtr NadaParser::parseStatement()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseDeclaration()
 {
-    auto declarationNode = std::make_shared<ASTNode>(ASTNodeType::Declaration, mLexer.line(), mLexer.column());
+    bool isVolatile = mLexer.token() == "volatile";
+    auto declarationNode = std::make_shared<ASTNode>(isVolatile ?
+                                                        ASTNodeType::VolatileDeclaration : ASTNodeType::Declaration,
+                                                    mLexer.line(), mLexer.column());
 
     mLexer.nextToken(); // skip "declare"
 
@@ -523,6 +528,7 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::FormalParameters:  return "Parameters";
     case ASTNodeType::FormalParameter :  return "Parameter";
     case ASTNodeType::Declaration:  return "Declaration";
+    case ASTNodeType::VolatileDeclaration:  return "Volatile";
     case ASTNodeType::Assignment:   return "Assignment";
     case ASTNodeType::Expression:   return "Expression";
     case ASTNodeType::ExpressionList: return "ExpressionList";

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
-#include "type.h"
+#include "private/type.h"
 
 class NadaSharedString;
 class NadaValue

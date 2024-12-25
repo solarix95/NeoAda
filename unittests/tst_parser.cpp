@@ -9,7 +9,7 @@
 #include <libneoada/state.h>
 #include <libneoada/interpreter.h>
 
-#include <libneoada/sharedstring.h>
+#include <libneoada/private/sharedstring.h>
 
 
 // add necessary includes here
@@ -71,6 +71,7 @@ private slots:
 
     void test_parser_Declaration1();
     void test_parser_Declaration2();
+    void test_parser_Declaration3();
 
     void test_parser_Factor();
     void test_parser_Primary1();
@@ -565,6 +566,27 @@ void TstParser::test_parser_Declaration2()
     std::string expectedAST = R"(
 Node(Program, "")
   Node(Declaration, "x")
+    Node(Identifier, "Number")
+    Node(Number, "42")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration3()
+{
+    std::string script = R"(
+        volatile x : Number := 42;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Volatile, "x")
     Node(Identifier, "Number")
     Node(Number, "42")
 )";

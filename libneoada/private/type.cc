@@ -1,5 +1,5 @@
 #include "type.h"
-#include "utils.h"
+#include "private/utils.h"
 
 //-------------------------------------------------------------------------------------------------
 Nada::Type Nada::typeByString(const std::string &name)
