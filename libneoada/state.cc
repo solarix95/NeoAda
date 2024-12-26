@@ -22,15 +22,25 @@ void NadaState::reset()
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaState::define(const std::string &name, const std::string &typeName)
+bool NadaState::define(const std::string &name, const std::string &typeName, bool isVolatile)
 {
     Nada::Type t = Nada::typeByString(typeName);
     if (t == Nada::Undefined)
         return false;
 
+    bool done;
     if (mCallStack.empty())
-        return mGlobals.back()->add(NadaSymbol(t,Nada::toLower(name)));
-    return mCallStack.back()->back()->add(NadaSymbol(t,Nada::toLower(name)));
+        done = mGlobals.back()->add(NadaSymbol(t,Nada::toLower(name)));
+    else
+        done = mCallStack.back()->back()->add(NadaSymbol(t,Nada::toLower(name)));
+
+    if (done && isVolatile) {
+        NadaValue &value = valueRef(name);
+        if (mVolatileCtor)
+            mVolatileCtor(name,value);
+    }
+
+    return done;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -156,6 +166,12 @@ bool NadaState::inLoopScope(const NadaSymbolTables &tables) const
             return true;
     }
     return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaState::onVolatileCtor(NadaState::CtorCallback cb)
+{
+    mVolatileCtor = std::move(cb);
 }
 
 //-------------------------------------------------------------------------------------------------

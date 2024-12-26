@@ -140,6 +140,8 @@ private slots:
     void test_interpreter_Return2();
     void test_interpreter_Return3();
 
+    void test_interpreter_Volatile_CTor();
+
     void test_api_evaluate_Literals();
     void test_api_evaluate_Equal();
     void test_api_evaluate_NotEqual();
@@ -1996,6 +1998,33 @@ void TstParser::test_interpreter_Return3()
     auto ret = interpreter.execute(ast);
 
     QVERIFY(ret.toBool(nullptr) == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_CTor()
+{
+    std::string script = R"(
+        volatile x : Natural;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.onVolatileCtor([&](const std::string &name,  NadaValue& val) -> void {
+        results.push_back(name);
+        results.push_back(val.type() == Nada::Natural ? "Natural" : "?");
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 2);
+    QVERIFY(results[0] == "x");
+    QVERIFY(results[1] == "Natural");
 }
 
 //-------------------------------------------------------------------------------------------------

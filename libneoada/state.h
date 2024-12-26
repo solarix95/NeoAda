@@ -6,6 +6,7 @@
 #include "private/functiontable.h"
 #include "parser.h"
 
+
 class NadaState
 {
 public:
@@ -14,7 +15,7 @@ public:
 
     void       reset();
 
-    bool       define(const std::string &name, const std::string &typeName);
+    bool       define(const std::string &name, const std::string &typeName, bool isVolatile = false);
     Nada::Type typeOf(const std::string &name) const;
 
     bool               bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
@@ -28,6 +29,14 @@ public:
     NadaValue         &valueRef(const std::string &symbolName);
     NadaValue         *valuePtr(const std::string &symbolName);
 
+    // Volatile interface
+    // Volatile Callbacks
+    using CtorCallback   = std::function<void     (const std::string &symbolName, NadaValue &value)>;
+    using DtorCallback   = std::function<void     (NadaValue &value)>;
+    using ReadCallback   = std::function<bool     (NadaValue &value)>;
+    using WriteCallback  = std::function<bool     (NadaValue &value)>;
+
+    void  onVolatileCtor (CtorCallback  cb);
 
     // local scope.. as if/while/for/..
     void               pushScope(NadaSymbolTable::Scope s);
@@ -50,6 +59,8 @@ private:
 
 
     NadaStackFrames    mCallStack;
+
+    CtorCallback       mVolatileCtor;
 };
 
 #endif // STATE_H

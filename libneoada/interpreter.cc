@@ -59,9 +59,10 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
         assert(node->children.size() == 1);
         return executeState(node->children[0],state);
         break;
+    case NadaParser::ASTNodeType::VolatileDeclaration:
     case NadaParser::ASTNodeType::Declaration:
         assert(node->children.size() >= 1);
-        if (!state->define(node->value.lowerValue, node->children[0]->value.lowerValue)) {
+        if (!state->define(node->value.lowerValue, node->children[0]->value.lowerValue, node->type == NadaParser::ASTNodeType::VolatileDeclaration)) {
             state->ret().reset();
             return state->ret(); // FIXME: Runtime-Error
         }
@@ -73,18 +74,6 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
             executeState(node->children[1],state);
             if (!value.assign(state->ret()))
                 throw NadaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
-
-            /*
-            if (node->children[1]->type == NadaParser::ASTNodeType::Number)
-                initialValue.fromNumber(node->children[1]->value.lowerValue);
-            else if (node->children[1]->type == NadaParser::ASTNodeType::Literal)
-                initialValue.fromString(node->children[1]->value.displayValue);
-
-            else assert(0 && "unsupported type");
-
-            if (initialValue.type() != Nada::Undefined)
-                value.assign(initialValue);
-            */
         }
         break;
     case NadaParser::ASTNodeType::IfStatement: {
