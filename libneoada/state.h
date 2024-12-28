@@ -20,7 +20,7 @@ public:
 
     // procedure/function
     bool               bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
-    bool               bind(const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
+    bool               bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
     bool               hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters);
     NadaFunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
 

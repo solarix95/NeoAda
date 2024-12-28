@@ -472,10 +472,18 @@ NadaValue &NadaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
 void NadaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NadaState *state)
 {
     assert(node->type == NadaParser::ASTNodeType::Procedure);
-    assert(node->children.size() == 2);
+    assert(node->children.size() >= 2);
 
-    auto parameters = node->children[0];
-    auto block      = node->children[1];
+    std::string name = node->value.lowerValue;
+    std::string typeName;
+    int parameterIndex = 0;
+    if (node->children[0]->type == NadaParser::ASTNodeType::MethodContext) {
+        typeName = node->children[0]->value.lowerValue;
+        parameterIndex = 1;
+    }
+
+    auto parameters = node->children[parameterIndex+0];
+    auto block      = node->children[parameterIndex+1];
 
     assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
     assert(block->type      == NadaParser::ASTNodeType::Block);
@@ -486,18 +494,26 @@ void NadaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NadaSt
         fncParameters.push_back(std::make_pair(p->value.lowerValue,p->children[0]->value.lowerValue));
     }
 
-    state->bind(node->value.lowerValue,fncParameters,block);
+    state->bind(typeName,name,fncParameters,block);
 }
 
 //-------------------------------------------------------------------------------------------------
 void NadaInterpreter::defineFunction(const NadaParser::ASTNodePtr &node, NadaState *state)
 {
     assert(node->type == NadaParser::ASTNodeType::Function);
-    assert(node->children.size() == 3);
+    assert(node->children.size() >= 3);
 
-    auto parameters = node->children[0];
-    auto returntype = node->children[1];
-    auto block      = node->children[2];
+    std::string name = node->value.lowerValue;
+    std::string typeName;
+    int parameterIndex = 0;
+    if (node->children[0]->type == NadaParser::ASTNodeType::MethodContext) {
+        typeName = node->children[0]->value.lowerValue;
+        parameterIndex = 1;
+    }
+
+    auto parameters = node->children[parameterIndex+0];
+    auto returntype = node->children[parameterIndex+1];
+    auto block      = node->children[parameterIndex+2];
 
     assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
     assert(block->type      == NadaParser::ASTNodeType::Block);
@@ -508,5 +524,5 @@ void NadaInterpreter::defineFunction(const NadaParser::ASTNodePtr &node, NadaSta
         fncParameters.push_back(std::make_pair(p->value.lowerValue,p->children[0]->value.lowerValue));
     }
 
-    state->bind(node->value.lowerValue,fncParameters,block);
+    state->bind(typeName,node->value.lowerValue,fncParameters,block);
 }

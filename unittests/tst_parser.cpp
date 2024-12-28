@@ -176,6 +176,9 @@ private slots:
     void test_api_evaluate_Function2();
     void test_api_evaluate_Function2_Uppercase();
 
+    void test_api_evaluate_Static_Method1();
+    void test_api_evaluate_Static_Method2();
+
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -2553,6 +2556,44 @@ void TstParser::test_api_evaluate_Function2_Uppercase()
     DECLARE x : Any := CreateHelloWorld();
 
     RETURN x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Static_Method1()
+{
+    std::string script = R"(
+
+    declare x : string;
+
+    procedure string:sayHello() is
+    begin
+        x := "Hello, World";
+    end;
+
+    string:sayHello();
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Static_Method2()
+{
+    std::string script = R"(
+
+    function string:hello() return string is
+    begin
+        return "Hello, World";
+    end;
+
+    declare x : any := string:hello();
+
+    return x;
     )";
 
     QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");

@@ -62,10 +62,10 @@ bool NadaState::bind(const std::string &name, const NadaFncParameters &parameter
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaState::bind(const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block)
+bool NadaState::bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block)
 {
     assert(!name.empty());
-    return mFunctions.bind(name,parameters,block);
+    return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block);
 }
 
 //-------------------------------------------------------------------------------------------------
