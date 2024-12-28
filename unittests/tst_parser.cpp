@@ -55,6 +55,7 @@ private slots:
     void test_core_SharedString();
     void test_core_NumericValues();
     void test_core_Assignment();
+    void test_core_References();
 
 
     // Lexer Literals
@@ -320,6 +321,32 @@ void TstParser::test_core_Assignment()
     v2.fromString("neoAda");
     QCOMPARE(v1.assign(v2),true);
     QCOMPARE(v1.toString(), v2.toString());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_References()
+{
+    NadaValue v1;
+    NadaValue r1;
+    r1.fromReference(&v1);
+
+
+    v1.initAny();
+    QCOMPARE(r1.type(), Nada::Type::Any);
+
+    v1.fromString("hello");
+    QCOMPARE(r1.type(), Nada::Type::String);
+    QCOMPARE(r1.toString(), v1.toString());
+
+    NadaValue r2 = r1; // copy reference
+    NadaValue v2;
+    v2.fromString("world");
+
+    r2.assign(v2);
+
+    QCOMPARE(v1.toString(), v2.toString());
+    QCOMPARE(r1.toString(), v1.toString());
+    QCOMPARE(r2.toString(), v1.toString());
 }
 
 /*-----------------------------------------------------------------------------------------------*\

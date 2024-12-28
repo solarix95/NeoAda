@@ -4,7 +4,7 @@
 #include <string>
 
 namespace Nada {
-    enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
+    enum Type { Undefined, Reference, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
 
     Type typeByString(const std::string &name);
 }

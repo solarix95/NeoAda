@@ -158,11 +158,21 @@ bool NadaValue::fromBool(bool value)
 }
 
 //-------------------------------------------------------------------------------------------------
+void NadaValue::fromReference(NadaValue *other)
+{
+    assert(other);
+    reset();
+    mValue.uPtr = other;
+    mType = Nada::Reference;
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::toBool(bool *ok) const
 {
     if (ok) *ok = false;
     switch (mType) {
     case Nada::Undefined: return false; break;
+    case Nada::Reference: return cInternalReference()->toBool(ok);
     case Nada::Any:       return false; break;
     case Nada::Number:    return false; break;
     case Nada::Natural:
@@ -194,6 +204,7 @@ int64_t NadaValue::toInt64(bool *ok) const
     if (ok) *ok = false;
     switch (mType) {
     case Nada::Undefined: return 0; break;
+    case Nada::Reference: return cInternalReference()->toInt64(ok);
     case Nada::Any:       return 0; break;
     case Nada::Number: {
         int ret;
@@ -233,6 +244,8 @@ int64_t NadaValue::toInt64(bool *ok) const
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::isNan() const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->isNan();
     return (mType == Nada::Number) && std::isnan(mValue.uDouble);
 }
 
@@ -244,6 +257,8 @@ bool NadaValue::assign(const NadaValue &other)
 
     switch (mType) {
     case Nada::Undefined: return false; break;
+    case Nada::Reference: return internalReference()->assign(other);
+        break;
     case Nada::Any: {
         assignOther(other);
         return true;
@@ -302,6 +317,10 @@ bool NadaValue::assign(const NadaValue &other)
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::equal(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->equal(other, ok);
+
+
     bool done;
     if (ok) *ok = false;
 
@@ -322,6 +341,9 @@ bool NadaValue::equal(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::logicalAnd(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->logicalAnd(other, ok);
+
     if (ok) *ok = false;
 
     bool done;
@@ -340,6 +362,9 @@ bool NadaValue::logicalAnd(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::logicalOr(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->logicalOr(other, ok);
+
     if (ok) *ok = false;
 
     bool done;
@@ -358,6 +383,9 @@ bool NadaValue::logicalOr(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::logicalXor(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->logicalXor(other, ok);
+
     if (ok) *ok = false;
 
     bool done;
@@ -376,6 +404,9 @@ bool NadaValue::logicalXor(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->greaterThen(other, ok);
+
     bool done;
     if (ok) *ok = false;
 
@@ -396,6 +427,9 @@ bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::lessThen(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->lessThen(other, ok);
+
     bool done;
     if (ok) *ok = false;
 
@@ -416,12 +450,14 @@ bool NadaValue::lessThen(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::spaceship(const NadaValue &other, bool *ok) const
 {
+
     if (ok) *ok = false;
 
     NadaValue ret;
 
     switch (mType) {
     case Nada::Undefined: return NadaValue();
+    case Nada::Reference: return cInternalReference()->spaceship(other, ok);
     case Nada::Any:       return NadaValue();
     case Nada::Number:
         if (std::isnan(mValue.uDouble) || (other.type() == Nada::Number && std::isnan(other.mValue.uDouble))) {
@@ -498,6 +534,9 @@ NadaValue NadaValue::spaceship(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->concat(other, ok);
+
     if (ok) *ok = false;
 
     switch (mType) {
@@ -524,6 +563,9 @@ NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::subtract(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->subtract(other, ok);
+
     if (ok) *ok = false;
     if (mType != other.mType)
         return NadaValue();
@@ -557,6 +599,9 @@ NadaValue NadaValue::subtract(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::add(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->add(other, ok);
+
     if (ok) *ok = false;
     if (mType != other.mType)
         return NadaValue();
@@ -591,6 +636,10 @@ NadaValue NadaValue::add(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::modulo(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->modulo(other, ok);
+
+
     if (ok) *ok = false;
     if (mType != other.mType)
         return NadaValue();
@@ -618,6 +667,9 @@ NadaValue NadaValue::modulo(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::multiply(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->multiply(other, ok);
+
     if (ok) *ok = false;
     if (mType != other.mType)
         return NadaValue();
@@ -651,6 +703,10 @@ NadaValue NadaValue::multiply(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaValue::division(const NadaValue &other, bool *ok) const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->division(other, ok);
+
+
     if (ok) *ok = false;
     if (mType != other.mType)
         return NadaValue();
@@ -685,6 +741,11 @@ NadaValue NadaValue::division(const NadaValue &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 void NadaValue::unaryOperator(const std::string &op, bool *ok)
 {
+    if (mType == Nada::Reference) {
+         internalReference()->unaryOperator(op, ok);
+        return;
+    }
+
     if (ok) *ok = false;
     switch (mType) {
     case Nada::Undefined: return; break;
@@ -736,16 +797,22 @@ void NadaValue::assignOther(const NadaValue &other)
 {
     switch (other.mType) {
     case Nada::Undefined: return;
+    case Nada::Reference: {
+        mType       = other.mType;
+        mValue.uPtr = other.mValue.uPtr;
+        return;
+    } break;
     case Nada::Any:       return;
     case Nada::Number:
     case Nada::Natural:
     case Nada::Supernatural:
     case Nada::Boolean:
     case Nada::Byte:
-    case Nada::Character:
+    case Nada::Character: {
         mType = other.mType;
         mValue.uInt64 = other.mValue.uInt64;
         return;
+    } break;
     case Nada::String:
         assignOtherString(other);
         return;
@@ -758,6 +825,8 @@ void NadaValue::assignOther(const NadaValue &other)
 //-------------------------------------------------------------------------------------------------
 void NadaValue::assignOtherString(const NadaValue &other)
 {
+    assert(mType != Nada::Reference);
+
     if (mType == Nada::Undefined || mType == Nada::Any)
         mType = Nada::String;
 
@@ -779,6 +848,9 @@ void NadaValue::assignOtherString(const NadaValue &other)
 //-------------------------------------------------------------------------------------------------
 bool NadaValue::setString(const std::string &newValue)
 {
+    if (mType == Nada::Reference)
+        return internalReference()->setString(newValue);
+
     if (mType != Nada::String)
         return false;
     if (newValue.empty() && !mValue.uPtr)  // nothing to to
@@ -810,10 +882,14 @@ bool NadaValue::setString(const std::string &newValue)
 //-------------------------------------------------------------------------------------------------
 std::string NadaValue::toString() const
 {
-    std::ostringstream oss;
+    if (mType == Nada::Reference)
+        return cInternalReference()->toString();
 
+
+    std::ostringstream oss;
     switch (mType) {
     case Nada::Undefined: return "";
+    case Nada::Reference: return "";
     case Nada::Any:       return "";
     case Nada::Number:
         oss << std::setprecision(15) << std::fixed << mValue.uDouble;
@@ -842,6 +918,9 @@ std::string NadaValue::toString() const
 //-------------------------------------------------------------------------------------------------
 Nada::Type NadaValue::type() const
 {
+    if (mType == Nada::Reference)
+        return cInternalReference()->type();
+
     return mType;
 }
 
@@ -896,6 +975,10 @@ void NadaValue::reset()
         mType = Nada::Undefined;
         mValue.uInt64 = 0;
         return;
+    case Nada::Reference:
+        mType = Nada::Undefined;
+        mValue.uPtr = nullptr;
+        return;
     case Nada::Struct:
         assert(0 && "not implemented");
         return;
@@ -922,8 +1005,26 @@ const NadaSharedString *NadaValue::cInternalString() const
 }
 
 //-------------------------------------------------------------------------------------------------
+NadaValue *NadaValue::internalReference()
+{
+    assert(mType == Nada::Reference);
+    assert(mValue.uPtr);
+    return ((NadaValue*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
+const NadaValue *NadaValue::cInternalReference() const
+{
+    assert(mType == Nada::Reference);
+    assert(mValue.uPtr);
+    return ((NadaValue*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::exact32BitInt(int &value) const
 {
+    assert(mType != Nada::Reference);
+
     if ((mType == Nada::Natural) && (mValue.uInt64 <= INT32_MAX) && (mValue.uInt64 >= INT32_MIN))
     {
         value = (int)mValue.uInt64;
@@ -961,6 +1062,7 @@ bool NadaValue::exact64BitDbl(double &value) const
 {
     switch (mType) {
     case Nada::Undefined:
+    case Nada::Reference:
     case Nada::Any:
     case Nada::String:
     case Nada::Struct:

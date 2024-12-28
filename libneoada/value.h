@@ -24,6 +24,7 @@ public:
     bool fromNumber(double value);
     bool fromDoubleNan();
     bool fromBool(bool value);
+    void fromReference(NadaValue *other);
 
     bool    toBool(bool *ok = nullptr) const;
     int64_t toInt64(bool *ok = nullptr) const;
@@ -70,8 +71,11 @@ private:
     void assignOtherString(const NadaValue &other);
 
     // Helper unterschiedlicher Datentypen
-    NadaSharedString *internalString();
+    NadaSharedString       *internalString();
     const NadaSharedString *cInternalString() const;
+    NadaValue              *internalReference();
+    const NadaValue        *cInternalReference() const;
+
     bool exact32BitInt(int &value) const;
     bool exact64BitDbl(double &value) const;
 
