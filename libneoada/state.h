@@ -18,10 +18,14 @@ public:
     bool       define(const std::string &name, const std::string &typeName, bool isVolatile = false);
     Nada::Type typeOf(const std::string &name) const;
 
+    // procedure/function
     bool               bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
     bool               bind(const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
-    bool               hasFunction(const std::string &name, const NadaValues &parameters);
-    NadaFunctionEntry &function(const std::string &name, const NadaValues &parameters);
+    bool               hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters);
+    NadaFunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
+
+    // methods
+    bool               bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
 
     bool               find(const std::string &symbolName,NadaSymbol &symbol) const;
 

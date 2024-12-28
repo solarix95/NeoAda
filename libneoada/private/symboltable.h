@@ -22,9 +22,10 @@ struct NadaSymbol {
     Nada::Type        type;
     Nada::LowerString name;
     NadaValue        *value;
+    Nada::LowerString typeName;
 
     NadaSymbol() : type(Nada::Undefined),value(nullptr) {}
-    NadaSymbol(Nada::Type t, const std::string &n) : type(t), name(n), value(nullptr) {}
+    NadaSymbol(Nada::Type t, const std::string &n, const std::string &tn) : type(t), name(n), value(nullptr), typeName(tn) {}
 };
 
 class NadaSymbolTable

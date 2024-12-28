@@ -105,6 +105,9 @@ NadaParser::ASTNodePtr NadaParser::parseIdentifier()
 {
     auto identifierNode = std::make_shared<ASTNode>(ASTNodeType::Identifier,mLexer.line(), mLexer.column(), mLexer.token());
 
+    if (handleIdentifierCall(identifierNode))
+        return identifierNode;
+
     mLexer.nextToken();
 
     if (mLexer.token() == ":=") {
@@ -118,9 +121,6 @@ NadaParser::ASTNodePtr NadaParser::parseIdentifier()
             return NadaParser::ASTNodePtr();
         ASTNode::addChild(identifierNode,expressionNode);
 
-    } else if (mLexer.token() == "(") {
-        identifierNode->type = ASTNodeType::FunctionCall;
-        parseFunctionCall(identifierNode);
     } else {
         throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     }
@@ -146,6 +146,15 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
     if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
         throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
+    bool isMethod = mLexer.token(1) == ":";
+
+    if (isMethod) {
+        auto typeNode = std::make_shared<ASTNode>(ASTNodeType::MethodContext, mLexer.line(), mLexer.column(), mLexer.token());
+        ASTNode::addChild(procedureNode,typeNode);
+        mLexer.nextToken();      // to ":"
+        if (!mLexer.nextToken()) // to method-name
+            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+    }
     procedureNode->value = mLexer.token();
 
     if (!mLexer.nextToken())
@@ -527,6 +536,7 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Function:     return "Function";
     case ASTNodeType::FormalParameters:  return "Parameters";
     case ASTNodeType::FormalParameter :  return "Parameter";
+    case ASTNodeType::MethodContext :    return "MethodContext";
     case ASTNodeType::Declaration:  return "Declaration";
     case ASTNodeType::VolatileDeclaration:  return "Volatile";
     case ASTNodeType::Assignment:   return "Assignment";
@@ -537,7 +547,9 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Identifier:   return "Identifier";
     case ASTNodeType::UnaryOperator:  return "UnaryOperator";
     case ASTNodeType::BinaryOperator: return "BinaryOperator";
-    case ASTNodeType::FunctionCall: return "FunctionCall";
+    case ASTNodeType::FunctionCall:   return "FunctionCall";
+    case ASTNodeType::StaticMethodCall:   return "StaticMethodCall";
+    case ASTNodeType::InstanceMethodCall: return "InstanceMethodCall";
     case ASTNodeType::IfStatement:  return "If";
     case ASTNodeType::Else:         return "Else";
     case ASTNodeType::Elsif:        return "ElseIf";
@@ -574,7 +586,13 @@ void NadaParser::ASTNode::addChild(std::shared_ptr<ASTNode> parent, std::shared_
 {
     parent->children.push_back(child);
     child->parent = parent;
+}
 
+//-------------------------------------------------------------------------------------------------
+void NadaParser::ASTNode::prependChild(std::shared_ptr<ASTNode> parent, std::shared_ptr<ASTNode> child)
+{
+    parent->children.insert(parent->children.begin(),child);
+    child->parent = parent;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -698,12 +716,7 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
         node = std::make_shared<ASTNode>(ASTNodeType::Literal, mLexer.line(), mLexer.column(), token);
     } else if (tokenType == NadaLexer::TokenType::Identifier) {
         node = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), token);
-
-        if (mLexer.token(1) == "(") {
-            mLexer.nextToken();
-            node = parseFunctionCall(node);
-        }
-
+        handleIdentifierCall(node);
     } else if (token == "(") {
         if (!mLexer.nextToken()) // Überspringe '('
             throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
@@ -734,9 +747,9 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
 //-------------------------------------------------------------------------------------------------
 NadaParser::ASTNodePtr NadaParser::parseFunctionCall(std::shared_ptr<ASTNode> &funcNode)
 {
-    funcNode->type = ASTNodeType::FunctionCall;
+    mLexer.nextToken(); // jump to "("
 
-    if (!mLexer.nextToken()) // Überspringe '('
+    if (!mLexer.nextToken()) // jump over '('
         throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.token() != ")") {
@@ -755,6 +768,31 @@ NadaParser::ASTNodePtr NadaParser::parseFunctionCall(std::shared_ptr<ASTNode> &f
             throw NadaException(Nada::Error::UnexpectedClosure,mLexer.line(), mLexer.column(),mLexer.token());
         }
     }
+
+    return funcNode;
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaParser::ASTNodePtr NadaParser::parseMethodCall(std::shared_ptr<ASTNode> &funcNode)
+{
+    mLexer.nextToken(); // jump to ":" or "."
+    bool isStatic = funcNode->type == ASTNodeType::StaticMethodCall;
+
+    if (!mLexer.nextToken())    // Überspringe ':' oder '.'
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
+        throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.token(1) != "(") // lookahead: methodencall?
+        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+
+    Nada::LowerString contextName = funcNode->value; // typename or instancename
+    Nada::LowerString instanceName(mLexer.token());
+
+    parseFunctionCall(funcNode);
+    funcNode->value = instanceName;
+    ASTNode::prependChild(funcNode,std::make_shared<ASTNode>(ASTNodeType::MethodContext, mLexer.line(), mLexer.column(), contextName.displayValue));
 
     return funcNode;
 }
@@ -779,5 +817,26 @@ NadaParser::ASTNodePtr NadaParser::parseIterableOrRange()
 
     throw NadaException(Nada::Error::InvalidRangeOrIterable,mLexer.line(), mLexer.column(),mLexer.token());
     return NadaParser::ASTNodePtr();
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaParser::handleIdentifierCall(ASTNodePtr &identNode)
+{
+    if (mLexer.token(1) == "(") {
+        identNode->type = ASTNodeType::FunctionCall;
+        parseFunctionCall(identNode);
+        return true;
+    } else if (mLexer.token(1) == ":") {
+        identNode->type = ASTNodeType::StaticMethodCall;
+        parseMethodCall(identNode);
+        return true;
+    }
+    else if (mLexer.token(1) == ".") {
+        identNode->type = ASTNodeType::InstanceMethodCall;
+        parseMethodCall(identNode);
+        return true;
+    }
+
+    return false;
 }
 

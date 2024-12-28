@@ -23,7 +23,7 @@ private:
     NadaValue  &executeForLoopRange(const NadaParser::ASTNodePtr &node, NadaState *state);
     NadaValue  &evaluateBinaryOperator(const NadaParser::ASTNodePtr &node, NadaState *state);
     NadaValue  &evaluateUnaryOperator(const NadaParser::ASTNodePtr &node, NadaState *state);
-
+    NadaValue  &executeFunctionCall(const NadaParser::ASTNodePtr &node, NadaState *state);
     void        defineProcedure(const NadaParser::ASTNodePtr &node, NadaState *state);
     void        defineFunction(const NadaParser::ASTNodePtr &node, NadaState *state);
 

@@ -17,6 +17,7 @@ public:
         FormalParameterMode, // procedure/function declaration: call(x : [in/out] Natural)
         Function,
         Declaration,
+        MethodContext,
         VolatileDeclaration,
         Assignment,
         Expression,
@@ -28,6 +29,8 @@ public:
         UnaryOperator,
         BinaryOperator, // Für "+" "-" "*" "/"
         FunctionCall,
+        StaticMethodCall,
+        InstanceMethodCall,
         Block,          // Begin/End
         IfStatement,
         Else,
@@ -74,6 +77,7 @@ public:
 
         std::string serialize(int depth = 0) const;
         static void addChild(std::shared_ptr<ASTNode> parent, std::shared_ptr<ASTNode> child);
+        static void prependChild(std::shared_ptr<ASTNode> parent, std::shared_ptr<ASTNode> child);
     };
 
     using ASTNodePtr = std::shared_ptr<ASTNode>;
@@ -109,7 +113,9 @@ private:
     NadaParser::ASTNodePtr parseFactor();             // a**b
     NadaParser::ASTNodePtr parsePrimary();            // a
     NadaParser::ASTNodePtr parseFunctionCall(NadaParser::ASTNodePtr &funcNode);       // a()
+    NadaParser::ASTNodePtr parseMethodCall(NadaParser::ASTNodePtr &funcNode);         // type:a()
     NadaParser::ASTNodePtr parseIterableOrRange();    // for x in [IterableOrRange]
+    bool                   handleIdentifierCall(NadaParser::ASTNodePtr &identNode);    // is function or procedure or method-call
 
     static std::string nodeTypeToString(ASTNodeType type);
 

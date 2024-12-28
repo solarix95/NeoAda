@@ -150,44 +150,7 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
         return state->ret();
     } break;
     case NadaParser::ASTNodeType::FunctionCall: {
-
-        NadaValues values;
-        for (const auto &node : node->children) {
-            values.push_back(executeState(node, state));
-        }
-
-        if (!state->hasFunction(node->value.lowerValue,values)) {
-            state->ret().reset();
-            return state->ret(); // TODO: ERROR
-        }
-
-        auto &fnc = state->function(node->value.lowerValue,values);
-
-        if (fnc.block) {
-            state->pushStack(NadaSymbolTable::LocalScope);
-            assert(values.size() == fnc.parameters.size());
-
-            /*
-                parameter: "x"  : "any"
-                value:     "42" : Type = Natural
-
-                Push to stack   : declare x : Natural := 42;
-            */
-
-            for (int i = 0; i< fnc.parameters.size(); i++) {
-                state->define(fnc.parameters[i].first, fnc.parameters[i].second);
-                // TODO: if !define -> runtime error!
-                NadaValue &valueRef = state->valueRef(fnc.parameters[i].first);
-                valueRef.assign(values[i]);
-            }
-
-            executeState(fnc.block, state);
-
-            if (mExecState == ReturnState)
-                mExecState = RunState;
-            state->popStack();
-        } else
-            fnc.nativeCallback(fnc.fncValues(values));
+        executeFunctionCall(node, state);
     }   break;
     case NadaParser::ASTNodeType::Assignment: {
         assert(node->children.size() == 1);
@@ -223,6 +186,9 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
     }   break;
     case NadaParser::ASTNodeType::Identifier: {
         state->ret() = state->value(node->value.lowerValue);
+    }   break;
+    case NadaParser::ASTNodeType::StaticMethodCall: {
+        executeFunctionCall(node, state);
     }   break;
     default:
         assert(0 && "not yet implemented");
@@ -443,6 +409,62 @@ NadaValue &NadaInterpreter::evaluateUnaryOperator(const NadaParser::ASTNodePtr &
 
     // FIXME: runtime error
     // if (!done)
+    return state->ret();
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue &NadaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &node, NadaState *state)
+{
+    NadaValues values;
+    for (const auto &node : node->children) {
+        if (node->type == NadaParser::ASTNodeType::MethodContext)
+            continue;
+        values.push_back(executeState(node, state));
+    }
+
+    std::string typeName;
+    if (node->type == NadaParser::ASTNodeType::StaticMethodCall) {
+        typeName = node->children[0]->value.lowerValue;
+    } else if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
+        NadaSymbol symbol;
+        if (!state->find(node->children[0]->value.lowerValue,symbol))
+            throw NadaException(Nada::Error::UnknownSymbol,node->line,node->column, node->children[0]->value.lowerValue);
+        typeName = symbol.typeName.lowerValue;
+    }
+
+    if (!state->hasFunction(typeName, node->value.lowerValue,values)) {
+        state->ret().reset();
+        return state->ret(); // TODO: ERROR
+    }
+
+    auto &fnc = state->function(typeName, node->value.lowerValue,values);
+
+    if (fnc.block) {
+        state->pushStack(NadaSymbolTable::LocalScope);
+        assert(values.size() == fnc.parameters.size());
+
+        /*
+                parameter: "x"  : "any"
+                value:     "42" : Type = Natural
+
+                Push to stack   : declare x : Natural := 42;
+            */
+
+        for (int i = 0; i< fnc.parameters.size(); i++) {
+            state->define(fnc.parameters[i].first, fnc.parameters[i].second);
+            // TODO: if !define -> runtime error!
+            NadaValue &valueRef = state->valueRef(fnc.parameters[i].first);
+            valueRef.assign(values[i]);
+        }
+
+        executeState(fnc.block, state);
+
+        if (mExecState == ReturnState)
+            mExecState = RunState;
+        state->popStack();
+    } else
+        fnc.nativeCallback(fnc.fncValues(values));
+
     return state->ret();
 }
 

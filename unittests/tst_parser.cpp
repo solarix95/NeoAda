@@ -2,6 +2,7 @@
 #include <QtTest>
 
 #include <iostream>
+#include <sstream>
 
 #include <libneoada/exception.h>
 #include <libneoada/lexer.h>
@@ -106,6 +107,9 @@ private slots:
     void test_parser_SimpleExpression();
 
     void test_parser_FunctionCall1();
+    void test_parser_MethodCall1();
+    void test_parser_MethodCall2();
+
     void test_parser_WhileLoop();
     void test_parser_WhileLoopBreak1();
     void test_parser_WhileLoopBreak2();
@@ -122,8 +126,9 @@ private slots:
 
     void test_parser_Procedure1();
     void test_parser_Procedure2();
-
     void test_parser_Function1();
+    void test_parser_Method1();
+    void test_parser_Method2();
 
     void test_state_Declarations();
     void test_state_GlobalScope();
@@ -141,6 +146,9 @@ private slots:
     void test_interpreter_Return3();
 
     void test_interpreter_Volatile_CTor();
+
+    void test_interpreter_static_method();
+
 
     void test_api_evaluate_Literals();
     void test_api_evaluate_Equal();
@@ -167,6 +175,7 @@ private slots:
     void test_api_evaluate_Function1();
     void test_api_evaluate_Function2();
     void test_api_evaluate_Function2_Uppercase();
+
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -1191,6 +1200,50 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_MethodCall1()
+{
+    std::string script = R"(
+        string:print(x);
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(StaticMethodCall, "print")
+    Node(MethodContext, "string")
+    Node(Identifier, "x")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_MethodCall2()
+{
+    std::string script = R"(
+        x.print();
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(InstanceMethodCall, "print")
+    Node(MethodContext, "x")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_WhileLoop()
 {
     std::string script = R"(
@@ -1638,8 +1691,63 @@ Node(Program, "")
 
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
-
 }
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Method1()
+{
+    std::string script = R"(
+
+function string:length() return Natural is
+begin
+end;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Function, "length")
+    Node(MethodContext, "string")
+    Node(Parameters, "")
+    Node(ReturnType, "Natural")
+    Node(Block, "")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Method2()
+{
+    std::string script = R"(
+
+procedure string:trim() is
+begin
+end;
+
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Procedure, "trim")
+    Node(MethodContext, "string")
+    Node(Parameters, "")
+    Node(Block, "")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_state_Declarations()
@@ -2025,6 +2133,38 @@ void TstParser::test_interpreter_Volatile_CTor()
     QVERIFY(results.size() == 2);
     QVERIFY(results[0] == "x");
     QVERIFY(results[1] == "Natural");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_static_method()
+{
+    std::string script = R"(
+        return string:number(10);
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+
+    state.bind("string","number",{{"n", "natural"}}, [&](const NadaFncValues& args) -> NadaValue {
+        std::string       s;
+        std::stringstream ss(s);
+        ss << args.at("n").toInt64();
+
+        NadaValue ret;
+        ret.fromString(s);
+        return ret;
+    });
+
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "10");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2804,7 +2944,6 @@ void TstParser::test_error_interpreter_boolAssignment()
         NeoAda::evaluate(script, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
     }
-
 }
 
 

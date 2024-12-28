@@ -3,6 +3,8 @@
 #include "value.h"
 #include <cassert>
 
+#define BUILD_METHOD(t,n) (t + ":" + n)
+
 //-------------------------------------------------------------------------------------------------
 NadaState::NadaState()
 {
@@ -30,9 +32,9 @@ bool NadaState::define(const std::string &name, const std::string &typeName, boo
 
     bool done;
     if (mCallStack.empty())
-        done = mGlobals.back()->add(NadaSymbol(t,Nada::toLower(name)));
+        done = mGlobals.back()->add(NadaSymbol(t,Nada::toLower(name), typeName));
     else
-        done = mCallStack.back()->back()->add(NadaSymbol(t,Nada::toLower(name)));
+        done = mCallStack.back()->back()->add(NadaSymbol(t,Nada::toLower(name), typeName));
 
     if (done && isVolatile) {
         NadaValue &value = valueRef(name);
@@ -55,25 +57,35 @@ Nada::Type NadaState::typeOf(const std::string &name) const
 //-------------------------------------------------------------------------------------------------
 bool NadaState::bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb)
 {
+    assert(!name.empty());
     return mFunctions.bind(name,parameters,cb);
 }
 
 //-------------------------------------------------------------------------------------------------
 bool NadaState::bind(const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block)
 {
+    assert(!name.empty());
     return mFunctions.bind(name,parameters,block);
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaState::hasFunction(const std::string &name, const NadaValues &parameters)
+bool NadaState::hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters)
 {
-    return mFunctions.contains(name,parameters);
+    return mFunctions.contains(type.empty() ? name : BUILD_METHOD(type,name),parameters);
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaFunctionEntry &NadaState::function(const std::string &name, const NadaValues &parameters)
+NadaFunctionEntry &NadaState::function(const std::string &type, const std::string &name, const NadaValues &parameters)
 {
-    return mFunctions.symbol(name,parameters);
+    return mFunctions.symbol(type.empty() ? name : BUILD_METHOD(type,name),parameters);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaState::bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb)
+{
+    assert(!type.empty());
+    assert(!name.empty());
+    return bind(BUILD_METHOD(type,name), parameters, std::move(cb));
 }
 
 //-------------------------------------------------------------------------------------------------
