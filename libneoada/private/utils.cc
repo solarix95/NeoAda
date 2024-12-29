@@ -2,7 +2,7 @@
 #include "utils.h"
 
 //-------------------------------------------------------------------------------------------------
-std::string Nada::toLower(const std::string &name)
+std::string Nda::toLower(const std::string &name)
 {
     std::string ret = name;
 

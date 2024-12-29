@@ -2655,21 +2655,19 @@ void TstParser::test_api_evaluate_Static_Method2()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Instance_Method1()
 {
-    /*
     std::string script = R"(
 
     function string:hello() return string is
     begin
-        return this & " World";
+        return this & ", World";
     end;
 
-    declare x : any := string:hello();
+    declare x : string := "Hello";
 
-    return x;
+    return x.hello();
     )";
 
     QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
-    */
 }
 
 //-------------------------------------------------------------------------------------------------

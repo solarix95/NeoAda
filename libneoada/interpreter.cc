@@ -195,6 +195,9 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
     case NadaParser::ASTNodeType::StaticMethodCall: {
         executeFunctionCall(node, state);
     }   break;
+    case NadaParser::ASTNodeType::InstanceMethodCall: {
+        executeFunctionCall(node, state);
+    }   break;
     default:
         assert(0 && "not yet implemented");
         break;
@@ -427,11 +430,11 @@ NadaValue &NadaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
         values.push_back(executeState(node, state));
     }
 
+    Nda::Symbol symbol;
     std::string typeName;
     if (node->type == NadaParser::ASTNodeType::StaticMethodCall) {
         typeName = node->children[0]->value.lowerValue;
     } else if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
-        Nda::Symbol symbol;
         if (!state->find(node->children[0]->value.lowerValue,symbol))
             throw NadaException(Nada::Error::UnknownSymbol,node->line,node->column, node->children[0]->value.lowerValue);
         typeName = symbol.typeName.lowerValue;
@@ -455,6 +458,13 @@ NadaValue &NadaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
                 Push to stack   : declare x : Natural := 42;
             */
 
+        // Creating "this":
+        if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
+            state->define("this", symbol.typeName.lowerValue);
+            // TODO: if !define -> runtime error!
+            NadaValue &valueRef = state->valueRef("this");
+            valueRef.fromReference(symbol.value);
+        }
         for (int i = 0; i< fnc.parameters.size(); i++) {
             state->define(fnc.parameters[i].name, fnc.parameters[i].type);
             // TODO: if !define -> runtime error!

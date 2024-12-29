@@ -9,7 +9,7 @@ NadaFunctionTable::NadaFunctionTable() {}
 //-------------------------------------------------------------------------------------------------
 bool NadaFunctionTable::bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb)
 {
-    std::string lowerName = Nada::toLower(name);
+    std::string lowerName = Nda::toLower(name);
 
     Nda::OverloadedFunction &variants = mFunctions[lowerName];
     variants.functionName = lowerName;
@@ -35,7 +35,7 @@ bool NadaFunctionTable::bind(const std::string &name, const Nda::FncParameters &
 //-------------------------------------------------------------------------------------------------
 bool NadaFunctionTable::contains(const std::string &name, const NadaValues &parameters)
 {
-    std::string lowerName = Nada::toLower(name);
+    std::string lowerName = Nda::toLower(name);
     if (mFunctions.count(lowerName) <= 0)
         return false;
 
@@ -54,7 +54,7 @@ bool NadaFunctionTable::contains(const std::string &name, const NadaValues &para
 //-------------------------------------------------------------------------------------------------
 Nda::FunctionEntry &NadaFunctionTable::symbol(const std::string &name, const NadaValues &parameters)
 {
-    std::string lowerName = Nada::toLower(name);
+    std::string lowerName = Nda::toLower(name);
 
     Nda::OverloadedFunction &variants = mFunctions[lowerName];
     for (auto &variant : variants.overloads) {

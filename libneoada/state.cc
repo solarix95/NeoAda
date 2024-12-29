@@ -32,9 +32,9 @@ bool NadaState::define(const std::string &name, const std::string &typeName, boo
 
     bool done;
     if (mCallStack.empty())
-        done = mGlobals.back()->add(Nda::Symbol(t,Nada::toLower(name), typeName));
+        done = mGlobals.back()->add(Nda::Symbol(t,Nda::toLower(name), typeName));
     else
-        done = mCallStack.back()->back()->add(Nda::Symbol(t,Nada::toLower(name), typeName));
+        done = mCallStack.back()->back()->add(Nda::Symbol(t,Nda::toLower(name), typeName));
 
     if (done && isVolatile) {
         NadaValue &value = valueRef(name);

@@ -787,8 +787,8 @@ NadaParser::ASTNodePtr NadaParser::parseMethodCall(std::shared_ptr<ASTNode> &fun
     if (mLexer.token(1) != "(") // lookahead: methodencall?
         throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
-    Nada::LowerString contextName = funcNode->value; // typename or instancename
-    Nada::LowerString instanceName(mLexer.token());
+    Nda::LowerString contextName = funcNode->value; // typename or instancename
+    Nda::LowerString instanceName(mLexer.token());
 
     parseFunctionCall(funcNode);
     funcNode->value = instanceName;

@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------
 Nda::Type Nda::typeByString(const std::string &name)
 {
-    std::string lowerName = Nada::toLower(name);
+    std::string lowerName = Nda::toLower(name);
 
     if (lowerName == "any")
         return Nda::Any;

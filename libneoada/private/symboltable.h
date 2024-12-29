@@ -15,9 +15,9 @@ namespace Nda {
 
 struct Symbol {
     Nda::Type        type;
-    Nada::LowerString name;
+    Nda::LowerString name;
     NadaValue        *value;
-    Nada::LowerString typeName;
+    Nda::LowerString typeName;
 
     Symbol() : type(Nda::Undefined),value(nullptr) {}
     Symbol(Nda::Type t, const std::string &n, const std::string &tn) : type(t), name(n), value(nullptr), typeName(tn) {}

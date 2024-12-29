@@ -148,7 +148,7 @@ bool NadaLexer::parseNext()
             }
 
             std::string token      = mScript.substr(start, mPos - start);
-            std::string lowerToken = Nada::toLower(token);
+            std::string lowerToken = Nda::toLower(token);
             shiftToNext(-1); // 1 Character zuviel eingelesen..
 
             static const std::unordered_set<std::string> reservedWords = {

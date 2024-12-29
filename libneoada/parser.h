@@ -64,7 +64,7 @@ public:
 
     struct ASTNode {        
         ASTNodeType       type;
-        Nada::LowerString value; // Der Wert (z. B. Literal, Operator, Identifier)
+        Nda::LowerString  value; // Der Wert (z. B. Literal, Operator, Identifier)
         std::vector<std::shared_ptr<ASTNode>> children; // Unterknoten
         std::shared_ptr<ASTNode>              parent;
 
