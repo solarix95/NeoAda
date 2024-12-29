@@ -9,25 +9,50 @@
 #include "value.h"
 #include "parser.h"
 
-using NadaFncParameters = std::vector<std::pair<std::string, std::string>>;
-using NadaFncValues     = std::unordered_map<std::string, NadaValue>;
-using NadaFncCallback   = std::function<NadaValue(const NadaFncValues&)>;
-using NadaPrcCallback   = std::function<void     (const NadaFncValues&)>;
+namespace Nda {
 
-struct NadaFunctionEntry {
-    std::string       returnType;
-    NadaFncParameters parameters;
+
+
+enum ParameterMode {
+    InMode,
+    OutMode
+};
+
+
+struct FormalParameter {
+    std::string   name;
+    std::string   type;
+    ParameterMode mode;
+};
+
+
+using FncParameters = std::vector<FormalParameter>;
+using FncValues     = std::unordered_map<std::string, NadaValue>;
+using FncCallback   = std::function<NadaValue(const FncValues&)>;
+using PrcCallback   = std::function<void     (const FncValues&)>;
+
+
+struct FunctionEntry {
+    std::string        returnType;
+    FncParameters parameters;
 
     std::shared_ptr<NadaParser::ASTNode> block;          // NeoAda-Code
-    NadaFncCallback                      nativeCallback; // c++ Built-in
+    FncCallback                     nativeCallback; // c++ Built-in
 
-    NadaFncValues     fncValues(const NadaValues &values) const;
+    FncValues     fncValues(const NadaValues &values) const;
 };
 
-struct NadaOverloadedFunction {
+struct OverloadedFunction {
     std::string functionName;
-    std::vector<NadaFunctionEntry> overloads;
+    std::vector<FunctionEntry> overloads;
 };
+
+
+}
+
+
+
+
 
 class NadaFunctionTable
 {
@@ -35,16 +60,15 @@ public:
     NadaFunctionTable();
 
     // Init/Setup
-    bool              bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb); // c++ callback :)
-    bool              bind(const std::string &name, const NadaFncParameters &parameters, const NadaParser::ASTNodePtr &block);
+    bool              bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // c++ callback :)
+    bool              bind(const std::string &name, const Nda::FncParameters &parameters, const NadaParser::ASTNodePtr &block);
 
     // Runtime
-    bool              contains(const std::string &name, const NadaValues &parameters);
-    NadaFunctionEntry &symbol(const std::string &name, const NadaValues &parameters);
-
+    bool               contains(const std::string &name, const NadaValues &parameters);
+    Nda::FunctionEntry &symbol(const std::string &name, const NadaValues &parameters);
 
 private:
-    std::unordered_map<std::string, NadaOverloadedFunction> mFunctions;
+    std::unordered_map<std::string, Nda::OverloadedFunction> mFunctions;
 };
 
 #endif // FUNCTIONTABLE_H

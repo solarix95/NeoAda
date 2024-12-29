@@ -26,15 +26,15 @@ void NadaState::reset()
 //-------------------------------------------------------------------------------------------------
 bool NadaState::define(const std::string &name, const std::string &typeName, bool isVolatile)
 {
-    Nada::Type t = Nada::typeByString(typeName);
-    if (t == Nada::Undefined)
+    Nda::Type t = Nda::typeByString(typeName);
+    if (t == Nda::Undefined)
         return false;
 
     bool done;
     if (mCallStack.empty())
-        done = mGlobals.back()->add(NadaSymbol(t,Nada::toLower(name), typeName));
+        done = mGlobals.back()->add(Nda::Symbol(t,Nada::toLower(name), typeName));
     else
-        done = mCallStack.back()->back()->add(NadaSymbol(t,Nada::toLower(name), typeName));
+        done = mCallStack.back()->back()->add(Nda::Symbol(t,Nada::toLower(name), typeName));
 
     if (done && isVolatile) {
         NadaValue &value = valueRef(name);
@@ -46,23 +46,23 @@ bool NadaState::define(const std::string &name, const std::string &typeName, boo
 }
 
 //-------------------------------------------------------------------------------------------------
-Nada::Type NadaState::typeOf(const std::string &name) const
+Nda::Type NadaState::typeOf(const std::string &name) const
 {
-    NadaSymbol symbol;
+    Nda::Symbol symbol;
     if (!find(name,symbol))
-        return Nada::Undefined;
+        return Nda::Undefined;
     return symbol.type;
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaState::bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb)
+bool NadaState::bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb)
 {
     assert(!name.empty());
     return mFunctions.bind(name,parameters,cb);
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaState::bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block)
+bool NadaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block)
 {
     assert(!name.empty());
     return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block);
@@ -75,13 +75,13 @@ bool NadaState::hasFunction(const std::string &type, const std::string &name, co
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaFunctionEntry &NadaState::function(const std::string &type, const std::string &name, const NadaValues &parameters)
+Nda::FunctionEntry &NadaState::function(const std::string &type, const std::string &name, const NadaValues &parameters)
 {
     return mFunctions.symbol(type.empty() ? name : BUILD_METHOD(type,name),parameters);
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaState::bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb)
+bool NadaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb)
 {
     assert(!type.empty());
     assert(!name.empty());
@@ -89,7 +89,7 @@ bool NadaState::bind(const std::string &type, const std::string &name, const Nad
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaState::find(const std::string &symbolName,NadaSymbol &symbol) const
+bool NadaState::find(const std::string &symbolName, Nda::Symbol &symbol) const
 {
     // First priority: current function scope:
     if (!mCallStack.empty()) {
@@ -114,7 +114,7 @@ bool NadaState::find(const std::string &symbolName,NadaSymbol &symbol) const
 //-------------------------------------------------------------------------------------------------
 NadaValue NadaState::value(const std::string &symbolName) const
 {
-    NadaSymbol symbol;
+    Nda::Symbol symbol;
     if (!find(symbolName,symbol))
         return NadaValue();
     return *symbol.value;
@@ -123,7 +123,7 @@ NadaValue NadaState::value(const std::string &symbolName) const
 //-------------------------------------------------------------------------------------------------
 NadaValue &NadaState::valueRef(const std::string &symbolName)
 {
-    NadaSymbol symbol;
+    Nda::Symbol symbol;
     bool done = find(symbolName,symbol);
     assert(done);
     return *(symbol.value);
@@ -132,7 +132,7 @@ NadaValue &NadaState::valueRef(const std::string &symbolName)
 //-------------------------------------------------------------------------------------------------
 NadaValue *NadaState::valuePtr(const std::string &symbolName)
 {
-    NadaSymbol symbol;
+    Nda::Symbol symbol;
     bool done = find(symbolName,symbol);
     assert(done);
     return symbol.value;

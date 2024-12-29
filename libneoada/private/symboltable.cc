@@ -11,7 +11,7 @@ bool NadaSymbolTable::contains(const std::string& name) const {
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaSymbolTable::add(const NadaSymbol &symbol)
+bool NadaSymbolTable::add(const Nda::Symbol &symbol)
 {
     if (contains(symbol.name.lowerValue))
         return false;
@@ -22,7 +22,7 @@ bool NadaSymbolTable::add(const NadaSymbol &symbol)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaSymbolTable::get(const std::string &name, NadaSymbol &symbol) const
+bool NadaSymbolTable::get(const std::string &name, Nda::Symbol &symbol) const
 {
     if (mTable.empty())
         return false;

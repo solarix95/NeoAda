@@ -3,14 +3,11 @@
 
 #include <string>
 
-namespace Nada {
+namespace Nda {
     enum Type { Undefined, Reference, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
 
     Type typeByString(const std::string &name);
 }
-
-
-
 
 
 

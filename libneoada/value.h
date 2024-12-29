@@ -16,7 +16,7 @@ public:
 
     void reset();
     void initAny();
-    void initType(Nada::Type t);
+    void initType(Nda::Type t);
     bool fromString(const std::string &value);
     bool fromNumber(const std::string &value);
     bool fromNumber(uint64_t value);
@@ -56,7 +56,7 @@ public:
 
     bool        setString(const std::string &newValue);
     std::string toString() const;
-    Nada::Type  type() const;
+    Nda::Type   type() const;
 
     NadaValue& operator=(const NadaValue&other);
 
@@ -66,7 +66,6 @@ public:
     static bool fromNumber(const std::string &value, int64_t &ret);
 
 private:
-
     void assignOther(const NadaValue &other);
     void assignOtherString(const NadaValue &other);
 
@@ -80,16 +79,22 @@ private:
     bool exact64BitDbl(double &value) const;
 
 
-    Nada::Type   mType;
+    Nda::Type   mType;
 
-    union {
+    union UValue {
         char          uChar;
         unsigned char uByte;
         double        uDouble;
         int64_t       uInt64;
         uint64_t      uUInt64;
         void         *uPtr;
-    }            mValue;
+    };
+
+    UValue mValue;
+
+    inline UValue       *uValue()        { return (mType == Nda::Reference) ?  internalReference()->uValue()  : &mValue; }
+    inline const UValue *cuValue() const { return (mType == Nda::Reference) ? cInternalReference()->cuValue() : &mValue; }
+
 };
 
 using NadaValues = std::vector<NadaValue>;

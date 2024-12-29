@@ -7,27 +7,27 @@
 NadaFunctionTable::NadaFunctionTable() {}
 
 //-------------------------------------------------------------------------------------------------
-bool NadaFunctionTable::bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb)
+bool NadaFunctionTable::bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb)
 {
     std::string lowerName = Nada::toLower(name);
 
-    NadaOverloadedFunction &variants = mFunctions[lowerName];
+    Nda::OverloadedFunction &variants = mFunctions[lowerName];
     variants.functionName = lowerName;
 
     // TODO: check if already there..
-    variants.overloads.push_back(NadaFunctionEntry{"",parameters,NadaParser::ASTNodePtr(), std::move(cb)});
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NadaParser::ASTNodePtr(), std::move(cb)});
 
     return true;
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaFunctionTable::bind(const std::string &name, const NadaFncParameters &parameters, const NadaParser::ASTNodePtr &block)
+bool NadaFunctionTable::bind(const std::string &name, const Nda::FncParameters &parameters, const NadaParser::ASTNodePtr &block)
 {
-    NadaOverloadedFunction &variants = mFunctions[name];
+    Nda::OverloadedFunction &variants = mFunctions[name];
     variants.functionName = name;
 
     // TODO: check if already there..
-    variants.overloads.push_back(NadaFunctionEntry{"",parameters,block, NadaFncCallback()});
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,block, Nda::FncCallback()});
 
     return true;
 }
@@ -39,7 +39,7 @@ bool NadaFunctionTable::contains(const std::string &name, const NadaValues &para
     if (mFunctions.count(lowerName) <= 0)
         return false;
 
-    NadaOverloadedFunction &variants = mFunctions[lowerName];
+    Nda::OverloadedFunction &variants = mFunctions[lowerName];
     for (const auto &variant : variants.overloads) {
         return true;
         /*
@@ -52,11 +52,11 @@ bool NadaFunctionTable::contains(const std::string &name, const NadaValues &para
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaFunctionEntry &NadaFunctionTable::symbol(const std::string &name, const NadaValues &parameters)
+Nda::FunctionEntry &NadaFunctionTable::symbol(const std::string &name, const NadaValues &parameters)
 {
     std::string lowerName = Nada::toLower(name);
 
-    NadaOverloadedFunction &variants = mFunctions[lowerName];
+    Nda::OverloadedFunction &variants = mFunctions[lowerName];
     for (auto &variant : variants.overloads) {
 
         return variant;
@@ -73,11 +73,11 @@ NadaFunctionEntry &NadaFunctionTable::symbol(const std::string &name, const Nada
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaFncValues NadaFunctionEntry::fncValues(const NadaValues &values) const
+Nda::FncValues Nda::FunctionEntry::fncValues(const NadaValues &values) const
 {
-    NadaFncValues ret;
+    Nda::FncValues ret;
     assert(values.size() == parameters.size());
     for (int i=0; i<(int)parameters.size(); i++)
-        ret[parameters[i].first] = values[i];
+        ret[parameters[i].name] = values[i];
     return ret;
 }

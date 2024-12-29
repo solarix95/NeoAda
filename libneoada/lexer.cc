@@ -155,7 +155,7 @@ bool NadaLexer::parseNext()
                 "declare", "volatile",
                 "if", "then", "else", "elsif", "end",
                 "while", "loop", "break", "continue", "when",
-                "for", "in", "reverse",
+                "for", "in", "out", "reverse",
                 "procedure", "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 

@@ -173,12 +173,15 @@ private slots:
     void test_api_evaluate_Procedure1();
     void test_api_evaluate_Procedure2();
     void test_api_evaluate_Procedure3_Return();
+    void test_api_evaluate_Procedure4_Out();
     void test_api_evaluate_Function1();
     void test_api_evaluate_Function2();
     void test_api_evaluate_Function2_Uppercase();
 
     void test_api_evaluate_Static_Method1();
     void test_api_evaluate_Static_Method2();
+
+    void test_api_evaluate_Instance_Method1();
 
 
     // static ERROR HANDLING
@@ -270,28 +273,28 @@ void TstParser::test_core_NumericValues()
     NadaValue v;
 
     QCOMPARE(v.fromNumber("123_456"),true);      // int64_t
-    QCOMPARE(v.type(), Nada::Natural);
+    QCOMPARE(v.type(), Nda::Natural);
 
     QCOMPARE(v.fromNumber("1.23E+10"),true);     // double
-    QCOMPARE(v.type(), Nada::Number);
+    QCOMPARE(v.type(), Nda::Number);
 
     QCOMPARE(v.fromNumber("16#1F#"),true);       // uint64_t (Base 16)
-    QCOMPARE(v.type(), Nada::Supernatural);
+    QCOMPARE(v.type(), Nda::Supernatural);
 
     QCOMPARE(v.fromNumber("2#1011_0001#"),true); // uint64_t (Base 2)
-    QCOMPARE(v.type(), Nada::Supernatural);
+    QCOMPARE(v.type(), Nda::Supernatural);
 
     QCOMPARE(v.fromNumber("10#123#E+2"),true);   // uint64_t mit Exponent
-    QCOMPARE(v.type(), Nada::Supernatural);
+    QCOMPARE(v.type(), Nda::Supernatural);
 
     QCOMPARE(v.fromNumber("1.2_34"),true);       // double
-    QCOMPARE(v.type(), Nada::Number);
+    QCOMPARE(v.type(), Nda::Number);
 
     QCOMPARE(v.fromNumber("18446744073709551615"),true); // uint64_t (Maximalwert)
-    QCOMPARE(v.type(), Nada::Supernatural);
+    QCOMPARE(v.type(), Nda::Supernatural);
 
     QCOMPARE(v.fromNumber("InvalidLiteral"),false);
-    QCOMPARE(v.type(), Nada::Undefined);
+    QCOMPARE(v.type(), Nda::Undefined);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -332,10 +335,10 @@ void TstParser::test_core_References()
 
 
     v1.initAny();
-    QCOMPARE(r1.type(), Nada::Type::Any);
+    QCOMPARE(r1.type(), Nda::Type::Any);
 
     v1.fromString("hello");
-    QCOMPARE(r1.type(), Nada::Type::String);
+    QCOMPARE(r1.type(), Nda::Type::String);
     QCOMPARE(r1.toString(), v1.toString());
 
     NadaValue r2 = r1; // copy reference
@@ -1803,24 +1806,24 @@ void TstParser::test_state_GlobalScope()
 
     // level "0" variable;
     QCOMPARE(state.define("a", "Number"), true);
-    QCOMPARE(state.typeOf("a"), Nada::Number);
+    QCOMPARE(state.typeOf("a"), Nda::Number);
 
     // level "1" variable;
     state.pushScope(NadaSymbolTable::ConditionalScope); // enter "if"
     QCOMPARE(state.define("a", "String"), true);
-    QCOMPARE(state.typeOf("a"), Nada::String);
+    QCOMPARE(state.typeOf("a"), Nda::String);
 
     // level "2" variable
     state.pushScope(NadaSymbolTable::ConditionalScope); // enter "if"
-    QCOMPARE(state.typeOf("a"), Nada::String);    // found level 1 "a"
+    QCOMPARE(state.typeOf("a"), Nda::String);    // found level 1 "a"
     QCOMPARE(state.define("a", "Natural"), true);
-    QCOMPARE(state.typeOf("a"), Nada::Natural);
+    QCOMPARE(state.typeOf("a"), Nda::Natural);
 
     state.popScope(); // leave "if"
-    QCOMPARE(state.typeOf("a"), Nada::String);
+    QCOMPARE(state.typeOf("a"), Nda::String);
 
     state.popScope(); // leave "if"
-    QCOMPARE(state.typeOf("a"), Nada::Number);
+    QCOMPARE(state.typeOf("a"), Nda::Number);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1850,17 +1853,17 @@ void TstParser::test_interpreter_Declarations()
     auto ast = parser.parse(script);
     auto ret = interpreter.execute(ast);
 
-    QCOMPARE(state.typeOf("x"), Nada::Natural);
-    QCOMPARE(state.typeOf("z"), Nada::Undefined);
+    QCOMPARE(state.typeOf("x"), Nda::Natural);
+    QCOMPARE(state.typeOf("z"), Nda::Undefined);
 
-    QCOMPARE(state.typeOf("a"), Nada::Any);
-    QCOMPARE(state.typeOf("b"), Nada::Number);
-    QCOMPARE(state.typeOf("c"), Nada::Supernatural);
-    QCOMPARE(state.typeOf("d"), Nada::Boolean);
-    QCOMPARE(state.typeOf("e"), Nada::Byte);
-    QCOMPARE(state.typeOf("f"), Nada::Character);
-    QCOMPARE(state.typeOf("g"), Nada::String);
-    QCOMPARE(state.typeOf("h"), Nada::Struct);
+    QCOMPARE(state.typeOf("a"), Nda::Any);
+    QCOMPARE(state.typeOf("b"), Nda::Number);
+    QCOMPARE(state.typeOf("c"), Nda::Supernatural);
+    QCOMPARE(state.typeOf("d"), Nda::Boolean);
+    QCOMPARE(state.typeOf("e"), Nda::Byte);
+    QCOMPARE(state.typeOf("f"), Nda::Character);
+    QCOMPARE(state.typeOf("g"), Nda::String);
+    QCOMPARE(state.typeOf("h"), Nda::Struct);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1879,7 +1882,7 @@ void TstParser::test_interpreter_ProcedureCall()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         results.push_back(args.at("message").toString());
         return NadaValue();
     });
@@ -1910,7 +1913,7 @@ void TstParser::test_interpreter_ifStatement()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         results.push_back(args.at("message").toString());
         return NadaValue();
     });
@@ -1941,7 +1944,7 @@ void TstParser::test_interpreter_ifElseStatement()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         results.push_back(args.at("message").toString());
         return NadaValue();
     });
@@ -1972,7 +1975,7 @@ void TstParser::test_interpreter_whileStatement()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         results.push_back(args.at("message").toString());
         return NadaValue();
     });
@@ -2006,7 +2009,7 @@ void TstParser::test_interpreter_whileBreak()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         results.push_back(args.at("message").toString());
         return NadaValue();
     });
@@ -2038,7 +2041,7 @@ void TstParser::test_interpreter_whileBreakWhen()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         results.push_back(args.at("message").toString());
         return NadaValue();
     });
@@ -2073,7 +2076,7 @@ void TstParser::test_interpreter_whileContinue()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         results.push_back(args.at("message").toString());
         return NadaValue();
     });
@@ -2155,7 +2158,7 @@ void TstParser::test_interpreter_Volatile_CTor()
     std::vector<std::string> results;
     state.onVolatileCtor([&](const std::string &name,  NadaValue& val) -> void {
         results.push_back(name);
-        results.push_back(val.type() == Nada::Natural ? "Natural" : "?");
+        results.push_back(val.type() == Nda::Natural ? "Natural" : "?");
     });
 
     interpreter.execute(ast);
@@ -2181,7 +2184,7 @@ void TstParser::test_interpreter_static_method()
 
     std::vector<std::string> results;
 
-    state.bind("string","number",{{"n", "natural"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("string","number",{{"n", "natural", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         std::string       s;
         std::stringstream ss(s);
         ss << args.at("n").toInt64();
@@ -2533,6 +2536,28 @@ void TstParser::test_api_evaluate_Procedure3_Return()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Procedure4_Out()
+{
+    std::string script = R"(
+
+    declare x : String := "Hello";
+
+    procedure Hello(s : out string) is
+    begin
+        s := s & ", World";
+    end;
+
+    Hello("NeoAda"); -- no effect -> warning?
+    Hello(x);
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+}
+
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Function1()
 {
     std::string script = R"(
@@ -2624,6 +2649,27 @@ void TstParser::test_api_evaluate_Static_Method2()
     )";
 
     QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Instance_Method1()
+{
+    /*
+    std::string script = R"(
+
+    function string:hello() return string is
+    begin
+        return this & " World";
+    end;
+
+    declare x : any := string:hello();
+
+    return x;
+    )";
+
+    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+    */
 }
 
 //-------------------------------------------------------------------------------------------------

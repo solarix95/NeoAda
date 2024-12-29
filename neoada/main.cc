@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     NadaState       state;
     NadaInterpreter interpreter(&state);
 
-    state.bind("print",{{"message", "Any"}}, [&](const NadaFncValues& args) -> NadaValue {
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
         std::cout << args.at("message").toString() << std::endl;
         return NadaValue();
     });

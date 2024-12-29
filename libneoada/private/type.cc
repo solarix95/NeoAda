@@ -2,36 +2,36 @@
 #include "private/utils.h"
 
 //-------------------------------------------------------------------------------------------------
-Nada::Type Nada::typeByString(const std::string &name)
+Nda::Type Nda::typeByString(const std::string &name)
 {
     std::string lowerName = Nada::toLower(name);
 
     if (lowerName == "any")
-        return Nada::Any;
+        return Nda::Any;
 
     if (lowerName == "number")
-        return Nada::Number;
+        return Nda::Number;
 
     if (lowerName == "natural")
-        return Nada::Natural;
+        return Nda::Natural;
 
     if (lowerName == "supernatural")
-        return Nada::Supernatural;
+        return Nda::Supernatural;
 
     if (lowerName == "boolean")
-        return Nada::Boolean;
+        return Nda::Boolean;
 
     if (lowerName == "byte")
-        return Nada::Byte;
+        return Nda::Byte;
 
     if (lowerName == "character")
-        return Nada::Character;
+        return Nda::Character;
 
     if (lowerName == "string")
-        return Nada::String;
+        return Nda::String;
 
     if (lowerName == "struct")
-        return Nada::Struct;
+        return Nda::Struct;
 
-    return Nada::Undefined;
+    return Nda::Undefined;
 }

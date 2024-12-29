@@ -154,7 +154,7 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
     }   break;
     case NadaParser::ASTNodeType::Assignment: {
         assert(node->children.size() == 1);
-        if (state->typeOf(node->value.lowerValue) == Nada::Undefined) {
+        if (state->typeOf(node->value.lowerValue) == Nda::Undefined) {
             std::cerr << node->value.displayValue << std::endl;
             state->typeOf(node->value.lowerValue);
             assert(0 && "runtime error");
@@ -185,7 +185,12 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
         return evaluateUnaryOperator(node, state);
     }   break;
     case NadaParser::ASTNodeType::Identifier: {
-        state->ret() = state->value(node->value.lowerValue);
+        auto *value = state->valuePtr(node->value.lowerValue);
+        if (value)
+            state->ret().fromReference(value);
+        else
+            state->ret().reset();
+        // TODO: runtime error
     }   break;
     case NadaParser::ASTNodeType::StaticMethodCall: {
         executeFunctionCall(node, state);
@@ -426,7 +431,7 @@ NadaValue &NadaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
     if (node->type == NadaParser::ASTNodeType::StaticMethodCall) {
         typeName = node->children[0]->value.lowerValue;
     } else if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
-        NadaSymbol symbol;
+        Nda::Symbol symbol;
         if (!state->find(node->children[0]->value.lowerValue,symbol))
             throw NadaException(Nada::Error::UnknownSymbol,node->line,node->column, node->children[0]->value.lowerValue);
         typeName = symbol.typeName.lowerValue;
@@ -451,10 +456,14 @@ NadaValue &NadaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
             */
 
         for (int i = 0; i< fnc.parameters.size(); i++) {
-            state->define(fnc.parameters[i].first, fnc.parameters[i].second);
+            state->define(fnc.parameters[i].name, fnc.parameters[i].type);
             // TODO: if !define -> runtime error!
-            NadaValue &valueRef = state->valueRef(fnc.parameters[i].first);
-            valueRef.assign(values[i]);
+            NadaValue &valueRef = state->valueRef(fnc.parameters[i].name);
+            if (fnc.parameters[i].mode == Nda::OutMode) {
+                valueRef.fromReference(&values[i]);
+            } else {
+                valueRef.assign(values[i]);
+            }
         }
 
         executeState(fnc.block, state);
@@ -488,10 +497,15 @@ void NadaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NadaSt
     assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
     assert(block->type      == NadaParser::ASTNodeType::Block);
 
-    NadaFncParameters fncParameters;
+    Nda::FncParameters fncParameters;
     for (const auto &p : parameters->children) {
         assert(p->children.size() >= 1); // TODO: in/out, child # 2
-        fncParameters.push_back(std::make_pair(p->value.lowerValue,p->children[0]->value.lowerValue));
+        Nda::ParameterMode mode = Nda::InMode;
+        if (p->children.size() == 2) {
+            assert(p->children[1]->type == NadaParser::ASTNodeType::FormalParameterMode);
+            mode = p->children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
+        }
+        fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue,mode});
     }
 
     state->bind(typeName,name,fncParameters,block);
@@ -518,10 +532,15 @@ void NadaInterpreter::defineFunction(const NadaParser::ASTNodePtr &node, NadaSta
     assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
     assert(block->type      == NadaParser::ASTNodeType::Block);
 
-    NadaFncParameters fncParameters;
+    Nda::FncParameters fncParameters;
     for (const auto &p : parameters->children) {
-        assert(p->children.size() >= 1); // TODO: in/out, child # 2
-        fncParameters.push_back(std::make_pair(p->value.lowerValue,p->children[0]->value.lowerValue));
+        Nda::ParameterMode mode = Nda::InMode;
+        assert(p->children.size() >= 1);
+        if (p->children.size() == 2) {
+            assert(p->children[1]->type == NadaParser::ASTNodeType::FormalParameterMode);
+            mode = p->children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
+        }
+        fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue, mode});
     }
 
     state->bind(typeName,node->value.lowerValue,fncParameters,block);

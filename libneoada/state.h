@@ -16,18 +16,18 @@ public:
     void       reset();
 
     bool       define(const std::string &name, const std::string &typeName, bool isVolatile = false);
-    Nada::Type typeOf(const std::string &name) const;
+    Nda::Type typeOf(const std::string &name) const;
 
     // procedure/function
-    bool               bind(const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
-    bool               bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
+    bool               bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb);
+    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
     bool               hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters);
-    NadaFunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
+    Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
 
     // methods
-    bool               bind(const std::string &type, const std::string &name, const NadaFncParameters &parameters, NadaFncCallback cb);
+    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb);
 
-    bool               find(const std::string &symbolName,NadaSymbol &symbol) const;
+    bool               find(const std::string &symbolName,Nda::Symbol &symbol) const;
 
     NadaValue          value(const std::string &symbolName) const;
     NadaValue         &valueRef(const std::string &symbolName);
