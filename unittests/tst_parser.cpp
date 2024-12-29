@@ -2237,14 +2237,14 @@ void TstParser::test_api_evaluate_Equal()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_NotEqual()
 {
-    QVERIFY(NeoAda::evaluate("return true /= true;").toBool()  == false);
-    QVERIFY(NeoAda::evaluate("return true /= false;").toBool() == true);
-    QVERIFY(NeoAda::evaluate("return 42   /= 42;").toBool()      == false);
-    QVERIFY(NeoAda::evaluate("return 42.5 /= 42.5;").toBool()  == false);
-    QVERIFY(NeoAda::evaluate("return 42   /= 23;").toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return true <> true;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return true <> false;").toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 42   <> 42;").toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 42.5 <> 42.5;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return 42   <> 23;").toBool()      == true);
 
-    QVERIFY(NeoAda::evaluate("return \"NeoAda\" /= \"NeoAda\";").toBool() == false);
-    QVERIFY(NeoAda::evaluate("return \"NeoAda\" /= \"neoada\";").toBool() == true); // case insensitive as in Ada95
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"NeoAda\";").toBool() == false);
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"neoada\";").toBool() == true); // case insensitive as in Ada95
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -275,7 +275,7 @@ bool NadaLexer::parseNext()
         }
 
         // Mehrstellige Operatoren zuerst prüfen
-        static const std::unordered_set<std::string> twoCharOperators = { ":=", "**", "/=", "<=", ">=", ".." };
+        static const std::unordered_set<std::string> twoCharOperators = { ":=", "**", "<>", "<=", ">=", ".." };
 
         if (nextChar() != '\0') {
             std::string twoCharOp = mScript.substr(mPos, 2);

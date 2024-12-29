@@ -636,7 +636,7 @@ NadaParser::ASTNodePtr NadaParser::parseSimpleExpression()
         ASTNode::addChild(left,term);
     }
 
-    while (mLexer.token(1) == "="  || mLexer.token(1) == "/=" ||
+    while (mLexer.token(1) == "="  || mLexer.token(1) == "<>" ||
            mLexer.token(1) == "+"  || mLexer.token(1) == "-"  || mLexer.token(1) == "&" ||
            mLexer.token(1) == "<"  || mLexer.token(1) == ">"  ||
            mLexer.token(1) == "<=" || mLexer.token(1) == ">=")

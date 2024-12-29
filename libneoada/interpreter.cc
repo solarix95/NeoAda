@@ -330,7 +330,7 @@ NadaValue &NadaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         return state->ret();
     }
 
-    if (node->value.lowerValue == "/=") {
+    if (node->value.lowerValue == "<>") {
         bool result = !left.equal(right, &done);
         if (!done)
             throw NadaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);

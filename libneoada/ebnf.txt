@@ -1,22 +1,86 @@
 
+program   ::= { statement }
+
+statement ::= declaration
+            | assignment
+            | return_statement
+            | if_statement
+            | for_loop
+            | while_loop
+            | method_declaration
+            | break_statement
+            | continue_statement
+            | method_call
+            | expression_statement
+
+comment             ::= "--" { any_character_except_newline } newline
+
+declaration         ::= "declare" identifier ":" type [ ":=" expression ] ";"
+
+method_declaration  ::= "function" type_name ":" identifier "(" parameter_list ")" [ "return" type ] "is" block "end" identifier ";"
+
+parameter_list      ::= [ parameter { "," parameter } ]
+parameter           ::= identifier ":" type
 
 
-rocedure_declaration    ::= "procedure" identifier formal_parameter_list "is" "begin" statement_list "end" ";"
+if_statement        ::= "if" expression "then" statement_list { "elsif" expression "then" statement_list } [ "else" statement_list ] "end" "if" ";"
 
-formal_parameter_list   ::= "(" parameter { "," parameter } ")"
-parameter               ::= identifier ":" "in" type
+for_loop            ::= "for" identifier "in" iterable_or_range "loop" statement_list "end" "loop" ";"
+iterable_or_range   ::= range | identifier
+range               ::= expression ".." expression
 
-statement_list          ::= { statement }
-statement               ::= assignment_statement
-                            | procedure_call
-                            | if_statement
-                            | loop_statement
-                            | while_statement
-                            | for_statement
-                            | declare_statement
-                            | break_statement
-                            | continue_statement
-                            | ...
+while_loop          ::= "while" expression "loop" statement_list "end" "loop" ";"
+break_statement     ::= "break"    ["when" expression] ";"
+continue_statement  ::= "continue" ["when" expression] ";"
+
+function_call        ::= simple_call | method_call_static | method_call_instance
+simple_call          ::= identifier "(" argument_list ")" ";"
+method_call_static   ::= type_name ":" identifier "(" argument_list ")" ";"
+method_call_instance ::= instance "." identifier "(" argument_list ")" ";"
+
+expression          ::= relation { logical_operator relation }
+logical_operator    ::= "and" | "or" | "xor"
+
+relation             ::= simple_expression [ relational_operator simple_expression ]
+relational_operator  ::= "=" | "<>" | "<" | "<=" | ">" | ">="
+
+simple_expression    ::= [ unary_operator ] term { adding_operator term }
+unary_operator       ::= "+" | "-"
+adding_operator      ::= "+" | "-" | "&"
+
+term                 ::= factor { multiplying_operator factor }
+multiplying_operator ::= "*" | "/" | "mod" | "rem"
+
+factor               ::= primary [ "**" primary ]
+
+primary ::= numeric_literal
+          | string_literal
+          | identifier
+          | function_call
+          | "(" expression ")"
+          | unary_operator primary
+          | "not" primary
+
+block           ::= "begin" statement_list "end"
+statement_list  ::= { statement }
+
+numeric_literal ::= numeral [ "." numeral ] [ exponent ]
+numeral         ::= digit { digit | "_" }
+exponent        ::= "E" [ "+" | "-" ] numeral
+string_literal  ::= '"' { character } '"'
+
+type              ::= "Number"       // double
+                    | "Natural"      // int64
+                    | "Supernatural" // unsigned int64
+                    | "Boolean"
+                    | "Character"
+                    | "String"       // utf8-String
+                    | "Byte"
+                    | "list"
+                    | "dict"
+                    | custom_type
+
+custom_type       ::= "type" identifier "is" type ";"
 
 
-declare_statement ::= "declare" identifier ":" type [ ":=" expression ] ";"
+

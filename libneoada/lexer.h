@@ -13,7 +13,7 @@ public:
         Number,        // Ganzzahl oder Gleitkommazahl
         String,        // String-Literale
         BooleanLiteral,
-        Operator,      // Operatoren wie ":=", "**", "/="
+        Operator,      // Operatoren wie ":=", "**", "<>"
         Separator,     // Satzzeichen wie ";", "(", ")"
         Unknown        // Unerwartete oder nicht erkannte Token
     };
