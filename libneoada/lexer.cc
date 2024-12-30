@@ -287,7 +287,7 @@ bool NadaLexer::parseNext()
         }
 
         // Einfache einstellige Operatoren prüfen
-        static const std::unordered_set<char> singleCharOperators = { '+', '-', '*', '/', '<', '>', '=', '&' };
+        static const std::unordered_set<char> singleCharOperators = { '+', '-', '*', '/', '<', '>', '=', '&', '#' };
         if (singleCharOperators.count(currentChar())) {
             mTokens.push_back(Token(std::string(1, currentChar()),TokenType::Operator, mRow, mColumn));
             return true;
@@ -295,7 +295,9 @@ bool NadaLexer::parseNext()
 
         // Einzelzeichen-Tokens (Operatoren, Separatoren, etc.)
         // Separatoren
-        if (currentChar() == ';' || currentChar() == ',' || currentChar() == '.' || currentChar() == ':' || currentChar() == '(' || currentChar() == ')') {
+        if (currentChar() == ';' || currentChar() == ',' || currentChar() == '.' || currentChar() == ':' ||
+            currentChar() == '(' || currentChar() == ')' ||
+            currentChar() == '[' || currentChar() == ']') {
             mTokens.push_back(Token(std::string(1, currentChar()),TokenType::Separator, mRow, mColumn));
             return true;
         }

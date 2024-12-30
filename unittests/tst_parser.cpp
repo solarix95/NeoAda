@@ -56,7 +56,10 @@ private slots:
     void test_core_NumericValues();
     void test_core_Assignment();
     void test_core_References();
-    void test_core_Listvalue();
+    void test_core_List_COW();
+    void test_core_List_REF();
+    void test_core_List_Contains();
+    void test_core_List_Concat();
 
 
     // Lexer Literals
@@ -75,6 +78,8 @@ private slots:
     void test_parser_Declaration1();
     void test_parser_Declaration2();
     void test_parser_Declaration3();
+    void test_parser_Declaration4_List();
+    void test_parser_Declaration5_List_Init();
 
     void test_parser_Factor();
     void test_parser_Primary1();
@@ -153,6 +158,7 @@ private slots:
 
 
     void test_api_evaluate_Literals();
+    void test_api_evaluate_Length();
     void test_api_evaluate_Equal();
     void test_api_evaluate_NotEqual();
     void test_api_evaluate_LessThan();
@@ -162,6 +168,8 @@ private slots:
     void test_api_evaluate_Modulo();
     void test_api_evaluate_Multiply();
     void test_api_evaluate_Relations();
+
+    void test_api_evaluate_List_Init();
 
     void test_api_evaluate_GlobalValue();
     void test_api_evaluate_ScopeValue();
@@ -354,7 +362,7 @@ void TstParser::test_core_References()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_core_Listvalue()
+void TstParser::test_core_List_COW()
 {
     NadaValue vs;
     vs.fromString("1");
@@ -442,7 +450,78 @@ void TstParser::test_core_Listvalue()
         QCOMPARE(a1.listSize(), 1);
         QCOMPARE(a2.listSize(), 2);
     }
+}
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_List_REF()
+{
+    NadaValue vs;
+    vs.fromString("1");
+
+    {
+        NadaValue a1;
+        a1.initType(Nda::List);
+        a1.appendToList(vs);
+
+        NadaValue r1;
+        r1.fromReference(&a1);
+        r1.appendToList(vs);
+
+        a1.appendToList(vs);
+
+        QCOMPARE(a1.listSize(), 3);
+        QCOMPARE(r1.listSize(), 3);
+
+        while (r1.listSize() > 0)
+            r1.takeFromList(0);
+
+        QCOMPARE(a1.listSize(), 0);
+        QCOMPARE(r1.listSize(), 0);
+    }
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_List_Contains()
+{
+    NadaValue vs;
+    vs.fromString("0");
+
+    NadaValue a1;
+    a1.initType(Nda::List);
+    a1.appendToList(vs);
+
+    QVERIFY(a1.containsInList(vs) == true);
+
+    vs.fromNumber((int64_t)0);
+    QVERIFY(a1.containsInList(vs) == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_List_Concat()
+{
+    NadaValue vs;
+    vs.fromString("0");
+
+    NadaValue a1;
+    a1.initType(Nda::List);
+    a1.appendToList(vs);
+
+    vs.fromString("1");
+    NadaValue a2;
+    a2.initType(Nda::List);
+    a2.appendToList(vs);
+
+    NadaValue a3 = a1.concat(a2);
+
+    vs.fromString("0");
+    QVERIFY(a3.containsInList(vs) == true);
+    vs.fromString("1");
+    QVERIFY(a3.containsInList(vs) == true);
+
+    QVERIFY(a1.listSize() == 1);
+    QVERIFY(a2.listSize() == 1);
+    QVERIFY(a3.listSize() == 2);
 }
 
 /*-----------------------------------------------------------------------------------------------*\
@@ -726,6 +805,51 @@ Node(Program, "")
   Node(Volatile, "x")
     Node(Identifier, "Number")
     Node(Number, "42")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration4_List()
+{
+    std::string script = R"(
+        declare x : List;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "x")
+    Node(Identifier, "List")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration5_List_Init()
+{
+    std::string script = R"(
+        declare x : List := [1,2,3];
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "x")
+    Node(Identifier, "List")
+    Node(ListLiteral, "")
+      Node(Number, "1")
+      Node(Number, "2")
+      Node(Number, "3")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -2311,6 +2435,19 @@ void TstParser::test_api_evaluate_Literals()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Length()
+{
+    QVERIFY(NeoAda::evaluate("return  #1;").toInt64()   == 1);
+    QVERIFY(NeoAda::evaluate("return  #1.1;").toInt64() == 1);
+    QVERIFY(NeoAda::evaluate("return #\"\";").toInt64() == 0);
+    QVERIFY(NeoAda::evaluate("return #\"NeoAda\";").toInt64() == 6);
+
+    QVERIFY(NeoAda::evaluate("return #[];").toInt64()      == 0);
+    QVERIFY(NeoAda::evaluate("return #[1];").toInt64()     == 1);
+    QVERIFY(NeoAda::evaluate("return #[1,2,3];").toInt64() == 3);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Equal()
 {
     QVERIFY(NeoAda::evaluate("return true = true;").toBool()  == true);
@@ -2415,6 +2552,33 @@ void TstParser::test_api_evaluate_Relations()
     QVERIFY(NeoAda::evaluate("return false xor true;").toBool()   == true);
     QVERIFY(NeoAda::evaluate("return true  xor false;").toBool()  == true);
     QVERIFY(NeoAda::evaluate("return false xor false;").toBool()  == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_List_Init()
+{
+    std::string script = R"(
+        declare x : List := [1,2,3];
+        print(x);
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 1);
+    QVERIFY(results[0] == "[1,2,3]");
 }
 
 //-------------------------------------------------------------------------------------------------

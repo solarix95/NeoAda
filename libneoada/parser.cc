@@ -1,6 +1,7 @@
 
 #include "parser.h"
 #include "exception.h"
+#include <cassert>
 
 //-------------------------------------------------------------------------------------------------
 NadaParser::NadaParser(NadaLexer &lexer)
@@ -543,6 +544,7 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Expression:   return "Expression";
     case ASTNodeType::ExpressionList: return "ExpressionList";
     case ASTNodeType::Literal:      return "Literal";
+    case ASTNodeType::ListLiteral:  return "ListLiteral";
     case ASTNodeType::Number:       return  "Number";
     case ASTNodeType::Identifier:   return "Identifier";
     case ASTNodeType::UnaryOperator:  return "UnaryOperator";
@@ -697,7 +699,7 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
     if (!mLexer.token(token,tokenType))
         throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
-    bool hasUnaryOperator = (token == "+" || token == "-");
+    bool hasUnaryOperator = (token == "+" || token == "-" || token == "#");
     std::string unaryOperator = token;
 
     if (hasUnaryOperator)
@@ -717,6 +719,8 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
     } else if (tokenType == NadaLexer::TokenType::Identifier) {
         node = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), token);
         handleIdentifierCall(node);
+     } else if (token == "[") {
+        node = parseListLiteral();
     } else if (token == "(") {
         if (!mLexer.nextToken()) // Überspringe '('
             throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
@@ -838,5 +842,36 @@ bool NadaParser::handleIdentifierCall(ASTNodePtr &identNode)
     }
 
     return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaParser::ASTNodePtr NadaParser::parseListLiteral()
+{
+    assert(mLexer.token() == "[");
+
+    auto ret = std::make_shared<ASTNode>(ASTNodeType::ListLiteral, mLexer.line(), mLexer.column());
+
+    if (!mLexer.nextToken())    // Überspringe '['
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    while (mLexer.token() != "]") {
+        // Parse ein Element der Liste
+        auto element = parseExpression();
+
+        if (element)
+            ASTNode::addChild(ret,element);
+
+        if (!mLexer.nextToken())    // Überspringe '['
+            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        // Optionales Komma
+        if (mLexer.token() == ",") {
+            mLexer.nextToken(); // Consume ','
+        } else if (mLexer.token() != "]") {
+            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        }
+    }
+
+    return ret;
 }
 

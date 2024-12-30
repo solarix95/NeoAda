@@ -12,8 +12,11 @@
 #include <stdexcept>
 #include <sstream>
 #include <limits>
+#include <algorithm> // std::find
 
 #define OP_SPACESHIP(v1, v2) ((int64_t)((v1) == (v2) ? 0 : ((v1) > (v2) ? +1 : -1)))
+
+bool       operator==(const NadaValue &v1, const NadaValue &v2);
 
 //-------------------------------------------------------------------------------------------------
 NadaValue::NadaValue()
@@ -311,6 +314,15 @@ bool NadaValue::assign(const NadaValue &other)
             return true;
         }
     } break;
+    case Nda::List: {
+        if (other.type() == mType) {
+            if (other.cInternalList() == cInternalList())
+                return true;
+            reset();
+            assignOtherList(other);
+            return true;
+        }
+    } break;
 
     case Nda::Character: return false; break;
     case Nda::Struct:    return false; break;
@@ -553,6 +565,20 @@ NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
             ret.fromString(cInternalString()->cValue() + other.toString());
         return ret;
     } break;
+    case Nda::List: {
+        if (other.type() == Nda::List) {
+            NadaValue ret;
+            ret.initType(Nda::List);
+
+            const auto &myArray    = cInternalList()->cArray();
+            const auto &otherArray = other.cInternalList()->cArray();
+            auto &newArray = ret.internalList()->array();
+            newArray = myArray;
+            newArray.insert(newArray.end(), otherArray.begin(), otherArray.end());
+
+            return ret;
+        }
+    }
     case Nda::Struct: {
         assert(0 && "not yet implemented");
         return NadaValue();
@@ -743,44 +769,48 @@ NadaValue NadaValue::division(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::unaryOperator(const std::string &op, bool *ok)
+NadaValue NadaValue::unaryOperator(const std::string &op, bool *ok) const
 {
     if (mType == Nda::Reference) {
-         internalReference()->unaryOperator(op, ok);
-        return;
+        return cInternalReference()->unaryOperator(op, ok);
+    }
+
+    if (op == "#") {
+        if (ok) *ok = true;
+        return lengthOperator();
     }
 
     if (ok) *ok = false;
+
+    NadaValue ret;
     switch (mType) {
-    case Nda::Undefined: return; break;
-    case Nda::Any:       return; break;
+    case Nda::Undefined: break;
+    case Nda::Any:       break;
     case Nda::Number: {
         if (op == "+") {
             if (ok) *ok = true;
-            return;
+            return *this;
         }
         if (op == "-") {
             // FIXME: nan? inf?
             if (ok) *ok = true;
-            mValue.uDouble = -mValue.uDouble;
-            return;
+            ret.fromNumber(-mValue.uDouble);
         }
     } break;
     case Nda::Natural:{
         if (op == "+") {
             if (ok) *ok = true;
-            return;
+            return *this;
         }
         if (op == "-") {
             if (ok) *ok = true;
-            mValue.uInt64 = -mValue.uInt64;
-            return;
+            ret.fromNumber(-mValue.uInt64);
         }
     } break;
     case Nda::Supernatural:{
         if (op == "+") {
             if (ok) *ok = true;
-            return;
+            return *this;
         }
     } break;
     case Nda::Boolean:
@@ -794,6 +824,47 @@ void NadaValue::unaryOperator(const std::string &op, bool *ok)
     case Nda::Struct:
         break;
     }
+
+    return ret;
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue NadaValue::lengthOperator() const
+{
+    if (mType == Nda::Reference) {
+        return cInternalReference()->lengthOperator();
+    }
+
+    int length = 0;
+    switch (mType) {
+    case Nda::Reference: break;
+    case Nda::Undefined: break;
+    case Nda::Any:
+    case Nda::Number:
+    case Nda::Natural:
+    case Nda::Supernatural:
+    case Nda::Boolean:
+    case Nda::Byte:
+    case Nda::Character:
+        length = 1;
+        break;
+    case Nda::String:
+        length = cInternalString() ? cInternalString()->cValue().length() : 0;
+        break;
+    case Nda::List:
+        length = listSize();
+        break;
+    case Nda::Dict:
+        assert(0 && "not implemented");
+        break;
+    case Nda::Struct:
+        assert(0 && "not implemented");
+        break;
+    }
+
+    NadaValue ret;
+    ret.fromNumber((int64_t)length);
+    return ret;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -896,6 +967,20 @@ const NadaValue &NadaValue::readAccess(int index) const
 
     const auto &array = cInternalList()->cArray();
     return array.at(index);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaValue::containsInList(const NadaValue &value) const
+{
+    assert(type() == Nda::List);
+    if (mType == Nda::Reference)
+        return cInternalReference()->containsInList(value);
+
+    if (listSize() <= 0)
+        return false;
+
+    const auto &array = cInternalList()->cArray();
+    return std::find(array.begin(), array.end(), value) != array.end();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1012,7 +1097,7 @@ std::string NadaValue::toString() const
     std::ostringstream oss;
     switch (mType) {
     case Nda::Undefined: return "";
-    case Nda::Reference: return "";
+    case Nda::Reference: return cInternalReference()->toString();
     case Nda::Any:       return "";
     case Nda::Number:
         oss << std::setprecision(15) << std::fixed << mValue.uDouble;
@@ -1031,6 +1116,19 @@ std::string NadaValue::toString() const
         if (mValue.uPtr)
             return cInternalString()->cValue();
         return "";
+    case Nda::List:
+        if (mValue.uPtr) {
+            std::string ret;
+            for (const auto &v : cInternalList()->cArray()) {
+                if (!ret.empty())
+                    ret = ret + ",";
+                ret += v.toString();
+            }
+            ret = "[" + ret + "]";
+            return ret;
+        }
+
+        return "[]";
     case Nda::Struct:
         return "NOT IMPLEMENTED";
     }
@@ -1129,8 +1227,6 @@ Nda::SharedString *NadaValue::internalString()
 const Nda::SharedString *NadaValue::cInternalString() const
 {
     assert(mType == Nda::String);
-    assert(mValue.uPtr);
-
     return ((Nda::SharedString*)mValue.uPtr);
 }
 
@@ -1153,16 +1249,22 @@ const NadaValue *NadaValue::cInternalReference() const
 //-------------------------------------------------------------------------------------------------
 Nda::SharedList *NadaValue::internalList()
 {
+    if (mType == Nda::Reference)
+        return internalReference()->internalList();
+
     assert(mType == Nda::List);
-    assert(mValue.uPtr);
+    if (!mValue.uPtr)
+        mValue.uPtr = new Nda::SharedList();
     return ((Nda::SharedList*)mValue.uPtr);
 }
 
 //-------------------------------------------------------------------------------------------------
 const Nda::SharedList   *NadaValue::cInternalList() const
 {
+    if (mType == Nda::Reference)
+        return cInternalReference()->cInternalList();
+
     assert(mType == Nda::List);
-    assert(mValue.uPtr);
     return ((Nda::SharedList*)mValue.uPtr);
 }
 
@@ -1256,4 +1358,16 @@ bool NadaValue::exact64BitDbl(double &value) const
     }
 
     return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+//                                   local functions
+//-------------------------------------------------------------------------------------------------
+
+bool       operator==(const NadaValue &v1, const NadaValue &v2)
+{
+    if (v1.type() != v2.type())
+        return false;
+
+    return v1.equal(v2);
 }

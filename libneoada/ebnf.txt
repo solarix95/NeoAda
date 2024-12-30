@@ -55,6 +55,7 @@ factor               ::= primary [ "**" primary ]
 
 primary ::= numeric_literal
           | string_literal
+          | list_literal
           | identifier
           | function_call
           | "(" expression ")"
@@ -68,6 +69,7 @@ numeric_literal ::= numeral [ "." numeral ] [ exponent ]
 numeral         ::= digit { digit | "_" }
 exponent        ::= "E" [ "+" | "-" ] numeral
 string_literal  ::= '"' { character } '"'
+list_literal    ::= "[" [ expression { "," expression } ] "]"
 
 type              ::= "Number"       // double
                     | "Natural"      // int64

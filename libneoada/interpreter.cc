@@ -171,6 +171,14 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
     case NadaParser::ASTNodeType::Literal:
         state->ret().fromString(node->value.displayValue);
         break;
+    case NadaParser::ASTNodeType::ListLiteral: {
+        NadaValue ret;
+        ret.initType(Nda::List);
+        for (const auto &child : node->children) {
+            ret.appendToList(executeState(child, state));
+        }
+        state->ret() = ret;
+    } break;
     case NadaParser::ASTNodeType::BooleanLiteral:
         state->ret().fromBool(node->value.lowerValue == "true");
         break;
@@ -413,7 +421,7 @@ NadaValue &NadaInterpreter::evaluateUnaryOperator(const NadaParser::ASTNodePtr &
     assert(node->children.size() == 1);
 
     bool done;
-    executeState(node->children[0],state).unaryOperator(node->value.lowerValue,&done);
+    state->ret() = executeState(node->children[0],state).unaryOperator(node->value.lowerValue,&done);
 
     // FIXME: runtime error
     // if (!done)

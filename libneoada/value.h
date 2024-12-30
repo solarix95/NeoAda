@@ -53,7 +53,8 @@ public:
     NadaValue multiply(const NadaValue &other, bool *ok= nullptr) const;
     NadaValue division(const NadaValue &other, bool *ok= nullptr) const;
 
-    void unaryOperator(const std::string &op, bool *ok = nullptr);
+    NadaValue unaryOperator(const std::string &op, bool *ok = nullptr) const;
+    NadaValue lengthOperator() const;
 
     // List interface
     int              listSize() const;
@@ -62,6 +63,7 @@ public:
     void             takeFromList(int index);
     NadaValue&       writeAccess(int index);
     const NadaValue& readAccess(int index) const;
+    bool             containsInList(const NadaValue &value) const;
 
     // String interface
     const std::string &cStringValue() const;

@@ -30,6 +30,12 @@ Nda::Type Nda::typeByString(const std::string &name)
     if (lowerName == "string")
         return Nda::String;
 
+    if (lowerName == "list")
+        return Nda::List;
+
+    if (lowerName == "dict")
+        return Nda::Dict;
+
     if (lowerName == "struct")
         return Nda::Struct;
 

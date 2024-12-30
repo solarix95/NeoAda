@@ -23,6 +23,7 @@ public:
         Expression,
         ExpressionList,
         Literal,
+        ListLiteral,
         Number,
         Identifier,
         BooleanLiteral,
@@ -112,10 +113,11 @@ private:
     NadaParser::ASTNodePtr parseTerm();               // a * b
     NadaParser::ASTNodePtr parseFactor();             // a**b
     NadaParser::ASTNodePtr parsePrimary();            // a
-    NadaParser::ASTNodePtr parseFunctionCall(NadaParser::ASTNodePtr &funcNode);       // a()
-    NadaParser::ASTNodePtr parseMethodCall(NadaParser::ASTNodePtr &funcNode);         // type:a()
+    NadaParser::ASTNodePtr parseFunctionCall(NadaParser::ASTNodePtr &funcNode);        // a()
+    NadaParser::ASTNodePtr parseMethodCall(NadaParser::ASTNodePtr &funcNode);          // type:a()
     NadaParser::ASTNodePtr parseIterableOrRange();    // for x in [IterableOrRange]
     bool                   handleIdentifierCall(NadaParser::ASTNodePtr &identNode);    // is function or procedure or method-call
+    NadaParser::ASTNodePtr parseListLiteral();         // is function or procedure or method-call
 
     static std::string nodeTypeToString(ASTNodeType type);
 
