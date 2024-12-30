@@ -1,6 +1,7 @@
 #include "value.h"
 #include "private/sharedstring.h"
 #include "private/numericparser.h"
+#include "private/sharedlist.h"
 
 #include <cassert>
 #include <cmath>
@@ -57,7 +58,10 @@ void NadaValue::initType(Nda::Type t)
     case Nda::Boolean:      mValue.uByte   =  0;  break;
     case Nda::Byte:         mValue.uByte   =  0;  break;
     case Nda::Character:    mValue.uByte   =  0;  break;
+
     case Nda::String:       mValue.uPtr    =  nullptr; break;
+    case Nda::List:         mValue.uPtr    =  nullptr; break;
+    case Nda::Dict:         mValue.uPtr    =  nullptr; break;
     case Nda::Struct:       mValue.uPtr    =  nullptr; break;
     default:
         assert(0 && "not implemented");
@@ -70,7 +74,7 @@ bool NadaValue::fromString(const std::string &value)
     reset();
     mType = Nda::String;
     if (!value.empty())
-        mValue.uPtr = new NadaSharedString(value);
+        mValue.uPtr = new Nda::SharedString(value);
     return true;
 }
 
@@ -793,6 +797,108 @@ void NadaValue::unaryOperator(const std::string &op, bool *ok)
 }
 
 //-------------------------------------------------------------------------------------------------
+int NadaValue::listSize() const
+{
+    assert(type() == Nda::List);
+    if (mType == Nda::Reference)
+        return cInternalReference()->listSize();
+
+    if (!mValue.uPtr)
+        return 0;
+
+    return cInternalList()->cArray().size();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaValue::appendToList(const NadaValue &value)
+{
+    assert(type() == Nda::List);
+    if (mType == Nda::Reference)
+        return internalReference()->appendToList(value);
+
+    if (!mValue.uPtr)
+        mValue.uPtr = new Nda::SharedList();
+    else if (internalList()->refCount() > 1)
+        detachList();
+
+    internalList()->array().push_back(value);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaValue::insertIntoList(int index, const NadaValue &value)
+{
+    assert(type() == Nda::List);
+    if (mType == Nda::Reference)
+        return internalReference()->insertIntoList(index, value);
+
+    if (!mValue.uPtr)
+        mValue.uPtr = new Nda::SharedList();
+    else if (internalList()->refCount() > 1)
+        detachList();
+
+    auto &array = internalList()->array();
+
+    if (index >= (int)array.size())
+        appendToList(value);
+
+    if (index < 0)
+        index = 0;
+
+    array.insert(array.begin() + index,value);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaValue::takeFromList(int index)
+{
+    assert(type() == Nda::List);
+    if (mType == Nda::Reference)
+        return internalReference()->takeFromList(index);
+
+    if (index < 0)
+        return;
+
+    if (index >= listSize())
+        return;
+
+    if (internalList()->refCount() > 1)
+        detachList();
+
+    auto &array = internalList()->array();
+    array.erase(array.begin() + index);
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaValue &NadaValue::writeAccess(int index)
+{
+    assert(type() == Nda::List);
+    if (mType == Nda::Reference)
+        return internalReference()->writeAccess(index);
+
+    assert(index >= 0);
+    assert(index < listSize());
+
+    if (internalList()->refCount() > 1)
+        detachList();
+
+    auto &array = internalList()->array();
+    return array.at(index);
+}
+
+//-------------------------------------------------------------------------------------------------
+const NadaValue &NadaValue::readAccess(int index) const
+{
+    assert(type() == Nda::List);
+    if (mType == Nda::Reference)
+        return cInternalReference()->readAccess(index);
+
+    assert(index >= 0);
+    assert(index < listSize());
+
+    const auto &array = cInternalList()->cArray();
+    return array.at(index);
+}
+
+//-------------------------------------------------------------------------------------------------
 void NadaValue::assignOther(const NadaValue &other)
 {
     reset();
@@ -816,6 +922,9 @@ void NadaValue::assignOther(const NadaValue &other)
     } break;
     case Nda::String:
         assignOtherString(other);
+        return;
+    case Nda::List:
+        assignOtherList(other);
         return;
     case Nda::Struct:
         assert(0 && "not implemented");
@@ -847,6 +956,19 @@ void NadaValue::assignOtherString(const NadaValue &other)
 }
 
 //-------------------------------------------------------------------------------------------------
+void NadaValue::assignOtherList(const NadaValue &other)
+{
+    assert(mType       == Nda::Undefined);
+    assert(mValue.uPtr == nullptr);
+
+    mType = Nda::List;
+    if (!other.mValue.uPtr)
+        return;
+    mValue.uPtr = other.mValue.uPtr;
+    internalList()->addRef();
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaValue::setString(const std::string &newValue)
 {
     if (mType == Nda::Reference)
@@ -869,12 +991,12 @@ bool NadaValue::setString(const std::string &newValue)
     if (mValue.uPtr) {
         if (internalString()->refCount() > 1) { // detach?
             internalString()->releaseRef();
-            mValue.uPtr = new NadaSharedString(newValue);
+            mValue.uPtr = new Nda::SharedString(newValue);
             return true;
         }
         internalString()->value() = newValue;
     } else {
-        mValue.uPtr = new NadaSharedString(newValue);
+        mValue.uPtr = new Nda::SharedString(newValue);
     }
 
     return true;
@@ -973,11 +1095,17 @@ void NadaValue::reset()
         return;
     case Nda::String:
         if (mValue.uPtr)
-            ((NadaSharedString*)mValue.uPtr)->releaseRef();
+            ((Nda::SharedString*)mValue.uPtr)->releaseRef();
         mType = Nda::Undefined;
-        mValue.uInt64 = 0;
+        mValue.uPtr = nullptr;
         return;
     case Nda::Reference:
+        mType = Nda::Undefined;
+        mValue.uPtr = nullptr;
+        return;
+    case Nda::List:
+        if (mValue.uPtr)
+            ((Nda::SharedList*)mValue.uPtr)->releaseRef();
         mType = Nda::Undefined;
         mValue.uPtr = nullptr;
         return;
@@ -990,20 +1118,20 @@ void NadaValue::reset()
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaSharedString *NadaValue::internalString()
+Nda::SharedString *NadaValue::internalString()
 {
     assert(mType == Nda::String);
     assert(mValue.uPtr);
-    return ((NadaSharedString*)mValue.uPtr);
+    return ((Nda::SharedString*)mValue.uPtr);
 }
 
 //-------------------------------------------------------------------------------------------------
-const NadaSharedString *NadaValue::cInternalString() const
+const Nda::SharedString *NadaValue::cInternalString() const
 {
     assert(mType == Nda::String);
     assert(mValue.uPtr);
 
-    return ((NadaSharedString*)mValue.uPtr);
+    return ((Nda::SharedString*)mValue.uPtr);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1020,6 +1148,35 @@ const NadaValue *NadaValue::cInternalReference() const
     assert(mType == Nda::Reference);
     assert(mValue.uPtr);
     return ((NadaValue*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
+Nda::SharedList *NadaValue::internalList()
+{
+    assert(mType == Nda::List);
+    assert(mValue.uPtr);
+    return ((Nda::SharedList*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
+const Nda::SharedList   *NadaValue::cInternalList() const
+{
+    assert(mType == Nda::List);
+    assert(mValue.uPtr);
+    return ((Nda::SharedList*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NadaValue::detachList()
+{
+    assert(mType == Nda::List);
+    assert(mValue.uPtr);
+    assert(internalList()->refCount() >= 2);
+
+    auto *newList = new Nda::SharedList();
+    newList->array() = internalList()->array(); // deep copy
+    internalList()->releaseRef();
+    mValue.uPtr = newList;
 }
 
 //-------------------------------------------------------------------------------------------------

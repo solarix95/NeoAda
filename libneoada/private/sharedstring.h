@@ -4,10 +4,13 @@
 #include <string>
 #include "shareddata.h"
 
-class NadaSharedString : public NadaSharedData
+namespace Nda {
+
+
+class SharedString : public Nda::SharedData
 {
 public:
-    NadaSharedString(const std::string &value);
+    SharedString(const std::string &value);
 
     inline std::string        &value()        { return mValue; }
     inline const std::string  &cValue() const { return mValue; }
@@ -16,5 +19,7 @@ private:
     std::string  mValue;
 
 };
+
+}
 
 #endif // SHAREDSTRING_H

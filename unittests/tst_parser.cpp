@@ -56,6 +56,7 @@ private slots:
     void test_core_NumericValues();
     void test_core_Assignment();
     void test_core_References();
+    void test_core_Listvalue();
 
 
     // Lexer Literals
@@ -350,6 +351,98 @@ void TstParser::test_core_References()
     QCOMPARE(v1.toString(), v2.toString());
     QCOMPARE(r1.toString(), v1.toString());
     QCOMPARE(r2.toString(), v1.toString());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_Listvalue()
+{
+    NadaValue vs;
+    vs.fromString("1");
+
+    { // append, insert remove
+        NadaValue a1;
+        a1.initType(Nda::List);
+
+        QCOMPARE(a1.listSize(), 0);
+        a1.appendToList(vs);
+        QCOMPARE(a1.listSize(), 1);
+        QVERIFY(a1.readAccess(0).toString() == "1");
+
+        vs.fromString("0");
+        a1.insertIntoList(0,vs);
+        QVERIFY(a1.readAccess(0).toString() == "0");
+        QVERIFY(a1.readAccess(1).toString() == "1");
+        a1.takeFromList(0);
+        QVERIFY(a1.readAccess(0).toString() == "1");
+        a1.takeFromList(0);
+        QCOMPARE(a1.listSize(), 0);
+    }
+
+    { // shared list
+        NadaValue a1;
+        a1.initType(Nda::List);
+
+        {
+            NadaValue a2;
+            a2.initType(Nda::List);
+
+            vs.fromString("a2");
+            a2.appendToList(vs);
+
+            QCOMPARE(a1.listSize(), 0);
+            QCOMPARE(a2.listSize(), 1);
+
+            a1 = a2;
+        } // destroy a2
+
+        QCOMPARE(a1.listSize(), 1);
+        QVERIFY(a1.readAccess(0).toString() == "a2");
+    }
+
+    { // copy-on-write: source changes
+        NadaValue a1;
+        a1.initType(Nda::List);
+
+        NadaValue a2;
+        a2.initType(Nda::List);
+
+        vs.fromString("0");
+        a1.appendToList(vs);
+
+        a2 = a1;
+        QVERIFY(a1.readAccess(0).toString() == "0");
+        QVERIFY(a2.readAccess(0).toString() == "0");
+
+        vs.fromString("1");
+        a1.insertIntoList(0,vs);
+        QVERIFY(a1.readAccess(0).toString() == "1");
+        QVERIFY(a2.readAccess(0).toString() == "0");
+        QCOMPARE(a1.listSize(), 2);
+        QCOMPARE(a2.listSize(), 1);
+    }
+
+    { // copy-on-write: target changes
+        NadaValue a1;
+        a1.initType(Nda::List);
+
+        NadaValue a2;
+        a2.initType(Nda::List);
+
+        vs.fromString("0");
+        a1.appendToList(vs);
+
+        a2 = a1;
+        QVERIFY(a1.readAccess(0).toString() == "0");
+        QVERIFY(a2.readAccess(0).toString() == "0");
+
+        vs.fromString("1");
+        a2.insertIntoList(0,vs);
+        QVERIFY(a1.readAccess(0).toString() == "0");
+        QVERIFY(a2.readAccess(0).toString() == "1");
+        QCOMPARE(a1.listSize(), 1);
+        QCOMPARE(a2.listSize(), 2);
+    }
+
 }
 
 /*-----------------------------------------------------------------------------------------------*\

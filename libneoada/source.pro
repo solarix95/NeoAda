@@ -18,7 +18,8 @@ HEADERS += \
     $$NEOADA_PATH/value.h \
     $$NEOADA_PATH/state.h \
     $$NEOADA_PATH/neoadaapi.h \
-    $$NEOADA_PATH/exception.h
+    $$NEOADA_PATH/exception.h \
+    $$NEOADA_PATH/private/sharedlist.h
 
 SOURCES += \
     $$NEOADA_PATH/private/type.cc \
@@ -34,7 +35,8 @@ SOURCES += \
     $$NEOADA_PATH/value.cc \
     $$NEOADA_PATH/state.cc \
     $$NEOADA_PATH/neoadaapi.cc \
-    $$NEOADA_PATH/exception.cc
+    $$NEOADA_PATH/exception.cc \
+    $$NEOADA_PATH/private/sharedlist.cc
 
 DISTFILES += \
     $$NEOADA_PATH/ebnf.txt

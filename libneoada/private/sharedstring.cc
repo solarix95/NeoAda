@@ -1,5 +1,10 @@
 #include "sharedstring.h"
 
-NadaSharedString::NadaSharedString(const std::string &value)
+namespace Nda {
+
+
+SharedString::SharedString(const std::string &value)
     : mValue(value)
 {}
+
+}

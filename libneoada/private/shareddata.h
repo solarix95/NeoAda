@@ -8,22 +8,26 @@
     like "String" and "Struct"
 */
 
-class NadaSharedData
+namespace Nda {
+
+class SharedData
 {
 public:
-    NadaSharedData();
-    virtual ~NadaSharedData();
+    SharedData();
+    virtual ~SharedData();
 
     void addRef();
     void releaseRef();
 
     inline int  refCount() const { return mReferences; }
 
-    NadaSharedData(const NadaSharedData&) = delete;            // No Copy
-    NadaSharedData& operator=(const NadaSharedData&) = delete; // No Assigment
+    SharedData(const SharedData&) = delete;            // No Copy
+    SharedData& operator=(const SharedData&) = delete; // No Assigment
 
 private:
     int mReferences;
 };
+
+}
 
 #endif // SHAREDDATA_H

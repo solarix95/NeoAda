@@ -1,24 +1,28 @@
 #include "shareddata.h"
 #include <cassert>
 
-//-------------------------------------------------------------------------------------------------
-NadaSharedData::NadaSharedData() : mReferences(1) {}
+namespace Nda {
 
-NadaSharedData::~NadaSharedData()
+//-------------------------------------------------------------------------------------------------
+SharedData::SharedData() : mReferences(1) {}
+
+SharedData::~SharedData()
 {
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaSharedData::addRef()
+void SharedData::addRef()
 {
     ++mReferences;
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaSharedData::releaseRef()
+void SharedData::releaseRef()
 {
     assert(mReferences > 0);
 
     if (--mReferences == 0)
         delete this;
+}
+
 }

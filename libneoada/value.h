@@ -6,7 +6,11 @@
 #include <string>
 #include "private/type.h"
 
-class NadaSharedString;
+namespace Nda {
+class SharedString;
+class SharedList;
+}
+
 class NadaValue
 {
 public:
@@ -51,7 +55,15 @@ public:
 
     void unaryOperator(const std::string &op, bool *ok = nullptr);
 
+    // List interface
+    int              listSize() const;
+    void             appendToList(const NadaValue &value);
+    void             insertIntoList(int index, const NadaValue &value);
+    void             takeFromList(int index);
+    NadaValue&       writeAccess(int index);
+    const NadaValue& readAccess(int index) const;
 
+    // String interface
     const std::string &cStringValue() const;
 
     bool        setString(const std::string &newValue);
@@ -68,12 +80,18 @@ public:
 private:
     void assignOther(const NadaValue &other);
     void assignOtherString(const NadaValue &other);
+    void assignOtherList(const NadaValue &other);
 
     // Helper unterschiedlicher Datentypen
-    NadaSharedString       *internalString();
-    const NadaSharedString *cInternalString() const;
-    NadaValue              *internalReference();
-    const NadaValue        *cInternalReference() const;
+    Nda::SharedString       *internalString();
+    const Nda::SharedString *cInternalString() const;
+    NadaValue               *internalReference();
+    const NadaValue         *cInternalReference() const;
+
+    Nda::SharedList         *internalList();
+    const Nda::SharedList   *cInternalList() const;
+    void                     detachList();
+
 
     bool exact32BitInt(int &value) const;
     bool exact64BitDbl(double &value) const;
