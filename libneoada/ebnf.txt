@@ -56,7 +56,7 @@ factor               ::= primary [ "**" primary ]
 primary ::= numeric_literal
           | string_literal
           | list_literal
-          | identifier
+          | identifier [ "[" expression "]" ]
           | function_call
           | "(" expression ")"
           | unary_operator primary

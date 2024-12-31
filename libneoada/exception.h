@@ -33,6 +33,9 @@ enum Error {
     AssignmentError,
     IllegalComparison,
     OperatorTypeError,
+    InvalidAssignment,
+    InvalidContainerType,
+    InvalidAccessValue,
 };
 }
 

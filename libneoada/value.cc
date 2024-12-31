@@ -1146,6 +1146,12 @@ Nda::Type NadaValue::type() const
 }
 
 //-------------------------------------------------------------------------------------------------
+Nda::Type NadaValue::myType() const
+{
+    return mType;
+}
+
+//-------------------------------------------------------------------------------------------------
 NadaValue &NadaValue::operator=(const NadaValue &other)
 {
     assignOther(other);

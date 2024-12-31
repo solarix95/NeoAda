@@ -153,20 +153,19 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
         executeFunctionCall(node, state);
     }   break;
     case NadaParser::ASTNodeType::Assignment: {
-        assert(node->children.size() == 1);
-        if (state->typeOf(node->value.lowerValue) == Nda::Undefined) {
-            std::cerr << node->value.displayValue << std::endl;
-            state->typeOf(node->value.lowerValue);
-            assert(0 && "runtime error");
-        }
-
-        auto &value = state->valueRef(node->value.lowerValue);
+        assert(node->children.size() == 2);
 
         executeState(node->children[0], state);
-        if (!value.assign(state->ret()))
-            throw NadaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
 
-        // FIXME: runtime error.. if (!value.assign(newValue))
+        if (state->ret().myType() != Nda::Reference)
+            throw NadaException(Nada::Error::InvalidAssignment,node->line,node->column, node->value.displayValue);
+
+        auto targetValue = state->ret();
+
+        executeState(node->children[1], state);
+
+        if (!targetValue.assign(state->ret()))
+            throw NadaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
     }   break;
     case NadaParser::ASTNodeType::Literal:
         state->ret().fromString(node->value.displayValue);
@@ -205,6 +204,34 @@ NadaValue &NadaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nad
     }   break;
     case NadaParser::ASTNodeType::InstanceMethodCall: {
         executeFunctionCall(node, state);
+    }   break;
+    case NadaParser::ASTNodeType::AccessOperator: {
+        assert(node->children.size() == 2);
+        assert(node->children[0]->type == NadaParser::ASTNodeType::Identifier);
+
+        if (state->typeOf(node->children[0]->value.lowerValue) == Nda::Undefined)
+            throw NadaException(Nada::Error::UnknownSymbol,node->line,node->column, node->value.displayValue);
+
+        if (state->typeOf(node->children[0]->value.lowerValue) != Nda::List)
+            throw NadaException(Nada::Error::InvalidContainerType,node->line,node->column, node->value.displayValue);
+
+        auto &targetList = state->valueRef(node->children[0]->value.lowerValue);
+
+        executeState(node->children[1], state);
+
+        bool done = false;
+        int64_t index = state->ret().toInt64(&done);
+        if (!done)
+           throw NadaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
+
+        if (index < 0)
+            throw NadaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
+
+        if (index >= targetList.listSize())
+            throw NadaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
+
+        auto &targetValue = targetList.writeAccess((int)index);
+        state->ret().fromReference(&targetValue);
     }   break;
     default:
         assert(0 && "not yet implemented");

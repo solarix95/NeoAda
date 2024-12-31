@@ -71,6 +71,7 @@ public:
     bool        setString(const std::string &newValue);
     std::string toString() const;
     Nda::Type   type() const;
+    Nda::Type   myType() const;
 
     NadaValue& operator=(const NadaValue&other);
 

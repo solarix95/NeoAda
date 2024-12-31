@@ -27,8 +27,9 @@ public:
         Number,
         Identifier,
         BooleanLiteral,
+        AccessOperator,  // list/dict []
         UnaryOperator,
-        BinaryOperator, // Für "+" "-" "*" "/"
+        BinaryOperator,  // Für "+" "-" "*" "/"
         FunctionCall,
         StaticMethodCall,
         InstanceMethodCall,
@@ -117,6 +118,7 @@ private:
     NadaParser::ASTNodePtr parseMethodCall(NadaParser::ASTNodePtr &funcNode);          // type:a()
     NadaParser::ASTNodePtr parseIterableOrRange();    // for x in [IterableOrRange]
     bool                   handleIdentifierCall(NadaParser::ASTNodePtr &identNode);    // is function or procedure or method-call
+    bool                   handleIdentifierAccess(NadaParser::ASTNodePtr &identNode);  // is array/dict access operator
     NadaParser::ASTNodePtr parseListLiteral();         // is function or procedure or method-call
 
     static std::string nodeTypeToString(ASTNodeType type);

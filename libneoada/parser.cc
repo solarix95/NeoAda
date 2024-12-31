@@ -109,10 +109,12 @@ NadaParser::ASTNodePtr NadaParser::parseIdentifier()
     if (handleIdentifierCall(identifierNode))
         return identifierNode;
 
+    handleIdentifierAccess(identifierNode);
+
     mLexer.nextToken();
 
     if (mLexer.token() == ":=") {
-        identifierNode->type = ASTNodeType::Assignment;
+        auto assignmentNode = std::make_shared<ASTNode>(ASTNodeType::Assignment,mLexer.line(), mLexer.column(), mLexer.token());
 
         if (!mLexer.nextToken())
             throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
@@ -120,7 +122,11 @@ NadaParser::ASTNodePtr NadaParser::parseIdentifier()
         auto expressionNode = parseExpression();
         if (!expressionNode)
             return NadaParser::ASTNodePtr();
-        ASTNode::addChild(identifierNode,expressionNode);
+
+        ASTNode::addChild(assignmentNode,identifierNode);
+        ASTNode::addChild(assignmentNode,expressionNode);
+
+        return assignmentNode;
 
     } else {
         throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
@@ -718,7 +724,10 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
         node = std::make_shared<ASTNode>(ASTNodeType::Literal, mLexer.line(), mLexer.column(), token);
     } else if (tokenType == NadaLexer::TokenType::Identifier) {
         node = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), token);
-        handleIdentifierCall(node);
+
+        if (!handleIdentifierCall(node))   // call()  ?
+            handleIdentifierAccess(node);  // array[] ?
+
      } else if (token == "[") {
         node = parseListLiteral();
     } else if (token == "(") {
@@ -842,6 +851,36 @@ bool NadaParser::handleIdentifierCall(ASTNodePtr &identNode)
     }
 
     return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaParser::handleIdentifierAccess(ASTNodePtr &identNode)
+{
+    if (mLexer.token(1) != "[")
+        return false;
+
+    auto accessNode = std::make_shared<ASTNode>(ASTNodeType::AccessOperator, mLexer.line(), mLexer.column());
+    ASTNode::addChild(accessNode,identNode);
+
+    if (!mLexer.nextToken())    // jump to "["
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (!mLexer.nextToken())    // jump over "["
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    auto index = parseExpression(); // [parse-this]
+    ASTNode::addChild(accessNode,index);
+
+    if (!mLexer.nextToken())    // jump to "]"
+        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.token() != "]") {
+        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+    }
+
+
+    identNode = accessNode;
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------

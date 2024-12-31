@@ -69,6 +69,7 @@ private slots:
     void test_lexer_Boolean();
     void test_lexer_Strings();
     void test_lexer_Range();
+    void test_lexer_ArrayAccess();
     void test_lexer_Comments();
     void test_lexer_Expression1();
     void test_lexer_Expression2();
@@ -84,6 +85,7 @@ private slots:
     void test_parser_Factor();
     void test_parser_Primary1();
     void test_parser_Primary2();
+    void test_parser_Primary3_List_Access();
 
     void test_parser_Relation1();
     void test_parser_Relation2();
@@ -170,6 +172,8 @@ private slots:
     void test_api_evaluate_Relations();
 
     void test_api_evaluate_List_Init();
+    void test_api_evaluate_List_Read();
+    void test_api_evaluate_List_Write();
 
     void test_api_evaluate_GlobalValue();
     void test_api_evaluate_ScopeValue();
@@ -640,6 +644,24 @@ void TstParser::test_lexer_Range()
     QVERIFY(results[2] == "10");
 }
 
+void TstParser::test_lexer_ArrayAccess()
+{
+    NadaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("x[7] :=");
+
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 5);
+    QVERIFY(results[0] == "x");
+    QVERIFY(results[1] == "[");
+    QVERIFY(results[2] == "7");
+    QVERIFY(results[3] == "]");
+    QVERIFY(results[4] == ":=");
+}
+
 void TstParser::test_lexer_Comments() {
     NadaLexer lexer;
     std::vector<std::string> results;
@@ -868,7 +890,8 @@ void TstParser::test_parser_Factor()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "**")
       Node(Identifier, "a")
       Node(Identifier, "b")
@@ -890,7 +913,8 @@ void TstParser::test_parser_Primary1()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(FunctionCall, "a")
 )";
     std::string currentAST =  ast->serialize();
@@ -910,13 +934,38 @@ void TstParser::test_parser_Primary2()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(Expression, "")
       Node(FunctionCall, "a")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
 }
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Primary3_List_Access()
+{
+    std::string script = R"(
+        x[1] := 7;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, ":=")
+    Node(Unknown, "")
+      Node(Identifier, "x")
+      Node(Number, "1")
+    Node(Number, "7")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_parser_Relation1()
@@ -931,7 +980,8 @@ void TstParser::test_parser_Relation1()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "and")
       Node(Identifier, "a")
       Node(Identifier, "b")
@@ -953,7 +1003,8 @@ void TstParser::test_parser_Relation2()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "and")
       Node(BinaryOperator, "and")
         Node(Identifier, "a")
@@ -977,7 +1028,8 @@ void TstParser::test_parser_Relation3()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "xor")
       Node(BinaryOperator, "or")
         Node(BinaryOperator, "and")
@@ -1003,7 +1055,8 @@ void TstParser::test_parser_SimpleExpression1()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(UnaryOperator, "-")
       Node(Identifier, "a")
 )";
@@ -1024,7 +1077,8 @@ void TstParser::test_parser_SimpleExpression2()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, ">")
       Node(Identifier, "a")
       Node(Identifier, "b")
@@ -1046,7 +1100,8 @@ void TstParser::test_parser_SimpleExpression3()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, ">")
       Node(FunctionCall, "a")
       Node(Identifier, "b")
@@ -1069,7 +1124,8 @@ void TstParser::test_parser_SimpleExpression4()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "+")
       Node(FunctionCall, "a")
         Node(Identifier, "z")
@@ -1092,7 +1148,8 @@ void TstParser::test_parser_SimpleExpression5()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(UnaryOperator, "-")
       Node(BinaryOperator, "*")
         Node(Number, "1")
@@ -1116,7 +1173,8 @@ void TstParser::test_parser_SimpleExpression6()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "-")
       Node(Identifier, "x")
       Node(Number, "1")
@@ -1138,7 +1196,8 @@ void TstParser::test_parser_Expression1()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(Number, "42")
 )";
     std::string currentAST =  ast->serialize();
@@ -1158,7 +1217,8 @@ void TstParser::test_parser_Expression2()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(Expression, "")
       Node(Number, "42")
 )";
@@ -1181,7 +1241,8 @@ void TstParser::test_parser_SimpleProgram()
 Node(Program, "")
   Node(Declaration, "x")
     Node(Identifier, "Natural")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(Number, "42")
 )";
 
@@ -1201,7 +1262,8 @@ void TstParser::test_parser_SimpleExpression()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "+")
       Node(Number, "42")
       Node(Number, "23")
@@ -1227,7 +1289,8 @@ void TstParser::test_parser_Expression3()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "+")
       Node(Number, "42")
       Node(Number, "23")
@@ -1249,7 +1312,8 @@ void TstParser::test_parser_Expression4()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "-")
       Node(BinaryOperator, "+")
         Node(Number, "1")
@@ -1273,7 +1337,8 @@ void TstParser::test_parser_Expression5()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "+")
       Node(BinaryOperator, "-")
         Node(BinaryOperator, "+")
@@ -1299,7 +1364,8 @@ void TstParser::test_parser_Expression6()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "+")
       Node(BinaryOperator, "**")
         Node(Identifier, "a")
@@ -1323,7 +1389,8 @@ void TstParser::test_parser_Expression7()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "+")
       Node(Number, "7")
       Node(BinaryOperator, "**")
@@ -1347,7 +1414,8 @@ void TstParser::test_parser_Expression8()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(FunctionCall, "test")
 )";
     std::string currentAST =  ast->serialize();
@@ -1367,7 +1435,8 @@ void TstParser::test_parser_Expression9()
 
     std::string expectedAST = R"(
 Node(Program, "")
-  Node(Assignment, "x")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
     Node(BinaryOperator, "-")
       Node(BinaryOperator, "+")
         Node(Number, "42")
@@ -1515,7 +1584,8 @@ Node(Program, "")
       Node(Identifier, "x")
       Node(Number, "10")
     Node(Block, "")
-      Node(Assignment, "x")
+      Node(Assignment, ":=")
+        Node(Identifier, "x")
         Node(BinaryOperator, "+")
           Node(Identifier, "x")
           Node(Number, "1")
@@ -2579,6 +2649,62 @@ void TstParser::test_api_evaluate_List_Init()
 
     QVERIFY(results.size() == 1);
     QVERIFY(results[0] == "[1,2,3]");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_List_Read()
+{
+    std::string script = R"(
+        declare x : List := [1,42,3];
+        print(x[1]);
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+        results.push_back(args.at("message").toString());
+        return NadaValue();
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 1);
+    QVERIFY(results[0] == "42");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_List_Write()
+{
+    std::string script = R"(
+        declare x : List := [1,2,3];
+
+        x[0] := 42;
+        x[1] := 43;
+        x[2] := 44;
+
+        return x;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NadaState       state;
+    NadaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.type()     == Nda::List);
+    QVERIFY(ret.listSize() == 3);
+    QVERIFY(ret.readAccess(0).toString() == "42");
+    QVERIFY(ret.readAccess(1).toString() == "43");
+    QVERIFY(ret.readAccess(2).toString() == "44");
 }
 
 //-------------------------------------------------------------------------------------------------
