@@ -42,12 +42,12 @@ int main(int argc, char* argv[]) {
     
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         std::cout << args.at("message").toString() << std::endl;
-        return NadaValue();
+        return NdaVariant();
     });
 
     auto ast = parser.parse(script);

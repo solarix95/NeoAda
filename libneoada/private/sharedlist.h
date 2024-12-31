@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "../value.h"
+#include "../variant.h"
 #include "shareddata.h"
 
 namespace Nda {
@@ -14,11 +14,11 @@ class SharedList : public Nda::SharedData
 public:
     SharedList();
 
-    inline std::vector<NadaValue>        &array()        { return mArray; }
-    inline const std::vector<NadaValue>  &cArray() const { return mArray; }
+    inline std::vector<NdaVariant>        &array()        { return mArray; }
+    inline const std::vector<NdaVariant>  &cArray() const { return mArray; }
 
 private:
-    std::vector<NadaValue>  mArray;
+    std::vector<NdaVariant>  mArray;
 
 };
 

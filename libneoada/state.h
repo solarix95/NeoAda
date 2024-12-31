@@ -1,17 +1,16 @@
-#ifndef STATE_H
-#define STATE_H
+#ifndef NEOADA_STATE_H
+#define NEOADA_STATE_H
 
 #include <string>
 #include "private/symboltable.h"
 #include "private/functiontable.h"
 #include "parser.h"
 
-
-class NadaState
+class NdaState
 {
 public:
-    NadaState();
-    virtual ~NadaState();
+    NdaState();
+    virtual ~NdaState();
 
     void       reset();
 
@@ -19,28 +18,35 @@ public:
     Nda::Type typeOf(const std::string &name) const;
 
     // procedure/function
-    bool               bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb);
+    bool               bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // function
+    bool               bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // procedure
     bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
     bool               hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters);
     Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
 
     // methods
-    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb);
+    bool               bindFnc(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb);
+    bool               bindPrc(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb);
 
     bool               find(const std::string &symbolName,Nda::Symbol &symbol) const;
 
-    NadaValue          value(const std::string &symbolName) const;
-    NadaValue         &valueRef(const std::string &symbolName);
-    NadaValue         *valuePtr(const std::string &symbolName);
+    NdaVariant          value(const std::string &symbolName) const;
+    NdaVariant         &valueRef(const std::string &symbolName);
+    NdaVariant         *valuePtr(const std::string &symbolName);
 
     // Volatile interface
     // Volatile Callbacks
-    using CtorCallback   = std::function<void     (const std::string &symbolName, NadaValue &value)>;
-    using DtorCallback   = std::function<void     (NadaValue &value)>;
-    using ReadCallback   = std::function<bool     (NadaValue &value)>;
-    using WriteCallback  = std::function<bool     (NadaValue &value)>;
+    using CtorCallback   = std::function<void     (const std::string &symbolName, NdaVariant &value)>;
+    using DtorCallback   = std::function<void     (NdaVariant &value)>;
+    using ReadCallback   = std::function<bool     (NdaVariant &value)>;
+    using WriteCallback  = std::function<bool     (NdaVariant &value)>;
 
     void  onVolatileCtor (CtorCallback  cb);
+
+    // "With" Addons
+    using WithCallback  = std::function<void(std::string &addonName)>;
+    void  onWith(WithCallback cb);
+    void  requestAddon(std::string name);
 
     // local scope.. as if/while/for/..
     void               pushScope(NadaSymbolTable::Scope s);
@@ -54,10 +60,12 @@ public:
     bool               inLoopScope(const NadaSymbolTables &tables) const;
 
 
-    inline NadaValue  &ret() { return mRetValue; }
+    inline NdaVariant  &ret() { return mRetValue; }
 
 private:
-    NadaValue          mRetValue;
+    void destroy();
+
+    NdaVariant         mRetValue;
     NadaSymbolTables   mGlobals;
     NadaFunctionTable  mFunctions;
 
@@ -65,6 +73,8 @@ private:
     NadaStackFrames    mCallStack;
 
     CtorCallback       mVolatileCtor;
+
+    WithCallback       mWithCallback;
 };
 
 #endif // STATE_H

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-class NadaException;
+class NdaException;
 class NadaLexer {
 public:
     enum class TokenType {

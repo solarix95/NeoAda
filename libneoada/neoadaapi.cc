@@ -10,24 +10,24 @@ namespace NeoAda
 {
 
 //-------------------------------------------------------------------------------------------------
-NadaValue evaluate(const std::string &shortScript, Exception *exception)
+NdaVariant evaluate(const std::string &shortScript, Exception *exception)
 {
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     try {
         auto ast = parser.parse(shortScript);
         return interpreter.execute(ast);
-    } catch (NadaException &ex) {
+    } catch (NdaException &ex) {
         if (exception)
             *exception = ex;
         else
             std::cerr << ex.what() << std::endl;
     }
 
-    return NadaValue();
+    return NdaVariant();
 }
 
 }

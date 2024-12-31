@@ -7,7 +7,7 @@
 NadaFunctionTable::NadaFunctionTable() {}
 
 //-------------------------------------------------------------------------------------------------
-bool NadaFunctionTable::bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb)
+bool NadaFunctionTable::bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb)
 {
     std::string lowerName = Nda::toLower(name);
 
@@ -15,7 +15,22 @@ bool NadaFunctionTable::bind(const std::string &name, const Nda::FncParameters &
     variants.functionName = lowerName;
 
     // TODO: check if already there..
-    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NadaParser::ASTNodePtr(), std::move(cb)});
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NadaParser::ASTNodePtr(), std::move(cb), nullptr});
+
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NadaFunctionTable::bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb)
+{
+
+    std::string lowerName = Nda::toLower(name);
+
+    Nda::OverloadedFunction &variants = mFunctions[lowerName];
+    variants.functionName = lowerName;
+
+    // TODO: check if already there..
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NadaParser::ASTNodePtr(), nullptr, std::move(cb)});
 
     return true;
 }
@@ -27,7 +42,7 @@ bool NadaFunctionTable::bind(const std::string &name, const Nda::FncParameters &
     variants.functionName = name;
 
     // TODO: check if already there..
-    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,block, Nda::FncCallback()});
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,block, nullptr, nullptr});
 
     return true;
 }

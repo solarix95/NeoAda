@@ -105,7 +105,7 @@ std::string NadaLexer::positionToText(int relativeIndex) const
 //-------------------------------------------------------------------------------------------------
 bool NadaLexer::tokenIsValid() const
 {
-    return mTokenIdx >= 0 && mTokenIdx < mTokens.size();
+    return mTokenIdx >= 0 && mTokenIdx < (int)mTokens.size();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -152,6 +152,7 @@ bool NadaLexer::parseNext()
             shiftToNext(-1); // 1 Character zuviel eingelesen..
 
             static const std::unordered_set<std::string> reservedWords = {
+                "with",
                 "declare", "volatile",
                 "if", "then", "else", "elsif", "end",
                 "while", "loop", "break", "continue", "when",
@@ -203,9 +204,9 @@ bool NadaLexer::parseNext()
 
             if (atEnd() || mScript[start] != '"' || currentChar() != '"') {
                 if (atEnd())
-                    throw NadaException(Nada::Error::UnexpectedEof, mRow, mColumn);
+                    throw NdaException(Nada::Error::UnexpectedEof, mRow, mColumn);
                 else
-                    throw NadaException(Nada::Error::InvalidStringLiteral, mRow, mColumn);
+                    throw NdaException(Nada::Error::InvalidStringLiteral, mRow, mColumn);
 
                 // std::cerr << "Invalid string literal: " << mScript.substr(start, mPos + 1 - start) << "\n";
                 isValid = false;
@@ -237,9 +238,9 @@ bool NadaLexer::parseNext()
 
                 // Prüfe auf abschließendes "#" für Based Numeral
                 if (atEnd())
-                    throw NadaException(Nada::Error::UnexpectedEof, mRow, mColumn);
+                    throw NdaException(Nada::Error::UnexpectedEof, mRow, mColumn);
                 if (currentChar() != '#')
-                    throw NadaException(Nada::Error::InvalidBasedLiteral, mRow, mColumn, mScript.substr(start, mPos - start));
+                    throw NdaException(Nada::Error::InvalidBasedLiteral, mRow, mColumn, mScript.substr(start, mPos - start));
                 shiftToNext(); // Überspringe abschließendes "#"
             } else {
                 // Schritt 3: Dezimalpunkt verarbeiten
@@ -258,11 +259,11 @@ bool NadaLexer::parseNext()
                     shiftToNext();
                 }
                 if (atEnd())
-                    throw NadaException(Nada::Error::UnexpectedEof, mRow, mColumn);
+                    throw NdaException(Nada::Error::UnexpectedEof, mRow, mColumn);
 
                 if (!isDigit(currentChar()))
                     // std::cerr << "Invalid exponent: " << mScript.substr(start, mPos - start) << "\n";
-                    throw NadaException(Nada::Error::InvalidExponent, mRow, mColumn, mScript.substr(start, mPos - start));
+                    throw NdaException(Nada::Error::InvalidExponent, mRow, mColumn, mScript.substr(start, mPos - start));
                 while (!atEnd() && (isDigit(currentChar()) || currentChar() == '_')) {
                     shiftToNext();
                 }
@@ -303,7 +304,7 @@ bool NadaLexer::parseNext()
         }
 
         // Fehlerhafte Zeichen
-        throw NadaException(Nada::Error::InvalidCharacter, mRow, mColumn, std::string(1, currentChar()));
+        throw NdaException(Nada::Error::InvalidCharacter, mRow, mColumn, std::string(1, currentChar()));
         // std::cerr << "Unexpected character: '" << currentChar() << "' at position " << mPos << "\n";
         return false;
     }

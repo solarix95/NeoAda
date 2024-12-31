@@ -16,7 +16,7 @@ bool NadaSymbolTable::add(const Nda::Symbol &symbol)
     if (contains(symbol.name.lowerValue))
         return false;
     mTable[symbol.name.lowerValue] = symbol;
-    mTable[symbol.name.lowerValue].value = new NadaValue();
+    mTable[symbol.name.lowerValue].value = new NdaVariant();
     mTable[symbol.name.lowerValue].value->initType(symbol.type);
     return true;
 }

@@ -1,7 +1,7 @@
 #include "exception.h"
 
 //-------------------------------------------------------------------------------------------------
-NadaException::NadaException()
+NdaException::NdaException()
     : mCode(Nada::Error::NoError)
     , mLine(0)
     , mColumn(0)
@@ -9,7 +9,7 @@ NadaException::NadaException()
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaException::NadaException(Nada::Error code, int line, int column, const std::string &extraInfo)
+NdaException::NdaException(Nada::Error code, int line, int column, const std::string &extraInfo)
     : mCode(code)
     , mLine(line)
     , mColumn(column)
@@ -23,13 +23,13 @@ NadaException::NadaException(Nada::Error code, int line, int column, const std::
 }
 
 //-------------------------------------------------------------------------------------------------
-const char *NadaException::what() const noexcept
+const char *NdaException::what() const noexcept
 {
     return mMessage.c_str();
 }
 
 //-------------------------------------------------------------------------------------------------
-std::string NadaException::messageByCode() const
+std::string NdaException::messageByCode() const
 {
     switch (mCode) {
     case Nada::Error::NoError: return "";
@@ -54,7 +54,7 @@ std::string NadaException::messageByCode() const
 }
 
 //-------------------------------------------------------------------------------------------------
-std::string NadaException::extraMsg() const
+std::string NdaException::extraMsg() const
 {
     if (mExtra.empty())
         return "";

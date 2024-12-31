@@ -39,11 +39,11 @@ enum Error {
 };
 }
 
-class NadaException : public std::exception
+class NdaException : public std::exception
 {
 public:
-    NadaException();
-    NadaException(Nada::Error code, int line, int row, const std::string &extraInfo = "");
+    NdaException();
+    NdaException(Nada::Error code, int line, int row, const std::string &extraInfo = "");
 
     const char* what() const noexcept override;
 

@@ -48,13 +48,15 @@ NadaParser::ASTNodePtr NadaParser::parseStatement()
         return parseSeparator(parseProcedureOrFunction());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "function") {
         return parseSeparator(parseProcedureOrFunction());
+    } else if (mLexer.tokenType() == NadaLexer::TokenType::Keyword && mLexer.token() == "with") {
+        return parseSeparator(parseWith());
     } else if (mLexer.tokenType() == NadaLexer::TokenType::Identifier) {
         return parseSeparator(parseIdentifier());
     }
 
     if (mLexer.atEnd())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
-    throw NadaException(Nada::Error::InvalidStatement,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+    throw NdaException(Nada::Error::InvalidStatement,mLexer.line(), mLexer.column(),mLexer.token());
     return NadaParser::ASTNodePtr();
 }
 
@@ -69,19 +71,19 @@ NadaParser::ASTNodePtr NadaParser::parseDeclaration()
     mLexer.nextToken(); // skip "declare"
 
     if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-        throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
     declarationNode->value = mLexer.token(); // set variable name
 
     mLexer.nextToken(); // skip identifier
 
     if (mLexer.token() != ":")
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
     mLexer.nextToken(); // skip ':'
 
     if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-        throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
     auto typeNode = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), mLexer.token());
     ASTNode::addChild(declarationNode,typeNode);
@@ -90,7 +92,7 @@ NadaParser::ASTNodePtr NadaParser::parseDeclaration()
     if (mLexer.token(1) == ":=") {
         mLexer.nextToken();       // springe zu   ":="
         if (!mLexer.nextToken())  // springe nach ":="
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
         auto expressionNode = parseExpression();
         if (!expressionNode)
@@ -99,6 +101,31 @@ NadaParser::ASTNodePtr NadaParser::parseDeclaration()
     }
 
     return declarationNode;
+}
+
+//-------------------------------------------------------------------------------------------------
+NadaParser::ASTNodePtr NadaParser::parseWith()
+{
+    std::string addonName;
+
+    NadaLexer::TokenType nextNode = NadaLexer::TokenType::Identifier;
+
+    while (mLexer.token(1) != ";") {
+        mLexer.nextToken();
+        if (mLexer.tokenType() != nextNode)
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        if (nextNode == NadaLexer::TokenType::Identifier) {
+            addonName = addonName + mLexer.token();
+            nextNode = NadaLexer::TokenType::Separator;
+        } else if (mLexer.token() == ".") {
+            addonName = addonName + ".";
+            nextNode = NadaLexer::TokenType::Identifier;
+        } else
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+    }
+
+    auto withNode = std::make_shared<ASTNode>(ASTNodeType::WithAddon,mLexer.line(), mLexer.column(), addonName);
+    return withNode;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -117,7 +144,7 @@ NadaParser::ASTNodePtr NadaParser::parseIdentifier()
         auto assignmentNode = std::make_shared<ASTNode>(ASTNodeType::Assignment,mLexer.line(), mLexer.column(), mLexer.token());
 
         if (!mLexer.nextToken())
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
         auto expressionNode = parseExpression();
         if (!expressionNode)
@@ -129,7 +156,7 @@ NadaParser::ASTNodePtr NadaParser::parseIdentifier()
         return assignmentNode;
 
     } else {
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     }
     return identifierNode;
 }
@@ -148,10 +175,10 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
                                                     mLexer.token());
 
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
     if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-        throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
     bool isMethod = mLexer.token(1) == ":";
 
@@ -160,12 +187,12 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
         ASTNode::addChild(procedureNode,typeNode);
         mLexer.nextToken();      // to ":"
         if (!mLexer.nextToken()) // to method-name
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
     }
     procedureNode->value = mLexer.token();
 
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
     auto parameterNode = parseFormalParameterList();
     ASTNode::addChild(procedureNode,parameterNode);
@@ -174,11 +201,11 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
         // function Add(a : in Natural; b : in Natural) return Natural is
         //                                                |       |
         if (mLexer.token() != "return")
-            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
         mLexer.nextToken();
 
         if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-            throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
         auto returnNode = std::make_shared<ASTNode>(ASTNodeType::ReturnType, mLexer.line(), mLexer.column(), mLexer.token());
         ASTNode::addChild(procedureNode,returnNode);
@@ -187,14 +214,14 @@ NadaParser::ASTNodePtr NadaParser::parseProcedureOrFunction()
     }
 
     if (mLexer.token() != "is")
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
 
     if (mLexer.token() != "begin")
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     mLexer.nextToken();
 
     auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block, mLexer.line(), mLexer.column());
@@ -215,18 +242,18 @@ NadaParser::ASTNodePtr NadaParser::parseWhileLoop()
 {
     auto whileNode = std::make_shared<ASTNode>(ASTNodeType::WhileLoop, mLexer.line(), mLexer.column());
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     auto condition = parseExpression();
 
     if (!condition) // hmm assert?
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column(),mLexer.token());
 
     ASTNode::addChild(whileNode,condition);
 
     mLexer.nextToken();
     if (mLexer.token() != "loop")
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     mLexer.nextToken();
 
     // 3. Parse den Block (Statements zwischen 'loop' und 'end loop')
@@ -251,42 +278,42 @@ NadaParser::ASTNodePtr NadaParser::parseForLoop()
 
     // consume "for"
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-        throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
     std::string loopVar = mLexer.token();
 
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.token() != "in")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"in");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"in");
 
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     auto iterableOrRangeNode = parseIterableOrRange();
     if (!iterableOrRangeNode)
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
     mLexer.nextToken();
     if (mLexer.token() != "loop")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"loop");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"loop");
 
     mLexer.nextToken(); // Consume "loop"
 
     auto bodyNode = parseBlockEnd("end");
     if (!bodyNode)
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
     if (mLexer.token() != "end")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"end");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"end");
     mLexer.nextToken(); // Consume "end"
 
     if (mLexer.token() != "loop")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"loop");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"loop");
 
     // "loop" consumed by "parseSeparator()"
 
@@ -302,20 +329,20 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
 {
     // Erwarte das Schlüsselwort "if"
     if (mLexer.token() != "if")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"if");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"if");
 
     mLexer.nextToken(); // Consume "if"
 
     // 1. Parse die Bedingung
     auto conditionNode = parseExpression();
     if (!conditionNode) {
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
     }
 
     // Erwarte "then"
     mLexer.nextToken();
     if (mLexer.token() != "then")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"then");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"then");
 
     mLexer.nextToken(); // Consume "then"
 
@@ -326,7 +353,7 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
     // 2. Parse den "then"-Block
     auto thenBlock = parseBlockEnd("elsif", "else");
     if (!thenBlock)
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
     ASTNode::addChild(ifNode,thenBlock);
 
@@ -335,17 +362,17 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
         mLexer.nextToken(); // Consume "elsif"
         auto elsifCondition = parseExpression();
         if (!elsifCondition) // assert?
-            throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+            throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
         mLexer.nextToken();
         if (mLexer.token() != "then")
-            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
         mLexer.nextToken(); // Consume "then"
 
         auto elsifBlock = parseBlockEnd("elsif", "else");
         if (!elsifBlock)
-            throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+            throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
         auto elsifNode = std::make_shared<ASTNode>(ASTNodeType::Elsif, mLexer.line(), mLexer.column());
         ASTNode::addChild(elsifNode,elsifCondition);
@@ -359,7 +386,7 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
 
         auto elseBlock = parseBlockEnd("end");
         if (!elseBlock)
-            throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+            throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
         auto elseNode = std::make_shared<ASTNode>(ASTNodeType::Else, mLexer.line(), mLexer.column());
         ASTNode::addChild(elseNode,elseBlock);
@@ -368,13 +395,13 @@ NadaParser::ASTNodePtr NadaParser::parseIfStatement()
 
     // 5. Erwarte "end if"
     if (mLexer.token() != "end")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(), "end");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(), "end");
 
     if (!mLexer.nextToken()) // Consume "end"
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
     if (mLexer.token() != "if")
-        throw NadaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(), "if");
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(), "if");
     return ifNode;
 }
 
@@ -386,12 +413,12 @@ NadaParser::ASTNodePtr NadaParser::parseReturn()
     if (mLexer.token(1) != ";") { // optional expression present?
 
         if (!mLexer.nextToken())
-                throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+                throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
         auto expression = parseExpression();
 
         if (!expression) // assert?
-            throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+            throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
         ASTNode::addChild(returnNode,expression);
     }
@@ -409,12 +436,12 @@ NadaParser::ASTNodePtr NadaParser::parseBreak()
 
     mLexer.nextToken();        // step to   "when"
     if (!mLexer.nextToken())   // step over "when
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
     auto expression = parseExpression();
 
     if (!expression) // assert?
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
     ASTNode::addChild(breakNode,expression);
     return breakNode;
@@ -430,12 +457,12 @@ NadaParser::ASTNodePtr NadaParser::parseContinue()
 
     mLexer.nextToken();        // step to   "when"
     if (!mLexer.nextToken())   // step over "when
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
     auto expression = parseExpression();
 
     if (!expression) // assert?
-        throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column());
 
     ASTNode::addChild(contNode,expression);
 
@@ -450,14 +477,14 @@ NadaParser::ASTNodePtr NadaParser::parseBlockEnd(const std::string &endToken1, c
     while (mLexer.token() != "end" && mLexer.token() != endToken1 && (endToken2.empty() || mLexer.token() != endToken2)) {
         auto statementNode = parseStatement();
         if (!statementNode) {
-            throw NadaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedStructure,mLexer.line(), mLexer.column(),mLexer.token());
         }
         if (mLexer.token() != ";")
-            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
         ASTNode::addChild(blockNode,statementNode);
         if (!mLexer.nextToken())
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
     }
     return blockNode;
 }
@@ -469,10 +496,10 @@ NadaParser::ASTNodePtr NadaParser::parseSeparator(const std::shared_ptr<ASTNode>
         return currentNode;
 
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.token() != ";")
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
     return currentNode;
 }
@@ -486,20 +513,20 @@ NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
         return parametersNode;
 
     if (!mLexer.nextToken())
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
     while (mLexer.token() != ")") {
 
         if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-            throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
         std::string paramName = mLexer.token();
         mLexer.nextToken(); // Consume name
 
         if (mLexer.token() != ":")
-            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
         if (!mLexer.nextToken()) // Consume ":"
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column());
 
         std::string paramMode; // "in" / "out"
         if (mLexer.tokenType() == NadaLexer::TokenType::Keyword) {
@@ -509,7 +536,7 @@ NadaParser::ASTNodePtr NadaParser::parseFormalParameterList()
 
         // Parameter Type e.g. "Natural",..
         if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-            throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
         std::string paramType = mLexer.token();
 
@@ -539,6 +566,7 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
 {
     switch (type) {
     case ASTNodeType::Program:      return "Program";
+    case ASTNodeType::WithAddon:    return "WithAddon";
     case ASTNodeType::Procedure:    return "Procedure";
     case ASTNodeType::Function:     return "Function";
     case ASTNodeType::FormalParameters:  return "Parameters";
@@ -628,7 +656,7 @@ NadaParser::ASTNodePtr NadaParser::parseSimpleExpression()
     NadaLexer::TokenType tokenType;
 
     if (!mLexer.token(token,tokenType))
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     bool hasUnaryOperator = (token == "+" || token == "-");
     std::string unaryOperator = token;
@@ -703,7 +731,7 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
     NadaLexer::TokenType tokenType;
 
     if (!mLexer.token(token,tokenType))
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     bool hasUnaryOperator = (token == "+" || token == "-" || token == "#");
     std::string unaryOperator = token;
@@ -712,7 +740,7 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
         mLexer.nextToken();
 
     if (!mLexer.token(token,tokenType))
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     auto node = NadaParser::ASTNodePtr();
 
@@ -732,20 +760,20 @@ NadaParser::ASTNodePtr NadaParser::parsePrimary()
         node = parseListLiteral();
     } else if (token == "(") {
         if (!mLexer.nextToken()) // Überspringe '('
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
         node = std::make_shared<ASTNode>(ASTNodeType::Expression, mLexer.line(), mLexer.column());
         auto expression = parseExpression();
         ASTNode::addChild(node,expression);
 
         if (!mLexer.nextToken())
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
         if (mLexer.token() != ")") {
-            throw NadaException(Nada::Error::UnexpectedClosure,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedClosure,mLexer.line(), mLexer.column(),mLexer.token());
         }
     } else
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),token);
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),token);
 
     if (hasUnaryOperator) {
         // hmm: runtime error? Bool or Strings can't have unary operators!
@@ -763,7 +791,7 @@ NadaParser::ASTNodePtr NadaParser::parseFunctionCall(std::shared_ptr<ASTNode> &f
     mLexer.nextToken(); // jump to "("
 
     if (!mLexer.nextToken()) // jump over '('
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.token() != ")") {
         while (true) {
@@ -778,7 +806,7 @@ NadaParser::ASTNodePtr NadaParser::parseFunctionCall(std::shared_ptr<ASTNode> &f
         }
 
         if (mLexer.token() != ")") {
-            throw NadaException(Nada::Error::UnexpectedClosure,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedClosure,mLexer.line(), mLexer.column(),mLexer.token());
         }
     }
 
@@ -792,13 +820,13 @@ NadaParser::ASTNodePtr NadaParser::parseMethodCall(std::shared_ptr<ASTNode> &fun
     bool isStatic = funcNode->type == ASTNodeType::StaticMethodCall;
 
     if (!mLexer.nextToken())    // Überspringe ':' oder '.'
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.tokenType() != NadaLexer::TokenType::Identifier)
-        throw NadaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.token(1) != "(") // lookahead: methodencall?
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
 
     Nda::LowerString contextName = funcNode->value; // typename or instancename
     Nda::LowerString instanceName(mLexer.token());
@@ -828,7 +856,7 @@ NadaParser::ASTNodePtr NadaParser::parseIterableOrRange()
         return start; // Es ist eine Iterable (z.B. anArray)
     }
 
-    throw NadaException(Nada::Error::InvalidRangeOrIterable,mLexer.line(), mLexer.column(),mLexer.token());
+    throw NdaException(Nada::Error::InvalidRangeOrIterable,mLexer.line(), mLexer.column(),mLexer.token());
     return NadaParser::ASTNodePtr();
 }
 
@@ -863,19 +891,19 @@ bool NadaParser::handleIdentifierAccess(ASTNodePtr &identNode)
     ASTNode::addChild(accessNode,identNode);
 
     if (!mLexer.nextToken())    // jump to "["
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (!mLexer.nextToken())    // jump over "["
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     auto index = parseExpression(); // [parse-this]
     ASTNode::addChild(accessNode,index);
 
     if (!mLexer.nextToken())    // jump to "]"
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     if (mLexer.token() != "]") {
-        throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     }
 
 
@@ -891,7 +919,7 @@ NadaParser::ASTNodePtr NadaParser::parseListLiteral()
     auto ret = std::make_shared<ASTNode>(ASTNodeType::ListLiteral, mLexer.line(), mLexer.column());
 
     if (!mLexer.nextToken())    // Überspringe '['
-        throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
     while (mLexer.token() != "]") {
         // Parse ein Element der Liste
@@ -901,13 +929,13 @@ NadaParser::ASTNodePtr NadaParser::parseListLiteral()
             ASTNode::addChild(ret,element);
 
         if (!mLexer.nextToken())    // Überspringe '['
-            throw NadaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
         // Optionales Komma
         if (mLexer.token() == ",") {
             mLexer.nextToken(); // Consume ','
         } else if (mLexer.token() != "]") {
-            throw NadaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
         }
     }
 

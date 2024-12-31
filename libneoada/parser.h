@@ -11,6 +11,7 @@ class NadaParser
 public:
     enum class ASTNodeType {
         Program,
+        WithAddon,
         Procedure,
         FormalParameters,    // procedure/function declaration: call(FormalParameters)
         FormalParameter,     // procedure/function declaration: call(FormalParameter, FormalParameter, FormalParameter)
@@ -91,6 +92,7 @@ public:
 private:
     NadaParser::ASTNodePtr parseStatement();
     NadaParser::ASTNodePtr parseDeclaration();
+    NadaParser::ASTNodePtr parseWith();
     NadaParser::ASTNodePtr parseIdentifier();  // "call()" or "var :="
     NadaParser::ASTNodePtr parseProcedureOrFunction();
     NadaParser::ASTNodePtr parseWhileLoop();

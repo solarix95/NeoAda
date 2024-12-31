@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "type.h"
-#include "value.h"
+#include "variant.h"
 #include "utils.h"
 
 namespace Nda {
@@ -16,7 +16,7 @@ namespace Nda {
 struct Symbol {
     Nda::Type        type;
     Nda::LowerString name;
-    NadaValue        *value;
+    NdaVariant        *value;
     Nda::LowerString typeName;
 
     Symbol() : type(Nda::Undefined),value(nullptr) {}

@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "value.h"
+#include "variant.h"
 #include "parser.h"
 
 namespace Nda {
@@ -27,8 +27,8 @@ struct FormalParameter {
 
 
 using FncParameters = std::vector<FormalParameter>;
-using FncValues     = std::unordered_map<std::string, NadaValue>;
-using FncCallback   = std::function<NadaValue(const FncValues&)>;
+using FncValues     = std::unordered_map<std::string, NdaVariant>;
+using FncCallback   = std::function<NdaVariant(const FncValues&)>;
 using PrcCallback   = std::function<void     (const FncValues&)>;
 
 
@@ -37,7 +37,8 @@ struct FunctionEntry {
     FncParameters parameters;
 
     std::shared_ptr<NadaParser::ASTNode> block;          // NeoAda-Code
-    FncCallback                     nativeCallback; // c++ Built-in
+    FncCallback                     nativeFncCallback;   // c++ Built-in
+    PrcCallback                     nativePrcCallback;   // c++ Built-in
 
     FncValues     fncValues(const NadaValues &values) const;
 };
@@ -60,7 +61,9 @@ public:
     NadaFunctionTable();
 
     // Init/Setup
-    bool              bind(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // c++ callback :)
+    bool              bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // c++ function  callback
+    bool              bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // c++ procedure callback
+
     bool              bind(const std::string &name, const Nda::FncParameters &parameters, const NadaParser::ASTNodePtr &block);
 
     // Runtime

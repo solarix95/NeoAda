@@ -1,4 +1,4 @@
-#include "value.h"
+#include "variant.h"
 #include "private/sharedstring.h"
 #include "private/numericparser.h"
 #include "private/sharedlist.h"
@@ -16,17 +16,17 @@
 
 #define OP_SPACESHIP(v1, v2) ((int64_t)((v1) == (v2) ? 0 : ((v1) > (v2) ? +1 : -1)))
 
-bool       operator==(const NadaValue &v1, const NadaValue &v2);
+bool       operator==(const NdaVariant &v1, const NdaVariant &v2);
 
 //-------------------------------------------------------------------------------------------------
-NadaValue::NadaValue()
+NdaVariant::NdaVariant()
     : mType(Nda::Undefined)
 {
     mValue.uInt64 = 0;
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue::NadaValue(const NadaValue &other)
+NdaVariant::NdaVariant(const NdaVariant &other)
     : mType(Nda::Undefined)
 {
     mValue.uInt64 = 0;
@@ -34,20 +34,20 @@ NadaValue::NadaValue(const NadaValue &other)
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue::~NadaValue()
+NdaVariant::~NdaVariant()
 {
     reset();
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::initAny()
+void NdaVariant::initAny()
 {
     reset();
     mType = Nda::Any;
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::initType(Nda::Type t)
+void NdaVariant::initType(Nda::Type t)
 {
     reset();
     mType = t;
@@ -72,7 +72,7 @@ void NadaValue::initType(Nda::Type t)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromString(const std::string &value)
+bool NdaVariant::fromString(const std::string &value)
 {
     reset();
     mType = Nda::String;
@@ -82,7 +82,7 @@ bool NadaValue::fromString(const std::string &value)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromNumber(const std::string &value)
+bool NdaVariant::fromNumber(const std::string &value)
 {
     reset();
 
@@ -123,7 +123,7 @@ bool NadaValue::fromNumber(const std::string &value)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromNumber(uint64_t value)
+bool NdaVariant::fromNumber(uint64_t value)
 {
     reset();
     mValue.uUInt64 = value;
@@ -132,7 +132,7 @@ bool NadaValue::fromNumber(uint64_t value)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromNumber(int64_t value)
+bool NdaVariant::fromNumber(int64_t value)
 {
     reset();
     mValue.uInt64 = value;
@@ -141,7 +141,7 @@ bool NadaValue::fromNumber(int64_t value)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromNumber(double value)
+bool NdaVariant::fromNumber(double value)
 {
     reset();
     mValue.uDouble = value;
@@ -150,13 +150,13 @@ bool NadaValue::fromNumber(double value)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromDoubleNan()
+bool NdaVariant::fromDoubleNan()
 {
     return fromNumber(std::numeric_limits<double>::quiet_NaN());
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromBool(bool value)
+bool NdaVariant::fromBool(bool value)
 {
     reset();
     mValue.uByte = value;
@@ -165,7 +165,7 @@ bool NadaValue::fromBool(bool value)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::fromReference(NadaValue *other)
+void NdaVariant::fromReference(NdaVariant *other)
 {
     assert(other);
     reset();
@@ -174,7 +174,7 @@ void NadaValue::fromReference(NadaValue *other)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::toBool(bool *ok) const
+bool NdaVariant::toBool(bool *ok) const
 {
     if (ok) *ok = false;
     switch (mType) {
@@ -206,7 +206,7 @@ bool NadaValue::toBool(bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-int64_t NadaValue::toInt64(bool *ok) const
+int64_t NdaVariant::toInt64(bool *ok) const
 {
     if (ok) *ok = false;
     switch (mType) {
@@ -249,7 +249,7 @@ int64_t NadaValue::toInt64(bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::isNan() const
+bool NdaVariant::isNan() const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->isNan();
@@ -257,7 +257,7 @@ bool NadaValue::isNan() const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::assign(const NadaValue &other)
+bool NdaVariant::assign(const NdaVariant &other)
 {
     if (this == &other)
         return true;
@@ -331,7 +331,7 @@ bool NadaValue::assign(const NadaValue &other)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::equal(const NadaValue &other, bool *ok) const
+bool NdaVariant::equal(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->equal(other, ok);
@@ -355,7 +355,7 @@ bool NadaValue::equal(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::logicalAnd(const NadaValue &other, bool *ok) const
+bool NdaVariant::logicalAnd(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->logicalAnd(other, ok);
@@ -376,7 +376,7 @@ bool NadaValue::logicalAnd(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::logicalOr(const NadaValue &other, bool *ok) const
+bool NdaVariant::logicalOr(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->logicalOr(other, ok);
@@ -397,7 +397,7 @@ bool NadaValue::logicalOr(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::logicalXor(const NadaValue &other, bool *ok) const
+bool NdaVariant::logicalXor(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->logicalXor(other, ok);
@@ -418,7 +418,7 @@ bool NadaValue::logicalXor(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
+bool NdaVariant::greaterThen(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->greaterThen(other, ok);
@@ -441,7 +441,7 @@ bool NadaValue::greaterThen(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::lessThen(const NadaValue &other, bool *ok) const
+bool NdaVariant::lessThen(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->lessThen(other, ok);
@@ -464,17 +464,17 @@ bool NadaValue::lessThen(const NadaValue &other, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::spaceship(const NadaValue &other, bool *ok) const
+NdaVariant NdaVariant::spaceship(const NdaVariant &other, bool *ok) const
 {
 
     if (ok) *ok = false;
 
-    NadaValue ret;
+    NdaVariant ret;
 
     switch (mType) {
-    case Nda::Undefined: return NadaValue();
+    case Nda::Undefined: return NdaVariant();
     case Nda::Reference: return cInternalReference()->spaceship(other, ok);
-    case Nda::Any:       return NadaValue();
+    case Nda::Any:       return NdaVariant();
     case Nda::Number:
         if (std::isnan(mValue.uDouble) || (other.type() == Nda::Number && std::isnan(other.cuValue()->uDouble))) {
             if (ok) *ok = true;
@@ -548,7 +548,7 @@ NadaValue NadaValue::spaceship(const NadaValue &other, bool *ok) const
 
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
+NdaVariant NdaVariant::concat(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->concat(other, ok);
@@ -557,7 +557,7 @@ NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
 
     switch (mType) {
     case Nda::String: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         if (other.type() == Nda::String)
             ret.fromString(cInternalString()->cValue() + other.cInternalString()->cValue());
@@ -567,7 +567,7 @@ NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
     } break;
     case Nda::List: {
         if (other.type() == Nda::List) {
-            NadaValue ret;
+            NdaVariant ret;
             ret.initType(Nda::List);
 
             const auto &myArray    = cInternalList()->cArray();
@@ -576,45 +576,46 @@ NadaValue NadaValue::concat(const NadaValue &other, bool *ok) const
             newArray = myArray;
             newArray.insert(newArray.end(), otherArray.begin(), otherArray.end());
 
+            if (ok) *ok = true;
             return ret;
         }
-    }
+    } break;
     case Nda::Struct: {
         assert(0 && "not yet implemented");
-        return NadaValue();
+        return NdaVariant();
     } break;
     default:
         break;
     }
 
-    return NadaValue();
+    return NdaVariant();
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::subtract(const NadaValue &other, bool *ok) const
+NdaVariant NdaVariant::subtract(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->subtract(other, ok);
 
     if (ok) *ok = false;
     if (mType != other.mType)
-        return NadaValue();
+        return NdaVariant();
 
     switch (mType) {
     case Nda::Number: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uDouble - other.cuValue()->uDouble);
         return ret;
     } break;
     case Nda::Natural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uInt64 - other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uUInt64 - other.cuValue()->uUInt64);
         return ret;
@@ -623,34 +624,34 @@ NadaValue NadaValue::subtract(const NadaValue &other, bool *ok) const
         break;
     }
 
-    return NadaValue();
+    return NdaVariant();
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::add(const NadaValue &other, bool *ok) const
+NdaVariant NdaVariant::add(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->add(other, ok);
 
     if (ok) *ok = false;
     if (mType != other.type())
-        return NadaValue();
+        return NdaVariant();
 
     switch (mType) {
     case Nda::Number: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uDouble + other.cuValue()->uDouble);
         return ret;
     } break;
     case Nda::Natural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uInt64 + other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uUInt64 + other.cuValue()->uUInt64);
         return ret;
@@ -659,12 +660,12 @@ NadaValue NadaValue::add(const NadaValue &other, bool *ok) const
         break;
     }
 
-    return NadaValue();
+    return NdaVariant();
 
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::modulo(const NadaValue &other, bool *ok) const
+NdaVariant NdaVariant::modulo(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->modulo(other, ok);
@@ -672,17 +673,17 @@ NadaValue NadaValue::modulo(const NadaValue &other, bool *ok) const
 
     if (ok) *ok = false;
     if (mType != other.type())
-        return NadaValue();
+        return NdaVariant();
 
     switch (mType) {
     case Nda::Natural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uInt64 % other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uUInt64 % other.cuValue()->uUInt64);
         return ret;
@@ -691,34 +692,34 @@ NadaValue NadaValue::modulo(const NadaValue &other, bool *ok) const
         break;
     }
 
-    return NadaValue();
+    return NdaVariant();
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::multiply(const NadaValue &other, bool *ok) const
+NdaVariant NdaVariant::multiply(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->multiply(other, ok);
 
     if (ok) *ok = false;
     if (mType != other.type())
-        return NadaValue();
+        return NdaVariant();
 
     switch (mType) {
     case Nda::Number: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uDouble * other.cuValue()->uDouble);
         return ret;
     } break;
     case Nda::Natural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uInt64 * other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uUInt64 * other.cuValue()->uUInt64);
         return ret;
@@ -727,11 +728,11 @@ NadaValue NadaValue::multiply(const NadaValue &other, bool *ok) const
         break;
     }
 
-    return NadaValue();
+    return NdaVariant();
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::division(const NadaValue &other, bool *ok) const
+NdaVariant NdaVariant::division(const NdaVariant &other, bool *ok) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->division(other, ok);
@@ -739,23 +740,23 @@ NadaValue NadaValue::division(const NadaValue &other, bool *ok) const
 
     if (ok) *ok = false;
     if (mType != other.type())
-        return NadaValue();
+        return NdaVariant();
 
     switch (mType) {
     case Nda::Number: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uDouble / other.cuValue()->uDouble);
         return ret;
     } break;
     case Nda::Natural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uInt64 / other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
-        NadaValue ret;
+        NdaVariant ret;
         if (ok) *ok = true;
         ret.fromNumber(mValue.uUInt64 / other.cuValue()->uUInt64);
         return ret;
@@ -764,12 +765,12 @@ NadaValue NadaValue::division(const NadaValue &other, bool *ok) const
         break;
     }
 
-    return NadaValue();
+    return NdaVariant();
 
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::unaryOperator(const std::string &op, bool *ok) const
+NdaVariant NdaVariant::unaryOperator(const std::string &op, bool *ok) const
 {
     if (mType == Nda::Reference) {
         return cInternalReference()->unaryOperator(op, ok);
@@ -782,7 +783,7 @@ NadaValue NadaValue::unaryOperator(const std::string &op, bool *ok) const
 
     if (ok) *ok = false;
 
-    NadaValue ret;
+    NdaVariant ret;
     switch (mType) {
     case Nda::Undefined: break;
     case Nda::Any:       break;
@@ -829,7 +830,7 @@ NadaValue NadaValue::unaryOperator(const std::string &op, bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue NadaValue::lengthOperator() const
+NdaVariant NdaVariant::lengthOperator() const
 {
     if (mType == Nda::Reference) {
         return cInternalReference()->lengthOperator();
@@ -862,13 +863,13 @@ NadaValue NadaValue::lengthOperator() const
         break;
     }
 
-    NadaValue ret;
+    NdaVariant ret;
     ret.fromNumber((int64_t)length);
     return ret;
 }
 
 //-------------------------------------------------------------------------------------------------
-int NadaValue::listSize() const
+int NdaVariant::listSize() const
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
@@ -881,7 +882,7 @@ int NadaValue::listSize() const
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::appendToList(const NadaValue &value)
+void NdaVariant::appendToList(const NdaVariant &value)
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
@@ -896,7 +897,7 @@ void NadaValue::appendToList(const NadaValue &value)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::insertIntoList(int index, const NadaValue &value)
+void NdaVariant::insertIntoList(int index, const NdaVariant &value)
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
@@ -919,7 +920,7 @@ void NadaValue::insertIntoList(int index, const NadaValue &value)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::takeFromList(int index)
+void NdaVariant::takeFromList(int index)
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
@@ -939,7 +940,7 @@ void NadaValue::takeFromList(int index)
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue &NadaValue::writeAccess(int index)
+NdaVariant &NdaVariant::writeAccess(int index)
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
@@ -956,7 +957,7 @@ NadaValue &NadaValue::writeAccess(int index)
 }
 
 //-------------------------------------------------------------------------------------------------
-const NadaValue &NadaValue::readAccess(int index) const
+const NdaVariant &NdaVariant::readAccess(int index) const
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
@@ -970,7 +971,7 @@ const NadaValue &NadaValue::readAccess(int index) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::containsInList(const NadaValue &value) const
+bool NdaVariant::containsInList(const NdaVariant &value) const
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
@@ -984,7 +985,7 @@ bool NadaValue::containsInList(const NadaValue &value) const
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::assignOther(const NadaValue &other)
+void NdaVariant::assignOther(const NdaVariant &other)
 {
     reset();
     switch (other.mType) {
@@ -1018,7 +1019,7 @@ void NadaValue::assignOther(const NadaValue &other)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::assignOtherString(const NadaValue &other)
+void NdaVariant::assignOtherString(const NdaVariant &other)
 {
     assert(mType != Nda::Reference);
 
@@ -1041,7 +1042,7 @@ void NadaValue::assignOtherString(const NadaValue &other)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::assignOtherList(const NadaValue &other)
+void NdaVariant::assignOtherList(const NdaVariant &other)
 {
     assert(mType       == Nda::Undefined);
     assert(mValue.uPtr == nullptr);
@@ -1054,7 +1055,7 @@ void NadaValue::assignOtherList(const NadaValue &other)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::setString(const std::string &newValue)
+bool NdaVariant::setString(const std::string &newValue)
 {
     if (mType == Nda::Reference)
         return internalReference()->setString(newValue);
@@ -1088,7 +1089,7 @@ bool NadaValue::setString(const std::string &newValue)
 }
 
 //-------------------------------------------------------------------------------------------------
-std::string NadaValue::toString() const
+std::string NdaVariant::toString() const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->toString();
@@ -1137,7 +1138,7 @@ std::string NadaValue::toString() const
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::Type NadaValue::type() const
+Nda::Type NdaVariant::type() const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->type();
@@ -1146,20 +1147,20 @@ Nda::Type NadaValue::type() const
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::Type NadaValue::myType() const
+Nda::Type NdaVariant::myType() const
 {
     return mType;
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue &NadaValue::operator=(const NadaValue &other)
+NdaVariant &NdaVariant::operator=(const NdaVariant &other)
 {
     assignOther(other);
     return *this;
 }
 
 //-------------------------------------------------------------------------------------------------
-int NadaValue::refCount() const
+int NdaVariant::refCount() const
 {
     if (!mValue.uPtr)
         return 0;
@@ -1172,7 +1173,7 @@ int NadaValue::refCount() const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::fromNumber(const std::string &value, int64_t &ret)
+bool NdaVariant::fromNumber(const std::string &value, int64_t &ret)
 {
     std::string cleanLiteral = NadaNumericParser::removeSeparators(value);
 
@@ -1183,7 +1184,7 @@ bool NadaValue::fromNumber(const std::string &value, int64_t &ret)
 
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::reset()
+void NdaVariant::reset()
 {
     switch (mType) {
     case Nda::Undefined: return;
@@ -1222,7 +1223,7 @@ void NadaValue::reset()
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::SharedString *NadaValue::internalString()
+Nda::SharedString *NdaVariant::internalString()
 {
     assert(mType == Nda::String);
     assert(mValue.uPtr);
@@ -1230,30 +1231,30 @@ Nda::SharedString *NadaValue::internalString()
 }
 
 //-------------------------------------------------------------------------------------------------
-const Nda::SharedString *NadaValue::cInternalString() const
+const Nda::SharedString *NdaVariant::cInternalString() const
 {
     assert(mType == Nda::String);
     return ((Nda::SharedString*)mValue.uPtr);
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaValue *NadaValue::internalReference()
+NdaVariant *NdaVariant::internalReference()
 {
     assert(mType == Nda::Reference);
     assert(mValue.uPtr);
-    return ((NadaValue*)mValue.uPtr);
+    return ((NdaVariant*)mValue.uPtr);
 }
 
 //-------------------------------------------------------------------------------------------------
-const NadaValue *NadaValue::cInternalReference() const
+const NdaVariant *NdaVariant::cInternalReference() const
 {
     assert(mType == Nda::Reference);
     assert(mValue.uPtr);
-    return ((NadaValue*)mValue.uPtr);
+    return ((NdaVariant*)mValue.uPtr);
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::SharedList *NadaValue::internalList()
+Nda::SharedList *NdaVariant::internalList()
 {
     if (mType == Nda::Reference)
         return internalReference()->internalList();
@@ -1265,7 +1266,7 @@ Nda::SharedList *NadaValue::internalList()
 }
 
 //-------------------------------------------------------------------------------------------------
-const Nda::SharedList   *NadaValue::cInternalList() const
+const Nda::SharedList   *NdaVariant::cInternalList() const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->cInternalList();
@@ -1275,7 +1276,7 @@ const Nda::SharedList   *NadaValue::cInternalList() const
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaValue::detachList()
+void NdaVariant::detachList()
 {
     assert(mType == Nda::List);
     assert(mValue.uPtr);
@@ -1288,7 +1289,7 @@ void NadaValue::detachList()
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::exact32BitInt(int &value) const
+bool NdaVariant::exact32BitInt(int &value) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->exact32BitInt(value);
@@ -1326,7 +1327,7 @@ bool NadaValue::exact32BitInt(int &value) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaValue::exact64BitDbl(double &value) const
+bool NdaVariant::exact64BitDbl(double &value) const
 {
     if (mType == Nda::Reference)
         return cInternalReference()->exact64BitDbl(value);
@@ -1370,7 +1371,7 @@ bool NadaValue::exact64BitDbl(double &value) const
 //                                   local functions
 //-------------------------------------------------------------------------------------------------
 
-bool       operator==(const NadaValue &v1, const NadaValue &v2)
+bool       operator==(const NdaVariant &v1, const NdaVariant &v2)
 {
     if (v1.type() != v2.type())
         return false;

@@ -9,6 +9,7 @@
 #include <libneoada/parser.h>
 #include <libneoada/state.h>
 #include <libneoada/interpreter.h>
+#include <libneoada/runtime.h>
 
 #include <libneoada/private/sharedstring.h>
 
@@ -82,6 +83,8 @@ private slots:
     void test_parser_Declaration4_List();
     void test_parser_Declaration5_List_Init();
 
+    void test_parser_With();
+
     void test_parser_Factor();
     void test_parser_Primary1();
     void test_parser_Primary2();
@@ -139,10 +142,12 @@ private slots:
     void test_parser_Method1();
     void test_parser_Method2();
 
+
     void test_state_Declarations();
     void test_state_GlobalScope();
 
     void test_interpreter_Declarations();
+    void test_interpreter_WithAddon();
     void test_interpreter_ProcedureCall();
     void test_interpreter_ifStatement();
     void test_interpreter_ifElseStatement();
@@ -172,7 +177,8 @@ private slots:
     void test_api_evaluate_Relations();
 
     void test_api_evaluate_List_Init();
-    void test_api_evaluate_List_Read();
+    void test_api_evaluate_List_Read1();
+    void test_api_evaluate_List_Read2();
     void test_api_evaluate_List_Write();
 
     void test_api_evaluate_GlobalValue();
@@ -196,6 +202,11 @@ private slots:
 
     void test_api_evaluate_Instance_Method1();
 
+    // runtime addons
+    void test_api_runtime_AdaList_Length();
+    void test_api_runtime_AdaList_Append();
+    void test_api_runtime_AdaList_Insert();
+    void test_api_runtime_AdaList_Concat();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -228,7 +239,7 @@ TstParser::~TstParser() {}
 void TstParser::test_core_SharedString()
 {
     // Test "Copy on Write"
-    NadaValue s1;
+    NdaVariant s1;
 
     QCOMPARE(s1.refCount(), 0);
 
@@ -240,7 +251,7 @@ void TstParser::test_core_SharedString()
     QCOMPARE(s1.refCount(), 1);
     QCOMPARE(s1.toString(), "1");
 
-    NadaValue s2(s1);
+    NdaVariant s2(s1);
     QCOMPARE(s1.refCount(), 2);
     QCOMPARE(s2.refCount(), 2);
     QCOMPARE(s2.toString(), "1");
@@ -269,7 +280,7 @@ void TstParser::test_core_SharedString()
     s1.setString("1");
 
     {
-        NadaValue s3;
+        NdaVariant s3;
         QCOMPARE(s1.refCount(), 1);
         QCOMPARE(s3.refCount(), 0);
 
@@ -283,7 +294,7 @@ void TstParser::test_core_SharedString()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_NumericValues()
 {
-    NadaValue v;
+    NdaVariant v;
 
     QCOMPARE(v.fromNumber("123_456"),true);      // int64_t
     QCOMPARE(v.type(), Nda::Natural);
@@ -313,8 +324,8 @@ void TstParser::test_core_NumericValues()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_Assignment()
 {
-    NadaValue v1;
-    NadaValue v2;
+    NdaVariant v1;
+    NdaVariant v2;
 
 
     // Number -> Any
@@ -342,8 +353,8 @@ void TstParser::test_core_Assignment()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_References()
 {
-    NadaValue v1;
-    NadaValue r1;
+    NdaVariant v1;
+    NdaVariant r1;
     r1.fromReference(&v1);
 
 
@@ -354,8 +365,8 @@ void TstParser::test_core_References()
     QCOMPARE(r1.type(), Nda::Type::String);
     QCOMPARE(r1.toString(), v1.toString());
 
-    NadaValue r2 = r1; // copy reference
-    NadaValue v2;
+    NdaVariant r2 = r1; // copy reference
+    NdaVariant v2;
     v2.fromString("world");
 
     r2.assign(v2);
@@ -368,11 +379,11 @@ void TstParser::test_core_References()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_COW()
 {
-    NadaValue vs;
+    NdaVariant vs;
     vs.fromString("1");
 
     { // append, insert remove
-        NadaValue a1;
+        NdaVariant a1;
         a1.initType(Nda::List);
 
         QCOMPARE(a1.listSize(), 0);
@@ -391,11 +402,11 @@ void TstParser::test_core_List_COW()
     }
 
     { // shared list
-        NadaValue a1;
+        NdaVariant a1;
         a1.initType(Nda::List);
 
         {
-            NadaValue a2;
+            NdaVariant a2;
             a2.initType(Nda::List);
 
             vs.fromString("a2");
@@ -412,10 +423,10 @@ void TstParser::test_core_List_COW()
     }
 
     { // copy-on-write: source changes
-        NadaValue a1;
+        NdaVariant a1;
         a1.initType(Nda::List);
 
-        NadaValue a2;
+        NdaVariant a2;
         a2.initType(Nda::List);
 
         vs.fromString("0");
@@ -434,10 +445,10 @@ void TstParser::test_core_List_COW()
     }
 
     { // copy-on-write: target changes
-        NadaValue a1;
+        NdaVariant a1;
         a1.initType(Nda::List);
 
-        NadaValue a2;
+        NdaVariant a2;
         a2.initType(Nda::List);
 
         vs.fromString("0");
@@ -459,15 +470,15 @@ void TstParser::test_core_List_COW()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_REF()
 {
-    NadaValue vs;
+    NdaVariant vs;
     vs.fromString("1");
 
     {
-        NadaValue a1;
+        NdaVariant a1;
         a1.initType(Nda::List);
         a1.appendToList(vs);
 
-        NadaValue r1;
+        NdaVariant r1;
         r1.fromReference(&a1);
         r1.appendToList(vs);
 
@@ -488,10 +499,10 @@ void TstParser::test_core_List_REF()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_Contains()
 {
-    NadaValue vs;
+    NdaVariant vs;
     vs.fromString("0");
 
-    NadaValue a1;
+    NdaVariant a1;
     a1.initType(Nda::List);
     a1.appendToList(vs);
 
@@ -504,19 +515,19 @@ void TstParser::test_core_List_Contains()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_Concat()
 {
-    NadaValue vs;
+    NdaVariant vs;
     vs.fromString("0");
 
-    NadaValue a1;
+    NdaVariant a1;
     a1.initType(Nda::List);
     a1.appendToList(vs);
 
     vs.fromString("1");
-    NadaValue a2;
+    NdaVariant a2;
     a2.initType(Nda::List);
     a2.appendToList(vs);
 
-    NadaValue a3 = a1.concat(a2);
+    NdaVariant a3 = a1.concat(a2);
 
     vs.fromString("0");
     QVERIFY(a3.containsInList(vs) == true);
@@ -872,6 +883,25 @@ Node(Program, "")
       Node(Number, "1")
       Node(Number, "2")
       Node(Number, "3")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_With()
+{
+    std::string script = R"(
+        with Ada.Lovelace;
+    )";
+
+    NadaLexer lexer;
+    NadaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(WithAddon, "Ada.Lovelace")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -2072,7 +2102,7 @@ Node(Program, "")
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_state_Declarations()
 {
-    NadaState state;
+    NdaState state;
 
     // enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
     QCOMPARE(state.define("a", "Any"), true);
@@ -2089,7 +2119,7 @@ void TstParser::test_state_Declarations()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_state_GlobalScope()
 {
-    NadaState state;
+    NdaState state;
 
     // level "0" variable;
     QCOMPARE(state.define("a", "Number"), true);
@@ -2134,8 +2164,8 @@ void TstParser::test_interpreter_Declarations()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
     auto ret = interpreter.execute(ast);
@@ -2154,6 +2184,35 @@ void TstParser::test_interpreter_Declarations()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_WithAddon()
+{
+    std::string script = R"(
+        with Ada.Lovelace;
+        with Ada.String;
+        with My.Addon;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.onWith([&](std::string addonName) {
+        results.push_back(addonName);
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 3);
+    QVERIFY(results[0] == "ada.lovelace");
+    QVERIFY(results[1] == "ada.string");
+    QVERIFY(results[2] == "my.addon");
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_ProcedureCall()
 {
     std::string script = R"(
@@ -2163,15 +2222,15 @@ void TstParser::test_interpreter_ProcedureCall()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2194,15 +2253,15 @@ void TstParser::test_interpreter_ifStatement()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2225,15 +2284,15 @@ void TstParser::test_interpreter_ifElseStatement()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2256,15 +2315,15 @@ void TstParser::test_interpreter_whileStatement()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2290,15 +2349,15 @@ void TstParser::test_interpreter_whileBreak()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2322,15 +2381,15 @@ void TstParser::test_interpreter_whileBreakWhen()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2357,15 +2416,15 @@ void TstParser::test_interpreter_whileContinue()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2383,8 +2442,8 @@ void TstParser::test_interpreter_Return1()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
     auto ret = interpreter.execute(ast);
@@ -2401,8 +2460,8 @@ void TstParser::test_interpreter_Return2()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
     auto ret = interpreter.execute(ast);
@@ -2419,8 +2478,8 @@ void TstParser::test_interpreter_Return3()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
     auto ret = interpreter.execute(ast);
@@ -2437,13 +2496,13 @@ void TstParser::test_interpreter_Volatile_CTor()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.onVolatileCtor([&](const std::string &name,  NadaValue& val) -> void {
+    state.onVolatileCtor([&](const std::string &name,  NdaVariant& val) -> void {
         results.push_back(name);
         results.push_back(val.type() == Nda::Natural ? "Natural" : "?");
     });
@@ -2464,20 +2523,20 @@ void TstParser::test_interpreter_static_method()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
 
-    state.bind("string","number",{{"n", "natural", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
-        std::string       s;
-        std::stringstream ss(s);
-        ss << args.at("n").toInt64();
+    state.bindFnc("string","number",{{"n", "natural", Nda::InMode}}, [](const Nda::FncValues& args) -> NdaVariant {
 
-        NadaValue ret;
-        ret.fromString(s);
+        std::ostringstream os;
+        os << args.at("n").toInt64();
+
+        NdaVariant ret;
+        ret.fromString(os.str());
         return ret;
     });
 
@@ -2634,15 +2693,15 @@ void TstParser::test_api_evaluate_List_Init()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
@@ -2652,7 +2711,7 @@ void TstParser::test_api_evaluate_List_Init()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_evaluate_List_Read()
+void TstParser::test_api_evaluate_List_Read1()
 {
     std::string script = R"(
         declare x : List := [1,42,3];
@@ -2661,21 +2720,43 @@ void TstParser::test_api_evaluate_List_Read()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bind("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NadaValue {
+    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
         results.push_back(args.at("message").toString());
-        return NadaValue();
+        return NdaVariant();
     });
 
     interpreter.execute(ast);
 
     QVERIFY(results.size() == 1);
     QVERIFY(results[0] == "42");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_List_Read2()
+{
+    std::string script = R"(
+        declare x : List := [1,42,3];
+        declare y : any  := x[1];
+
+        return y;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    auto y = interpreter.execute(ast);
+
+    QVERIFY(y.toInt64() == 42);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2693,8 +2774,8 @@ void TstParser::test_api_evaluate_List_Write()
 
     NadaLexer       lexer;
     NadaParser      parser(lexer);
-    NadaState       state;
-    NadaInterpreter interpreter(&state);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
 
     auto ast = parser.parse(script);
 
@@ -3054,6 +3135,88 @@ void TstParser::test_api_evaluate_Instance_Method1()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Length()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,2,3];
+
+    return x.length();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 3);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Append()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,2,3];
+
+    x.append(42);
+
+    return x.length();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 4);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Insert()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,2,3];
+
+    x.insert(0,42);
+
+    return x[0];
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Concat()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,2,3];
+
+    x.concat([4,5,6]);
+
+    return x.length();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 6);
+}
+
+//-------------------------------------------------------------------------------------------------
 //                                       ERROR HANDLING
 //-------------------------------------------------------------------------------------------------
 
@@ -3061,12 +3224,12 @@ void TstParser::test_api_evaluate_Instance_Method1()
 void TstParser::test_error_lexer_invalidCharacter()
 {
     NadaLexer lexer;
-    NadaException ex;
+    NdaException ex;
 
     lexer.setScript("$");
     try {
         while (lexer.nextToken());
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::InvalidCharacter);
@@ -3076,7 +3239,7 @@ void TstParser::test_error_lexer_invalidCharacter()
     lexer.setScript("declare \n $");
     try {
         while (lexer.nextToken());
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::InvalidCharacter);
@@ -3089,12 +3252,12 @@ void TstParser::test_error_lexer_invalidCharacter()
 void TstParser::test_error_lexer_invalidString()
 {
     NadaLexer lexer;
-    NadaException ex;
+    NdaException ex;
 
     lexer.setScript("\"23456789");
     try {
         while (lexer.nextToken());
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
@@ -3106,13 +3269,13 @@ void TstParser::test_error_lexer_invalidString()
 void TstParser::test_error_lexer_invalidBasedLiteral()
 {
     NadaLexer lexer;
-    NadaException ex;
+    NdaException ex;
 
     //               2#1000_0100#
     lexer.setScript("2#1000_0100 ");
     try {
         while (lexer.nextToken());
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
     // std::cout << ex.what() << std::endl;
@@ -3123,7 +3286,7 @@ void TstParser::test_error_lexer_invalidBasedLiteral()
     lexer.setScript("5%5 ");
     try {
         while (lexer.nextToken());
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
     // std::cout << ex.what() << std::endl;
@@ -3132,7 +3295,7 @@ void TstParser::test_error_lexer_invalidBasedLiteral()
     lexer.setScript("16#FFG ");
     try {
         while (lexer.nextToken());
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
     // std::cout << ex.what() << std::endl;
@@ -3149,11 +3312,11 @@ void TstParser::test_error_parser_declaration1()
 
     NadaLexer lexer;
     NadaParser parser(lexer);
-    NadaException ex;
+    NdaException ex;
 
     try {
         parser.parse(script);
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
 
@@ -3169,11 +3332,11 @@ void TstParser::test_error_parser_declaration2()
 
     NadaLexer lexer;
     NadaParser parser(lexer);
-    NadaException ex;
+    NdaException ex;
 
     try {
         parser.parse(script);
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
 
@@ -3189,11 +3352,11 @@ void TstParser::test_error_parser_declaration3()
 
     NadaLexer lexer;
     NadaParser parser(lexer);
-    NadaException ex;
+    NdaException ex;
 
     try {
         parser.parse(script);
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
 
@@ -3209,11 +3372,11 @@ void TstParser::test_error_parser_declaration4()
 
     NadaLexer lexer;
     NadaParser parser(lexer);
-    NadaException ex;
+    NdaException ex;
 
     try {
         parser.parse(script);
-    } catch (NadaException &e) {
+    } catch (NdaException &e) {
         ex = e;
     }
 
@@ -3229,59 +3392,59 @@ void TstParser::test_error_parser_if1()
 
     NadaLexer lexer;
     NadaParser parser(lexer);
-    NadaException ex;
+    NdaException ex;
 
-    try { parser.parse(script); } catch (NadaException &e) {
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
 
     QVERIFY(ex.code()   == Nada::Error::KeywordExpected);
 
     script = "if x then";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
     script = "if x then y";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::InvalidToken);
 
     script = "if x then y()";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
     script = "if x then y() end";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::InvalidToken);
 
     script = "if x then y(); end";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
     script = "if x then y(); end if";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
     script = "if x then y(); end if;";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::NoError);
@@ -3296,66 +3459,66 @@ void TstParser::test_error_parser_ifElse1()
 
     NadaLexer lexer;
     NadaParser parser(lexer);
-    NadaException ex;
+    NdaException ex;
 
-    try { parser.parse(script); } catch (NadaException &e) {
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
     script = "if x then f(); else y";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::InvalidToken);
 
     script = "if x then f(); else y()";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
 
     script = "if x then f(); else y() end";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::InvalidToken);
 
     script = "if x then f(); else y(); end";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
     script = "if x then f(); else y(); end;";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::KeywordExpected);
 
     script = "if x then f(); else y(); end while;";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::KeywordExpected);
 
     script = "if x then f(); else y(); end if";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::UnexpectedEof);
 
     script = "if x then f(); else y(); end if;";
-    ex = NadaException();
-    try { parser.parse(script); } catch (NadaException &e) {
+    ex = NdaException();
+    try { parser.parse(script); } catch (NdaException &e) {
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::NoError);

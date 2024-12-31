@@ -1,14 +1,14 @@
 #ifndef NEOADAAPI_H
 #define NEOADAAPI_H
 
-#include "value.h"
+#include "variant.h"
 
-class NadaException;
+class NdaException;
 namespace NeoAda
 {
-using Exception = NadaException;
+using Exception = NdaException;
 
-NadaValue evaluate(const std::string &shortScript, Exception *exception = nullptr);
+NdaVariant evaluate(const std::string &shortScript, Exception *exception = nullptr);
 }
 
 
