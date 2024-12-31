@@ -28,9 +28,8 @@ struct FormalParameter {
 
 using FncParameters = std::vector<FormalParameter>;
 using FncValues     = std::unordered_map<std::string, NdaVariant>;
-using FncCallback   = std::function<NdaVariant(const FncValues&)>;
-using PrcCallback   = std::function<void     (const FncValues&)>;
-
+using FncCallback   = std::function<bool (const FncValues&, NdaVariant &ret)>;
+using PrcCallback   = std::function<bool (const FncValues&)>;
 
 struct FunctionEntry {
     std::string        returnType;

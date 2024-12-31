@@ -207,6 +207,8 @@ private slots:
     void test_api_runtime_AdaList_Append();
     void test_api_runtime_AdaList_Insert();
     void test_api_runtime_AdaList_Concat();
+    void test_api_runtime_AdaList_Contains();
+    void test_api_runtime_AdaList_IndexOf();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -2228,13 +2230,12 @@ void TstParser::test_interpreter_ProcedureCall()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
-
 
     QVERIFY(results.size() == 2);
     QVERIFY(results[0] == "hello NeoAda");
@@ -2259,9 +2260,9 @@ void TstParser::test_interpreter_ifStatement()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -2290,9 +2291,9 @@ void TstParser::test_interpreter_ifElseStatement()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -2321,9 +2322,9 @@ void TstParser::test_interpreter_whileStatement()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -2355,9 +2356,9 @@ void TstParser::test_interpreter_whileBreak()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -2387,9 +2388,9 @@ void TstParser::test_interpreter_whileBreakWhen()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -2422,9 +2423,9 @@ void TstParser::test_interpreter_whileContinue()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -2530,14 +2531,13 @@ void TstParser::test_interpreter_static_method()
 
     std::vector<std::string> results;
 
-    state.bindFnc("string","number",{{"n", "natural", Nda::InMode}}, [](const Nda::FncValues& args) -> NdaVariant {
+    state.bindFnc("string","number",{{"n", "natural", Nda::InMode}}, [](const Nda::FncValues& args, NdaVariant &ret) -> bool {
 
         std::ostringstream os;
         os << args.at("n").toInt64();
 
-        NdaVariant ret;
         ret.fromString(os.str());
-        return ret;
+        return true;
     });
 
 
@@ -2699,9 +2699,9 @@ void TstParser::test_api_evaluate_List_Init()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -2726,9 +2726,9 @@ void TstParser::test_api_evaluate_List_Read1()
     auto ast = parser.parse(script);
 
     std::vector<std::string> results;
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         results.push_back(args.at("message").toString());
-        return NdaVariant();
+        return true;
     });
 
     interpreter.execute(ast);
@@ -3214,6 +3214,44 @@ void TstParser::test_api_runtime_AdaList_Concat()
     auto ret = r.runScript(script);
 
     QVERIFY(ret.toInt64() == 6);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Contains()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,42,3];
+
+    return x.contains(42);
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toBool() == true);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_IndexOf()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,42,3];
+
+    return x.indexOf(42);
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 1);
 }
 
 //-------------------------------------------------------------------------------------------------

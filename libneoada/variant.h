@@ -57,13 +57,14 @@ public:
     NdaVariant lengthOperator() const;
 
     // List interface
-    int              listSize() const;
-    void             appendToList(const NdaVariant &value);
-    void             insertIntoList(int index, const NdaVariant &value);
-    void             takeFromList(int index);
+    int               listSize() const;
+    void              appendToList(const NdaVariant &value);
+    void              insertIntoList(int index, const NdaVariant &value);
+    void              takeFromList(int index);
     NdaVariant&       writeAccess(int index);
     const NdaVariant& readAccess(int index) const;
-    bool             containsInList(const NdaVariant &value) const;
+    int               indexInList(const NdaVariant &value) const;
+    bool              containsInList(const NdaVariant &value) const;
 
     // String interface
     const std::string &cStringValue() const;

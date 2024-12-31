@@ -530,9 +530,9 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
         }
 
         if (fnc.nativeFncCallback)
-            state->ret() = fnc.nativeFncCallback(parameters);
+            fnc.nativeFncCallback(parameters, state->ret());
         else
-           fnc.nativePrcCallback(parameters);
+            fnc.nativePrcCallback(parameters);
     }
 
     return state->ret();

@@ -971,17 +971,27 @@ const NdaVariant &NdaVariant::readAccess(int index) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaVariant::containsInList(const NdaVariant &value) const
+int NdaVariant::indexInList(const NdaVariant &value) const
 {
     assert(type() == Nda::List);
     if (mType == Nda::Reference)
-        return cInternalReference()->containsInList(value);
+        return cInternalReference()->indexInList(value);
 
     if (listSize() <= 0)
-        return false;
+        return -1;
 
     const auto &array = cInternalList()->cArray();
-    return std::find(array.begin(), array.end(), value) != array.end();
+    auto pos = std::find(array.begin(), array.end(), value);
+    if (pos == array.end())
+        return -1;
+
+    return std::distance(array.begin(), pos);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaVariant::containsInList(const NdaVariant &value) const
+{
+    return indexInList(value) >= 0;
 }
 
 //-------------------------------------------------------------------------------------------------
