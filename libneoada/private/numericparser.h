@@ -24,8 +24,8 @@ namespace NadaNumericParser {
 std::string removeSeparators(const std::string& str);          // 200_042.23
 bool        isFloatingPointLiteral(const std::string& str);    // 5.5?
 bool        isBasedLiteral(const std::string& str);            // 16#1F# ?
-uint64_t    parseBasedLiteral(const std::string& literal, bool &ok);
-
+int64_t     parseBasedLiteral(const std::string& literal, bool &ok);
+uint64_t    parseUBasedLiteral(const std::string& literal, bool &ok);
 }
 
 

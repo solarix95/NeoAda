@@ -20,6 +20,7 @@ public:
 
 private:
     NdaVariant  &executeState(const NadaParser::ASTNodePtr &node, NdaState *state);
+    NdaVariant  &executeNumber(const NadaParser::ASTNodePtr &node, NdaState *state);
     NdaVariant  &executeForLoopRange(const NadaParser::ASTNodePtr &node, NdaState *state);
     NdaVariant  &evaluateBinaryOperator(const NadaParser::ASTNodePtr &node, NdaState *state);
     NdaVariant  &evaluateUnaryOperator(const NadaParser::ASTNodePtr &node, NdaState *state);

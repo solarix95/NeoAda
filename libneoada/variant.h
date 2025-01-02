@@ -7,28 +7,32 @@
 #include "private/type.h"
 
 namespace Nda {
-class SharedString;
-class SharedList;
+class  SharedString;
+class  SharedList;
 }
 
 class NdaVariant
 {
 public:
-    NdaVariant();
+    NdaVariant(const Nda::RuntimeType *type = nullptr);
     NdaVariant(const NdaVariant &other);
     ~NdaVariant();
 
     void reset();
-    void initAny();
-    void initType(Nda::Type t);
-    bool fromString(const std::string &value);
-    bool fromNumber(const std::string &value);
-    bool fromNumber(uint64_t value);
-    bool fromNumber(int64_t value);
-    bool fromNumber(double value);
-    bool fromDoubleNan();
-    bool fromBool(bool value);
-    void fromReference(NdaVariant *other);
+    void initType(const Nda::RuntimeType *type);
+    void fromString(const Nda::RuntimeType *type, const std::string &value);
+
+    bool fromNumberLiteral(const Nda::RuntimeType  *type,const std::string &value);
+    void fromNumber(const Nda::RuntimeType *type, double value);
+    bool fromNaturalLiteral(const Nda::RuntimeType *type,const std::string &value);
+    void fromNatural(const Nda::RuntimeType *type, int64_t value);
+    bool fromSNaturalLiteral(const Nda::RuntimeType *type,const std::string &value);
+    void fromSNatural(const Nda::RuntimeType *type, uint64_t value);
+    bool fromByteLiteral(const Nda::RuntimeType *type,const std::string &value);
+
+    void  fromDoubleNan(const Nda::RuntimeType *type);
+    void  fromBool(const Nda::RuntimeType *t, bool value);
+    void  fromReference(const Nda::RuntimeType *type, NdaVariant *other);
 
     bool    toBool(bool *ok = nullptr) const;
     int64_t toInt64(bool *ok = nullptr) const;
@@ -44,7 +48,7 @@ public:
     bool      greaterThen(const NdaVariant &other, bool *ok = nullptr) const;
     bool      lessThen(const NdaVariant &other, bool *ok = nullptr) const;
 
-    NdaVariant spaceship(const NdaVariant &other, bool *ok = nullptr) const;
+    double     spaceship(const NdaVariant &other, bool *ok = nullptr) const;
 
     NdaVariant concat(const NdaVariant &other, bool *ok = nullptr) const;
     NdaVariant subtract(const NdaVariant &other, bool *ok= nullptr) const;
@@ -54,7 +58,7 @@ public:
     NdaVariant division(const NdaVariant &other, bool *ok= nullptr) const;
 
     NdaVariant unaryOperator(const std::string &op, bool *ok = nullptr) const;
-    NdaVariant lengthOperator() const;
+    int        lengthOperator() const;
 
     // List interface
     int               listSize() const;
@@ -65,6 +69,7 @@ public:
     const NdaVariant& readAccess(int index) const;
     int               indexInList(const NdaVariant &value) const;
     bool              containsInList(const NdaVariant &value) const;
+    void              reverseList();
 
     // String interface
     const std::string &cStringValue() const;
@@ -73,12 +78,14 @@ public:
     std::string toString() const;
     Nda::Type   type() const;
     Nda::Type   myType() const;
+    const Nda::RuntimeType *runtimeType() const;
 
     NdaVariant& operator=(const NdaVariant&other);
 
     // Unit-Test only
     int         refCount() const;
 
+    static Nda::Type numericType(const std::string &literal);
     static bool fromNumber(const std::string &value, int64_t &ret);
 
 private:
@@ -100,11 +107,9 @@ private:
     bool exact32BitInt(int &value) const;
     bool exact64BitDbl(double &value) const;
 
-
-    Nda::Type   mType;
+    const Nda::RuntimeType *mRuntimeType;
 
     union UValue {
-        char          uChar;
         unsigned char uByte;
         double        uDouble;
         int64_t       uInt64;
@@ -114,8 +119,8 @@ private:
 
     UValue mValue;
 
-    inline UValue       *uValue()        { return (mType == Nda::Reference) ?  internalReference()->uValue()  : &mValue; }
-    inline const UValue *cuValue() const { return (mType == Nda::Reference) ? cInternalReference()->cuValue() : &mValue; }
+    inline UValue       *uValue()        { return (myType() == Nda::Reference) ?  internalReference()->uValue()  : &mValue; }
+    inline const UValue *cuValue() const { return (myType() == Nda::Reference) ? cInternalReference()->cuValue() : &mValue; }
 
 };
 

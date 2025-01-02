@@ -14,13 +14,12 @@
 namespace Nda {
 
 struct Symbol {
-    Nda::Type        type;
-    Nda::LowerString name;
-    NdaVariant        *value;
-    Nda::LowerString typeName;
+    Nda::LowerString        name;
+    NdaVariant             *value;
+    const Nda::RuntimeType *type;
 
-    Symbol() : type(Nda::Undefined),value(nullptr) {}
-    Symbol(Nda::Type t, const std::string &n, const std::string &tn) : type(t), name(n), value(nullptr), typeName(tn) {}
+    Symbol() : value(nullptr), type(nullptr) {}
+    Symbol(const std::string &n, const Nda::RuntimeType *t) : name(n), value(nullptr), type(t)  {}
 };
 
 

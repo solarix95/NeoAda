@@ -48,6 +48,7 @@ std::string NdaException::messageByCode() const
     case Nada::Error::AssignmentError:        return "Incompatible datatype";
     case Nada::Error::IllegalComparison:      return "Illegal comparison";
     case Nada::Error::OperatorTypeError:      return "Unsupported operand type(s)";
+    case Nada::Error::InvalidNumericValue:    return "Invalid numeric value";
 
     }
     return "";

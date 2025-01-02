@@ -171,22 +171,21 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
             throw NdaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
     }   break;
     case NadaParser::ASTNodeType::Literal:
-        state->ret().fromString(node->value.displayValue);
+        state->ret().fromString(state->typeByName("string"),node->value.displayValue);
         break;
     case NadaParser::ASTNodeType::ListLiteral: {
         NdaVariant ret;
-        ret.initType(Nda::List);
+        ret.initType(state->typeByName("list"));
         for (const auto &child : node->children) {
             ret.appendToList(executeState(child, state));
         }
         state->ret() = ret;
     } break;
     case NadaParser::ASTNodeType::BooleanLiteral:
-        state->ret().fromBool(node->value.lowerValue == "true");
+        state->ret().fromBool(state->typeByName("boolean"),node->value.lowerValue == "true");
         break;
     case NadaParser::ASTNodeType::Number: {
-        auto done = state->ret().fromNumber(node->value.lowerValue);
-        // FIXME: Error-Handling? done?
+        executeNumber(node,state);
     }   break;
     case NadaParser::ASTNodeType::BinaryOperator: {
         return evaluateBinaryOperator(node, state);
@@ -197,7 +196,7 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
     case NadaParser::ASTNodeType::Identifier: {
         auto *value = state->valuePtr(node->value.lowerValue);
         if (value)
-            state->ret().fromReference(value);
+            state->ret().fromReference(state->typeByName("reference"),value);
         else
             state->ret().reset();
         // TODO: runtime error
@@ -234,7 +233,7 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
             throw NdaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
 
         auto &targetValue = targetList.writeAccess((int)index);
-        state->ret().fromReference(&targetValue);
+        state->ret().fromReference(state->typeByName("reference"), &targetValue);
     }   break;
     default:
         assert(0 && "not yet implemented");
@@ -242,6 +241,35 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
     }
 
     return state->ret();
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant &NdaInterpreter::executeNumber(const NadaParser::ASTNodePtr &node, NdaState *state)
+{
+    auto &ret = state->ret();
+    auto identType = NdaVariant::numericType(node->value.lowerValue); // _B -> _b
+
+    bool done = false;
+    switch(identType) {
+    case Nda::Number:
+        done = ret.fromNumberLiteral(state->typeByName("number")   ,node->value.lowerValue);
+        break;
+    case Nda::Natural:
+        done = ret.fromNaturalLiteral(state->typeByName("natural") ,node->value.lowerValue);
+        break;
+    case Nda::Supernatural:
+        done = ret.fromNaturalLiteral(state->typeByName("supernatural") ,node->value.lowerValue);
+        break;
+    case Nda::Byte:
+        done = ret.fromNaturalLiteral(state->typeByName("byte") ,node->value.lowerValue);
+        break;
+    default: break;
+    }
+
+    if (!done)
+        throw NdaException(Nada::Error::InvalidNumericValue,node->line,node->column, node->value.displayValue);
+
+    return ret;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -263,8 +291,8 @@ NdaVariant &NdaInterpreter::executeForLoopRange(const NadaParser::ASTNodePtr &no
     state->pushScope(NadaSymbolTable::LoopScope);
     state->define(varName,"Natural");
     auto &valueRef = state->valueRef(varName);
-    for (int64_t i = from; i<=to; i++) {
-        valueRef.fromNumber(i);
+    for (int64_t i = from; i<=to; i++) {          
+        valueRef.fromNatural(state->typeByName("natural"),i);
         executeState(node->children[1],state);
 
         if (mExecState == BreakState) {
@@ -314,7 +342,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result = left.greaterThen(right, &done);
         if (!done)
             throw NdaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
-        state->ret().fromBool(result);
+        state->ret().fromBool(state->typeByName("boolean"),result);
         return state->ret();
     }
 
@@ -322,7 +350,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result = left.lessThen(right, &done);
         if (!done)
             throw NdaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
-        state->ret().fromBool(result);
+        state->ret().fromBool(state->typeByName("boolean"),result);
         return state->ret();
     }
 
@@ -331,13 +359,13 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result2 = result1 || left.equal(right);
 
         if (result1 || result2) {
-            state->ret().fromBool(result1);
+            state->ret().fromBool(state->typeByName("boolean"),result1);
             return state->ret();
         }
         if (!done)
             throw NdaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
 
-        state->ret().fromBool(false);
+        state->ret().fromBool(state->typeByName("boolean"),false);
         return state->ret();
     }
 
@@ -351,12 +379,12 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
             throw NdaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
 
         if (result1 || result2) {
-            state->ret().fromBool(result1 || result2);
+            state->ret().fromBool(state->typeByName("boolean"),result1 || result2);
             return state->ret();
         }
 
 
-        state->ret().fromBool(false);
+        state->ret().fromBool(state->typeByName("boolean"),false);
         return state->ret();
     }
 
@@ -364,7 +392,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result = left.equal(right, &done);
         if (!done)
             throw NdaException(Nada::Error::IllegalComparison,node->line,node->column, node->value.displayValue);
-        state->ret().fromBool(result);
+        state->ret().fromBool(state->typeByName("boolean"),result);
         return state->ret();
     }
 
@@ -372,7 +400,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result = !left.equal(right, &done);
         if (!done)
             throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
-        state->ret().fromBool(result);
+        state->ret().fromBool(state->typeByName("boolean"),result);
         return state->ret();
     }
 
@@ -421,7 +449,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result = left.logicalAnd(right, &done);
         if (!done)
             throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
-        state->ret().fromBool(result);
+        state->ret().fromBool(state->typeByName("boolean"),result);
         return state->ret();
     }
 
@@ -429,7 +457,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result = left.logicalOr(right, &done);
         if (!done)
             throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
-        state->ret().fromBool(result);
+        state->ret().fromBool(state->typeByName("boolean"),result);
         return state->ret();
     }
 
@@ -437,7 +465,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
         bool result = left.logicalXor(right, &done);
         if (!done)
             throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
-        state->ret().fromBool(result);
+        state->ret().fromBool(state->typeByName("boolean"),result);
         return state->ret();
     }
 
@@ -450,8 +478,12 @@ NdaVariant &NdaInterpreter::evaluateUnaryOperator(const NadaParser::ASTNodePtr &
 {
     assert(node->children.size() == 1);
 
-    bool done;
-    state->ret() = executeState(node->children[0],state).unaryOperator(node->value.lowerValue,&done);
+    if (node->value.lowerValue == "#") {
+        state->ret().fromNatural(state->typeByName("natural"), executeState(node->children[0],state).lengthOperator());
+    } else {
+        bool done;
+        state->ret() = executeState(node->children[0],state).unaryOperator(node->value.lowerValue,&done);
+    }
 
     // FIXME: runtime error
     // if (!done)
@@ -475,7 +507,7 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
     } else if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
         if (!state->find(node->children[0]->value.lowerValue,symbol))
             throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->children[0]->value.lowerValue);
-        typeName = symbol.typeName.lowerValue;
+        typeName = symbol.type->name.lowerValue;
     }
 
     if (!state->hasFunction(typeName, node->value.lowerValue,values)) {
@@ -498,17 +530,17 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
 
         // Creating "this":
         if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
-            state->define("this", symbol.typeName.lowerValue);
+            state->define("this", symbol.type);
             // TODO: if !define -> runtime error!
             NdaVariant &valueRef = state->valueRef("this");
-            valueRef.fromReference(symbol.value);
+            valueRef.fromReference(state->typeByName("reference"),symbol.value);
         }
         for (int i = 0; i< fnc.parameters.size(); i++) {
             state->define(fnc.parameters[i].name, fnc.parameters[i].type);
             // TODO: if !define -> runtime error!
             NdaVariant &valueRef = state->valueRef(fnc.parameters[i].name);
             if (fnc.parameters[i].mode == Nda::OutMode) {
-                valueRef.fromReference(&values[i]);
+                valueRef.fromReference(state->typeByName("reference"),&values[i]);
             } else {
                 valueRef.assign(values[i]);
             }
@@ -525,7 +557,7 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
         // Creating "this":
         if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
             NdaVariant thisRef;
-            thisRef.fromReference(symbol.value);
+            thisRef.fromReference(state->typeByName("reference"),symbol.value);
             parameters["this"] = thisRef;
         }
 

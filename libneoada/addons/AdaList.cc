@@ -10,22 +10,20 @@ void add_AdaList_symbols(NdaState *state)
 {
     assert(state);
 
-    // {{"n", "natural", Nda::InMode}}
-
-    // ------------------ String.Length() ---------------------------------------------------------
-    state->bindFnc("list","length",{}, [](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+    // ------------------ List.Length() ---------------------------------------------------------
+    state->bindFnc("list","length",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
 
         CHECK_INSTANCE_CALL;
 
         auto self = args.at("this");
         if (self.type() == Nda::List)
-            ret.fromNumber((int64_t)self.listSize());
+            ret.fromNatural(state->typeByName("natural"),self.listSize());
         else
             return false;
         return true;
     });
 
-    // ------------------ String.Append() ---------------------------------------------------------
+    // ------------------ List.Append() ---------------------------------------------------------
     state->bindPrc("list","append",{{"v", "any", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
 
         CHECK_INSTANCE_CALL;
@@ -40,7 +38,7 @@ void add_AdaList_symbols(NdaState *state)
         return true;
     });
 
-    // ------------------ String.Insert() ---------------------------------------------------------
+    // ------------------ List.Insert() ---------------------------------------------------------
     state->bindPrc("list","insert",{{"p", "Number", Nda::InMode}, {"v", "any", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
 
         CHECK_INSTANCE_CALL;
@@ -56,7 +54,7 @@ void add_AdaList_symbols(NdaState *state)
         return true;
     });
 
-    // ------------------ String.Concat() ---------------------------------------------------------
+    // ------------------ List.Concat() ---------------------------------------------------------
     state->bindPrc("list","concat",{{"v", "any", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
 
         CHECK_INSTANCE_CALL;
@@ -78,8 +76,8 @@ void add_AdaList_symbols(NdaState *state)
         return true;
     });
 
-    // ------------------ String.Append() ---------------------------------------------------------
-    state->bindFnc("list","contains",{{"v", "any", Nda::InMode}}, [](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+    // ------------------ List.Contains() ---------------------------------------------------------
+    state->bindFnc("list","contains",{{"v", "any", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
 
         CHECK_INSTANCE_CALL;
 
@@ -89,12 +87,12 @@ void add_AdaList_symbols(NdaState *state)
         if (self.type() != Nda::List)
             return false;
 
-        ret.fromBool(self.containsInList(element));
+        ret.fromBool(state->typeByName("boolean"),self.containsInList(element));
         return true;
     });
 
-    // ------------------ String.Append() ---------------------------------------------------------
-    state->bindFnc("list","indexOf",{{"v", "any", Nda::InMode}}, [](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+    // ------------------ List.IndexOf() ---------------------------------------------------------
+    state->bindFnc("list","indexOf",{{"v", "any", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
 
         CHECK_INSTANCE_CALL;
 
@@ -104,9 +102,42 @@ void add_AdaList_symbols(NdaState *state)
         if (self.type() != Nda::List)
             return false;
 
-        ret.fromNumber((int64_t)self.indexInList(element));
+        ret.fromNatural(state->typeByName("natural"),(int64_t)self.indexInList(element));
         return true;
     });
+
+    // ------------------ List.Flip() ---------------------------------------------------------
+    state->bindPrc("list","flip",{}, [](const Nda::FncValues& args) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self    = args.at("this");
+
+        if (self.type() != Nda::List)
+            return false;
+
+        self.reverseList();
+
+        return true;
+    });
+
+    // ------------------ List.Flipped() ---------------------------------------------------------
+    state->bindFnc("list","flipped",{}, [](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self    = args.at("this");
+
+        if (self.type() != Nda::List)
+            return false;
+
+        ret.initType(self.runtimeType());
+        ret.assign(ret);
+        ret.reverseList();
+
+        return true;
+    });
+
 
 
 

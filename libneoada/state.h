@@ -14,8 +14,15 @@ public:
 
     void       reset();
 
+    // runtime type information
+    bool                    registerType(std::string name, Nda::Type type, bool instantiable);
+    bool                    registerType(std::string name, std::string basename); // "type mytype as list;"
+    const Nda::RuntimeType *typeByName(std::string name) const;
+
+    // variable definition
     bool       define(const std::string &name, const std::string &typeName, bool isVolatile = false);
-    Nda::Type typeOf(const std::string &name) const;
+    bool       define(const std::string &name, const Nda::RuntimeType *type, bool isVolatile = false);
+    Nda::Type  typeOf(const std::string &name) const;
 
     // procedure/function
     bool               bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // function
@@ -67,10 +74,10 @@ private:
 
     NdaVariant         mRetValue;
     NadaSymbolTables   mGlobals;
-    NadaFunctionTable  mFunctions;
-
-
     NadaStackFrames    mCallStack;
+
+    Nda::FunctionTable  mFunctions;
+    Nda::RuntimeTypes   mTypes;
 
     CtorCallback       mVolatileCtor;
 

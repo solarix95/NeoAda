@@ -36,6 +36,7 @@ enum Error {
     InvalidAssignment,
     InvalidContainerType,
     InvalidAccessValue,
+    InvalidNumericValue,
 };
 }
 

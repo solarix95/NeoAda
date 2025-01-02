@@ -333,6 +333,13 @@ bool NadaLexer::isDigit(char c) const {
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NadaLexer::isNumericSuffix(char c) const
+{
+    return (c == 'n') || (c == 'u') || (c == 'd') || (c == 'b');
+
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaLexer::shiftToNext(int step)
 {
     assert(step != 0);

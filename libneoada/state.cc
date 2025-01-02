@@ -21,21 +21,88 @@ NdaState::~NdaState()
 void NdaState::reset()
 {
     destroy();
+
     mGlobals.push_back(new NadaSymbolTable(NadaSymbolTable::GlobalScope));
+
+    // register all standard NeoAda Datatypes
+    registerType("Reference",Nda::Reference, false);
+    registerType("Any",Nda::Any, true);
+    registerType("Number",Nda::Number, true);
+
+    registerType("Natural",Nda::Natural, true);
+    registerType("Supernatural",Nda::Supernatural, true);
+    registerType("Byte",Nda::Byte, true);
+
+    registerType("Boolean",Nda::Boolean, true);
+
+    registerType("String",Nda::String, true);
+    registerType("List",Nda::List, true);
+    registerType("Dict",Nda::Dict, true);
+
 }
+
+//-------------------------------------------------------------------------------------------------
+bool NdaState::registerType(std::string name, Nda::Type type, bool instantiable)
+{
+    const auto *currentType = typeByName(name);
+    if (currentType) {
+        return currentType->dataType == type; // already registered -> ok..
+    }
+
+    mTypes[Nda::toLower(name)] = Nda::RuntimeType(name,type,"",instantiable);
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaState::registerType(std::string name, std::string basename)
+{
+    name = Nda::toLower(name);
+    if (mTypes.find(name) != mTypes.end())
+        return false;
+
+    const auto *baseType = typeByName(basename);
+    if (!baseType)
+        return false;
+
+    if (baseType->instantiable == false) // dont subclass "Reference"!!
+        return false;
+
+    mTypes[name] = Nda::RuntimeType(name,baseType->dataType,basename,true);
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+const Nda::RuntimeType *NdaState::typeByName(std::string name) const
+{
+    name = Nda::toLower(name);
+
+    if (mTypes.find(name) == mTypes.end())
+        return nullptr;
+
+    return &mTypes.at(name);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 bool NdaState::define(const std::string &name, const std::string &typeName, bool isVolatile)
 {
-    Nda::Type t = Nda::typeByString(typeName);
-    if (t == Nda::Undefined)
+    const Nda::RuntimeType *t = typeByName(typeName);
+    if (!t || !t->instantiable)
         return false;
+
+    return define(name,t,isVolatile);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaState::define(const std::string &name, const Nda::RuntimeType *type, bool isVolatile)
+{
+    assert(type);
 
     bool done;
     if (mCallStack.empty())
-        done = mGlobals.back()->add(Nda::Symbol(t,Nda::toLower(name), typeName));
+        done = mGlobals.back()->add(Nda::Symbol(name, type));
     else
-        done = mCallStack.back()->back()->add(Nda::Symbol(t,Nda::toLower(name), typeName));
+        done = mCallStack.back()->back()->add(Nda::Symbol(name, type));
 
     if (done && isVolatile) {
         NdaVariant &value = valueRef(name);
@@ -44,6 +111,7 @@ bool NdaState::define(const std::string &name, const std::string &typeName, bool
     }
 
     return done;
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -52,7 +120,7 @@ Nda::Type NdaState::typeOf(const std::string &name) const
     Nda::Symbol symbol;
     if (!find(name,symbol))
         return Nda::Undefined;
-    return symbol.type;
+    return symbol.type->dataType;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -214,6 +282,8 @@ void NdaState::destroy()
         delete table;
         mGlobals.pop_back();
     }
+
+    mTypes.clear();
 }
 
 

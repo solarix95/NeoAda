@@ -53,8 +53,10 @@ public:
 private slots:
 
     // Core Datastructure
-    void test_core_SharedString();
+    void test_core_NumericLiterals();
     void test_core_NumericValues();
+    void test_core_NumericValues_Invalid();
+    void test_core_SharedString();
     void test_core_Assignment();
     void test_core_References();
     void test_core_List_COW();
@@ -209,6 +211,8 @@ private slots:
     void test_api_runtime_AdaList_Concat();
     void test_api_runtime_AdaList_Contains();
     void test_api_runtime_AdaList_IndexOf();
+    void test_api_runtime_AdaList_Flip();
+    void test_api_runtime_AdaList_Flipped();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -240,16 +244,17 @@ TstParser::~TstParser() {}
 
 void TstParser::test_core_SharedString()
 {
+    NdaState state;
     // Test "Copy on Write"
     NdaVariant s1;
 
     QCOMPARE(s1.refCount(), 0);
 
-    s1.fromString("");
+    s1.fromString(state.typeByName("string"),"");
     QCOMPARE(s1.refCount(), 0);
     QCOMPARE(s1.toString(), "");
 
-    s1.fromString("1");
+    s1.fromString(state.typeByName("string"),"1");
     QCOMPARE(s1.refCount(), 1);
     QCOMPARE(s1.toString(), "1");
 
@@ -292,62 +297,102 @@ void TstParser::test_core_SharedString()
     }
     QCOMPARE(s1.refCount(), 1);
 }
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_NumericLiterals()
+{
+    QVERIFY(NdaVariant::numericType("0_n") == Nda::Natural);
+    QVERIFY(NdaVariant::numericType("0_u") == Nda::Supernatural);
+    QVERIFY(NdaVariant::numericType("0_d") == Nda::Number);
+    QVERIFY(NdaVariant::numericType("0_b") == Nda::Byte);
+
+    QVERIFY(NdaVariant::numericType("0_z") == Nda::Undefined);
+
+
+    QVERIFY(NdaVariant::numericType("0")   == Nda::Natural);
+    QVERIFY(NdaVariant::numericType("42")  == Nda::Natural);
+
+    QVERIFY(NdaVariant::numericType("0.5")    == Nda::Number);
+    QVERIFY(NdaVariant::numericType("1.0E5")    == Nda::Number);
+    QVERIFY(NdaVariant::numericType("1.0e5")    == Nda::Number);
+    QVERIFY(NdaVariant::numericType("4.2E-5") == Nda::Number);
+
+    QVERIFY(NdaVariant::numericType("2#1000_0100#") == Nda::Natural);
+    QVERIFY(NdaVariant::numericType("2#1000#")      == Nda::Natural);
+    QVERIFY(NdaVariant::numericType("16#F#")        == Nda::Natural);
+    QVERIFY(NdaVariant::numericType("2#1000#_b")    == Nda::Byte);
+
+}
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_NumericValues()
 {
+    NdaState   state;
     NdaVariant v;
 
-    QCOMPARE(v.fromNumber("123_456"),true);      // int64_t
+    // int64_t
+    QCOMPARE(v.fromNaturalLiteral(state.typeByName("natural"),"123_456"),true);
     QCOMPARE(v.type(), Nda::Natural);
 
-    QCOMPARE(v.fromNumber("1.23E+10"),true);     // double
+    // double
+    QCOMPARE(v.fromNumberLiteral(state.typeByName("number"),"1.23E+10"),true);
     QCOMPARE(v.type(), Nda::Number);
 
-    QCOMPARE(v.fromNumber("16#1F#"),true);       // uint64_t (Base 16)
-    QCOMPARE(v.type(), Nda::Supernatural);
-
-    QCOMPARE(v.fromNumber("2#1011_0001#"),true); // uint64_t (Base 2)
-    QCOMPARE(v.type(), Nda::Supernatural);
-
-    QCOMPARE(v.fromNumber("10#123#E+2"),true);   // uint64_t mit Exponent
-    QCOMPARE(v.type(), Nda::Supernatural);
-
-    QCOMPARE(v.fromNumber("1.2_34"),true);       // double
+    QCOMPARE(v.fromNumberLiteral(state.typeByName("number"),"1.2_34"),true);
     QCOMPARE(v.type(), Nda::Number);
 
-    QCOMPARE(v.fromNumber("18446744073709551615"),true); // uint64_t (Maximalwert)
+    // uint64_t (Base 16)
+    QCOMPARE(v.fromSNaturalLiteral(state.typeByName("supernatural"),"16#1F#"),true);
     QCOMPARE(v.type(), Nda::Supernatural);
 
-    QCOMPARE(v.fromNumber("InvalidLiteral"),false);
+    // uint64_t (Base 2)
+    QCOMPARE(v.fromSNaturalLiteral(state.typeByName("supernatural"),"2#1011_0001#"),true);
+    QCOMPARE(v.type(), Nda::Supernatural);
+
+    // uint64_t (Maximalwert)
+    QCOMPARE(v.fromSNaturalLiteral(state.typeByName("supernatural"),"18446744073709551615"),true);
+    QCOMPARE(v.type(), Nda::Supernatural);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_NumericValues_Invalid()
+{
+    // passes NdaVariant::numericType() but are invalid anyway:
+
+    NdaState   state;
+    NdaVariant v;
+
+    // uint64_t (too long)
+    QCOMPARE(v.fromSNaturalLiteral(state.typeByName("supernatural"),"18446744073709551616"),false);
     QCOMPARE(v.type(), Nda::Undefined);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_Assignment()
 {
+    NdaState   state;
     NdaVariant v1;
     NdaVariant v2;
 
 
     // Number -> Any
-    v1.initAny();
-    v2.fromNumber(42.23);
+    v1.initType(state.typeByName("any"));
+
+    v2.fromNumber(state.typeByName("number"), 42.23);
     QCOMPARE(v1.assign(v2),true);
 
     // Natural -> Any
-    v1.initAny();
-    v2.fromNumber((int64_t)42);
+    v1.initType(state.typeByName("any"));
+    v2.fromNatural(state.typeByName("natural"),42);
     QCOMPARE(v1.assign(v2),true);
 
     // Supernatural -> Any
-    v1.initAny();
-    v2.fromNumber((uint64_t)42);
+    v1.initType(state.typeByName("any"));
+    v2.fromSNatural(state.typeByName("supernatural"),(uint64_t)42);
     QCOMPARE(v1.assign(v2),true);
 
     // String -> Any
-    v1.initAny();
-    v2.fromString("neoAda");
+    v1.initType(state.typeByName("any"));
+    v2.fromString(state.typeByName("string"),"neoAda");
     QCOMPARE(v1.assign(v2),true);
     QCOMPARE(v1.toString(), v2.toString());
 }
@@ -355,21 +400,18 @@ void TstParser::test_core_Assignment()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_References()
 {
+    NdaState   state;
     NdaVariant v1;
     NdaVariant r1;
-    r1.fromReference(&v1);
+    r1.fromReference(state.typeByName("reference"),&v1);
+    v1.fromString(state.typeByName("string"), "hello");
 
-
-    v1.initAny();
-    QCOMPARE(r1.type(), Nda::Type::Any);
-
-    v1.fromString("hello");
     QCOMPARE(r1.type(), Nda::Type::String);
     QCOMPARE(r1.toString(), v1.toString());
 
     NdaVariant r2 = r1; // copy reference
     NdaVariant v2;
-    v2.fromString("world");
+    v2.fromString(state.typeByName("string"),"world");
 
     r2.assign(v2);
 
@@ -381,19 +423,20 @@ void TstParser::test_core_References()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_COW()
 {
+    NdaState   state;
     NdaVariant vs;
-    vs.fromString("1");
+    vs.fromString(state.typeByName("string"),"1");
 
     { // append, insert remove
         NdaVariant a1;
-        a1.initType(Nda::List);
+        a1.initType(state.typeByName("list"));
 
         QCOMPARE(a1.listSize(), 0);
         a1.appendToList(vs);
         QCOMPARE(a1.listSize(), 1);
         QVERIFY(a1.readAccess(0).toString() == "1");
 
-        vs.fromString("0");
+        vs.fromString(state.typeByName("string"), "0");
         a1.insertIntoList(0,vs);
         QVERIFY(a1.readAccess(0).toString() == "0");
         QVERIFY(a1.readAccess(1).toString() == "1");
@@ -405,13 +448,13 @@ void TstParser::test_core_List_COW()
 
     { // shared list
         NdaVariant a1;
-        a1.initType(Nda::List);
+        a1.initType(state.typeByName("list"));
 
         {
             NdaVariant a2;
-            a2.initType(Nda::List);
+            a2.initType(state.typeByName("list"));
 
-            vs.fromString("a2");
+            vs.fromString(state.typeByName("string"),"a2");
             a2.appendToList(vs);
 
             QCOMPARE(a1.listSize(), 0);
@@ -426,19 +469,19 @@ void TstParser::test_core_List_COW()
 
     { // copy-on-write: source changes
         NdaVariant a1;
-        a1.initType(Nda::List);
+        a1.initType(state.typeByName("list"));
 
         NdaVariant a2;
-        a2.initType(Nda::List);
+        a2.initType(state.typeByName("list"));
 
-        vs.fromString("0");
+        vs.fromString(state.typeByName("string"),"0");
         a1.appendToList(vs);
 
         a2 = a1;
         QVERIFY(a1.readAccess(0).toString() == "0");
         QVERIFY(a2.readAccess(0).toString() == "0");
 
-        vs.fromString("1");
+        vs.fromString(state.typeByName("string"),"1");
         a1.insertIntoList(0,vs);
         QVERIFY(a1.readAccess(0).toString() == "1");
         QVERIFY(a2.readAccess(0).toString() == "0");
@@ -448,19 +491,19 @@ void TstParser::test_core_List_COW()
 
     { // copy-on-write: target changes
         NdaVariant a1;
-        a1.initType(Nda::List);
+        a1.initType(state.typeByName("list"));
 
         NdaVariant a2;
-        a2.initType(Nda::List);
+        a2.initType(state.typeByName("list"));
 
-        vs.fromString("0");
+        vs.fromString(state.typeByName("string"),"0");
         a1.appendToList(vs);
 
         a2 = a1;
         QVERIFY(a1.readAccess(0).toString() == "0");
         QVERIFY(a2.readAccess(0).toString() == "0");
 
-        vs.fromString("1");
+        vs.fromString(state.typeByName("string"),"1");
         a2.insertIntoList(0,vs);
         QVERIFY(a1.readAccess(0).toString() == "0");
         QVERIFY(a2.readAccess(0).toString() == "1");
@@ -472,16 +515,17 @@ void TstParser::test_core_List_COW()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_REF()
 {
+    NdaState   state;
     NdaVariant vs;
-    vs.fromString("1");
+    vs.fromString(state.typeByName("string"),"1");
 
     {
         NdaVariant a1;
-        a1.initType(Nda::List);
+        a1.initType(state.typeByName("list"));
         a1.appendToList(vs);
 
         NdaVariant r1;
-        r1.fromReference(&a1);
+        r1.fromReference(state.typeByName("reference"),&a1);
         r1.appendToList(vs);
 
         a1.appendToList(vs);
@@ -501,39 +545,43 @@ void TstParser::test_core_List_REF()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_Contains()
 {
+    NdaState state;
+
     NdaVariant vs;
-    vs.fromString("0");
+    vs.fromString(state.typeByName("string"),"0");
 
     NdaVariant a1;
-    a1.initType(Nda::List);
+    a1.initType(state.typeByName("list"));
     a1.appendToList(vs);
 
     QVERIFY(a1.containsInList(vs) == true);
 
-    vs.fromNumber((int64_t)0);
+    vs.fromNumber(state.typeByName("number"),0);
     QVERIFY(a1.containsInList(vs) == false);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_List_Concat()
 {
+    NdaState state;
+
     NdaVariant vs;
-    vs.fromString("0");
+    vs.fromString(state.typeByName("string"),"0");
 
     NdaVariant a1;
-    a1.initType(Nda::List);
+    a1.initType(state.typeByName("list"));
     a1.appendToList(vs);
 
-    vs.fromString("1");
+    vs.fromString(state.typeByName("string"),"1");
     NdaVariant a2;
-    a2.initType(Nda::List);
+    a2.initType(state.typeByName("list"));
     a2.appendToList(vs);
 
     NdaVariant a3 = a1.concat(a2);
 
-    vs.fromString("0");
+    vs.fromString(state.typeByName("string"),"0");
     QVERIFY(a3.containsInList(vs) == true);
-    vs.fromString("1");
+    vs.fromString(state.typeByName("string"),"1");
     QVERIFY(a3.containsInList(vs) == true);
 
     QVERIFY(a1.listSize() == 1);
@@ -2113,9 +2161,7 @@ void TstParser::test_state_Declarations()
     QCOMPARE(state.define("d", "Supernatural"), true);
     QCOMPARE(state.define("e", "Boolean"), true);
     QCOMPARE(state.define("f", "Byte"), true);
-    QCOMPARE(state.define("g", "Character"), true);
     QCOMPARE(state.define("h", "String"), true);
-    QCOMPARE(state.define("i", "Struct"), true);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2158,9 +2204,7 @@ void TstParser::test_interpreter_Declarations()
         declare c: Supernatural;
         declare d: Boolean;
         declare e: Byte;
-        declare f: Character;
         declare g: String;
-        declare h: Struct;
 
     )";
 
@@ -2180,9 +2224,7 @@ void TstParser::test_interpreter_Declarations()
     QCOMPARE(state.typeOf("c"), Nda::Supernatural);
     QCOMPARE(state.typeOf("d"), Nda::Boolean);
     QCOMPARE(state.typeOf("e"), Nda::Byte);
-    QCOMPARE(state.typeOf("f"), Nda::Character);
     QCOMPARE(state.typeOf("g"), Nda::String);
-    QCOMPARE(state.typeOf("h"), Nda::Struct);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2531,12 +2573,12 @@ void TstParser::test_interpreter_static_method()
 
     std::vector<std::string> results;
 
-    state.bindFnc("string","number",{{"n", "natural", Nda::InMode}}, [](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+    state.bindFnc("string","number",{{"n", "natural", Nda::InMode}}, [&](const Nda::FncValues& args, NdaVariant &ret) -> bool {
 
         std::ostringstream os;
         os << args.at("n").toInt64();
 
-        ret.fromString(os.str());
+        ret.fromString(state.typeByName("string"),os.str());
         return true;
     });
 
@@ -3253,6 +3295,47 @@ void TstParser::test_api_runtime_AdaList_IndexOf()
 
     QVERIFY(ret.toInt64() == 1);
 }
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Flip()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [40,41,42];
+    x.flip();
+
+    return x[0];
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Flipped()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [40,41,42];
+    declare y : List := x.flipped();
+
+    return y[0];
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 42);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 //                                       ERROR HANDLING

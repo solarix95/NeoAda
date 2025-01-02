@@ -45,9 +45,9 @@ int main(int argc, char* argv[]) {
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
-    state.bindFnc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> NdaVariant {
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         std::cout << args.at("message").toString() << std::endl;
-        return NdaVariant();
+        return true;
     });
 
     auto ast = parser.parse(script);

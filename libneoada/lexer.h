@@ -43,6 +43,7 @@ private:
     bool isIdentifierStart(char c) const;
     bool isIdentifierPart(char c) const;
     bool isDigit(char c) const;
+    bool isNumericSuffix(char c) const;
 
     // character-cursor
     bool        shiftToNext(int step = 1);

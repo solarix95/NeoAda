@@ -47,17 +47,10 @@ struct OverloadedFunction {
     std::vector<FunctionEntry> overloads;
 };
 
-
-}
-
-
-
-
-
-class NadaFunctionTable
+class FunctionTable
 {
 public:
-    NadaFunctionTable();
+    FunctionTable();
 
     // Init/Setup
     bool              bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // c++ function  callback
@@ -72,5 +65,12 @@ public:
 private:
     std::unordered_map<std::string, Nda::OverloadedFunction> mFunctions;
 };
+
+}
+
+
+
+
+
 
 #endif // FUNCTIONTABLE_H

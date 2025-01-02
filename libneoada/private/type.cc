@@ -24,9 +24,6 @@ Nda::Type Nda::typeByString(const std::string &name)
     if (lowerName == "byte")
         return Nda::Byte;
 
-    if (lowerName == "character")
-        return Nda::Character;
-
     if (lowerName == "string")
         return Nda::String;
 
@@ -35,9 +32,6 @@ Nda::Type Nda::typeByString(const std::string &name)
 
     if (lowerName == "dict")
         return Nda::Dict;
-
-    if (lowerName == "struct")
-        return Nda::Struct;
 
     return Nda::Undefined;
 }
