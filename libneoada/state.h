@@ -15,9 +15,17 @@ public:
     void       reset();
 
     // runtime type information
-    bool                    registerType(std::string name, Nda::Type type, bool instantiable);
-    bool                    registerType(std::string name, std::string basename); // "type mytype as list;"
+    const Nda::RuntimeType *registerType(std::string name, Nda::Type type, bool instantiable);
+    const Nda::RuntimeType *registerType(std::string name, std::string basename); // "type mytype as list;"
     const Nda::RuntimeType *typeByName(std::string name) const;
+
+    // cache.. just for performance reasons:
+    inline const Nda::RuntimeType *booleanType() const   { return mBooleanType; }
+    inline const Nda::RuntimeType *numberType() const    { return mNumberType; }
+    inline const Nda::RuntimeType *naturalType() const   { return mNaturalType; }
+    inline const Nda::RuntimeType *stringType() const    { return mStringType; }
+    inline const Nda::RuntimeType *listType() const      { return mListType; }
+    inline const Nda::RuntimeType *referenceType() const { return mReferenceType; }
 
     // variable definition
     bool       define(const std::string &name, const std::string &typeName, bool isVolatile = false);
@@ -35,7 +43,7 @@ public:
     bool               bindFnc(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb);
     bool               bindPrc(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb);
 
-    bool               find(const std::string &symbolName,Nda::Symbol &symbol) const;
+    bool               find(const std::string &symbolName,Nda::Symbol **symbol) const;
 
     NdaVariant          value(const std::string &symbolName) const;
     NdaVariant         &valueRef(const std::string &symbolName);
@@ -82,6 +90,14 @@ private:
     CtorCallback       mVolatileCtor;
 
     WithCallback       mWithCallback;
+
+    // cache
+    const Nda::RuntimeType *mBooleanType;
+    const Nda::RuntimeType *mNumberType;
+    const Nda::RuntimeType *mNaturalType;
+    const Nda::RuntimeType *mStringType;
+    const Nda::RuntimeType *mListType;
+    const Nda::RuntimeType *mReferenceType;
 };
 
 #endif // STATE_H

@@ -43,10 +43,21 @@ public:
 
     bool add(const Nda::Symbol &symbol);
     bool get(const std::string& name, Nda::Symbol &symbol) const;
+    bool get2(const std::string& name, Nda::Symbol **symbol) const;
     bool initValue(const std::string& name);
 
 private:
-    std::unordered_map<std::string, Nda::Symbol> mTable;
+    struct MyHash {
+        std::size_t operator()(const std::string& key) const {
+            std::size_t result = 5381; // Anfangswert wählen
+            for (char c : key) {
+                result = (result << 5) + result + c; // Djb2-Algorithmus
+            }
+            return result;
+        }
+    };
+
+    std::unordered_map<std::string, Nda::Symbol*> mTable;
     Scope                                       mScope;
 };
 

@@ -7,6 +7,12 @@
 
 //-------------------------------------------------------------------------------------------------
 NdaState::NdaState()
+    : mBooleanType(nullptr)
+    , mNumberType(nullptr)
+    , mNaturalType(nullptr)
+    , mStringType(nullptr)
+    , mListType(nullptr)
+    , mReferenceType(nullptr)
 {
     reset();
 }
@@ -25,51 +31,52 @@ void NdaState::reset()
     mGlobals.push_back(new NadaSymbolTable(NadaSymbolTable::GlobalScope));
 
     // register all standard NeoAda Datatypes
-    registerType("Reference",Nda::Reference, false);
+    mReferenceType = registerType("Reference",Nda::Reference, false); assert(mReferenceType);
     registerType("Any",Nda::Any, true);
-    registerType("Number",Nda::Number, true);
+    mNumberType = registerType("Number",Nda::Number, true); assert(mNumberType);
 
-    registerType("Natural",Nda::Natural, true);
+    mNaturalType = registerType("Natural",Nda::Natural, true); assert(mNaturalType);
     registerType("Supernatural",Nda::Supernatural, true);
     registerType("Byte",Nda::Byte, true);
 
-    registerType("Boolean",Nda::Boolean, true);
+    mBooleanType = registerType("Boolean",Nda::Boolean, true); assert(mBooleanType);
+    mStringType  = registerType("String",Nda::String, true);   assert(mStringType);
+    mListType    = registerType("List",Nda::List, true);       assert(mListType);
 
-    registerType("String",Nda::String, true);
-    registerType("List",Nda::List, true);
     registerType("Dict",Nda::Dict, true);
 
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaState::registerType(std::string name, Nda::Type type, bool instantiable)
+const Nda::RuntimeType *NdaState::registerType(std::string name, Nda::Type type, bool instantiable)
 {
     Nda::LowerString lname(name);
     const auto *currentType = typeByName(lname.lowerValue);
     if (currentType) {
-        return currentType->dataType == type; // already registered -> ok..
+        if (currentType->dataType == type) // already registered -> ok..
+            return currentType;
     }
 
     mTypes[lname.lowerValue] = Nda::RuntimeType(lname,type,"",instantiable);
-    return true;
+    return &mTypes[lname.lowerValue];
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaState::registerType(std::string name, std::string basename)
+const Nda::RuntimeType *NdaState::registerType(std::string name, std::string basename)
 {
     name = Nda::toLower(name);
     if (mTypes.find(name) != mTypes.end())
-        return false;
+        return nullptr;
 
     const auto *baseType = typeByName(basename);
     if (!baseType)
-        return false;
+        return nullptr;
 
     if (baseType->instantiable == false) // dont subclass "Reference"!!
-        return false;
+        return nullptr;
 
     mTypes[name] = Nda::RuntimeType(name,baseType->dataType,basename,true);
-    return true;
+    return &mTypes.at(name);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -116,10 +123,10 @@ bool NdaState::define(const std::string &name, const Nda::RuntimeType *type, boo
 //-------------------------------------------------------------------------------------------------
 Nda::Type NdaState::typeOf(const std::string &name) const
 {
-    Nda::Symbol symbol;
-    if (!find(name,symbol))
+    Nda::Symbol *symbol;
+    if (!find(name,&symbol))
         return Nda::Undefined;
-    return symbol.type->dataType;
+    return symbol->type->dataType;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -172,53 +179,70 @@ bool NdaState::bindPrc(const std::string &type, const std::string &name, const N
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaState::find(const std::string &symbolName, Nda::Symbol &symbol) const
+bool NdaState::find(const std::string &symbolName, Nda::Symbol **symbol) const
 {
     // First priority: current function scope:
     if (!mCallStack.empty()) {
         const auto& currentFrame = mCallStack.back();
+
+        /*
         for (auto it = currentFrame->rbegin(); it != currentFrame->rend(); ++it) {
-            if ((*it)->get(symbolName,symbol)) {
+            if ((*it)->get2(symbolName,symbol)) {
                 return true;
             }
         }
+        */
+        for (int i=(*currentFrame).size()-1; i >= 0; i-- ) {
+            if ((*currentFrame)[i]->get2(symbolName,symbol))
+                return true;
+        }
+
+
     }
 
     // second: globals:
+    /*
     for (auto it = mGlobals.rbegin(); it != mGlobals.rend(); ++it) {
-        if ((*it)->get(symbolName,symbol)) {
+        if ((*it)->get2(symbolName,symbol)) {
             return true;
         }
     }
+    */
+    for (int i=mGlobals.size()-1; i >= 0; i-- ) {
+        if (mGlobals[i]->get2(symbolName,symbol))
+            return true;
+    }
+
 
     return false;
 }
 
+
 //-------------------------------------------------------------------------------------------------
 NdaVariant NdaState::value(const std::string &symbolName) const
 {
-    Nda::Symbol symbol;
-    if (!find(symbolName,symbol))
+    Nda::Symbol *symbol;
+    if (!find(symbolName,&symbol))
         return NdaVariant();
-    return *symbol.value;
+    return *symbol->value;
 }
 
 //-------------------------------------------------------------------------------------------------
 NdaVariant &NdaState::valueRef(const std::string &symbolName)
 {
-    Nda::Symbol symbol;
-    bool done = find(symbolName,symbol);
+    Nda::Symbol *symbol;
+    bool done = find(symbolName,&symbol);
     assert(done);
-    return *(symbol.value);
+    return *(symbol->value);
 }
 
 //-------------------------------------------------------------------------------------------------
 NdaVariant *NdaState::valuePtr(const std::string &symbolName)
 {
-    Nda::Symbol symbol;
-    bool done = find(symbolName,symbol);
+    Nda::Symbol *symbol;
+    bool done = find(symbolName,&symbol);
     assert(done);
-    return symbol.value;
+    return symbol->value;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -268,7 +292,7 @@ void NdaState::destroy()
 {
     mRetValue.reset(); // detach references
 
-    mFunctions.clear();
+    mFunctions.clear(); // release shared-pointers: ASTNodes
 
     while (!mCallStack.empty()) {
         auto *tables = mCallStack.back();
