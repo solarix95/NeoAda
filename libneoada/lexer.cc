@@ -124,6 +124,11 @@ int NadaLexer::column() const
 bool NadaLexer::parseNext()
 {
     mPos++;
+    if (!atEnd() && currentChar() == '\n') {
+        mRow++;
+        mColumn = 0;
+    }
+
     while (!atEnd()) {
 
         // Whitespace überspringen
@@ -352,7 +357,7 @@ bool NadaLexer::shiftToNext(int step)
         mRow += step > 0 ? +1 : -1;
         mColumn = 0;
     } else if (!atEnd())
-        mColumn++;
+        mColumn += step;
 
     return atEnd();
 }

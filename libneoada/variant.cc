@@ -373,7 +373,7 @@ bool NdaVariant::assign(const NdaVariant &other)
         return true;
     } break;
     case Nda::Number: {
-        if (other.myType() == Nda::Number) {
+        if (other.type() == Nda::Number) {
             mValue.uDouble = other.cuValue()->uDouble;
             return true;
         }
@@ -383,25 +383,25 @@ bool NdaVariant::assign(const NdaVariant &other)
         }
     } break;
     case Nda::Natural: {
-        if (other.myType() == Nda::Natural) {
+        if (other.type() == Nda::Natural) {
             mValue.uInt64 = other.cuValue()->uInt64;
             return true;
         }
     } break;
     case Nda::Supernatural: {
-        if (other.myType() == Nda::Supernatural) {
+        if (other.type() == Nda::Supernatural) {
             mValue.uUInt64 = other.cuValue()->uUInt64;
             return true;
         }
     } break;
     case Nda::Boolean: {
-        if (other.myType() == Nda::Boolean) {
+        if (other.type() == Nda::Boolean) {
             mValue.uByte = other.cuValue()->uByte;
             return true;
         }
     } break;
     case Nda::Byte: {
-        if (other.myType() == Nda::Byte) {
+        if (other.type() == Nda::Byte) {
             mValue.uByte = other.cuValue()->uByte;
             return true;
         }
