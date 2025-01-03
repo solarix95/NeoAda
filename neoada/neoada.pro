@@ -6,7 +6,7 @@ TEMPLATE = app
 TARGET = neoada
 INCLUDEPATH += .
 QT -= widgets
-
+CONFIG += debug
 
 NEOADA_PATH = ../libneoada
 include(../libneoada/source.pro)

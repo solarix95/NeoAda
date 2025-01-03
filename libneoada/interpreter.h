@@ -1,5 +1,5 @@
-#ifndef INTERPRETER_H
-#define INTERPRETER_H
+#ifndef LIB_NEOADA_INTERPRETER_H
+#define LIB_NEOADA_INTERPRETER_H
 
 #include "parser.h"
 #include "variant.h"
@@ -16,17 +16,17 @@ class NdaInterpreter
 public:
     NdaInterpreter(NdaState *state);
 
-    NdaVariant execute(const NadaParser::ASTNodePtr &node, NdaState *state = nullptr);
+    NdaVariant execute(const NdaParser::ASTNodePtr &node, NdaState *state = nullptr);
 
 private:
-    NdaVariant  &executeState(const NadaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &executeNumber(const NadaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &executeForLoopRange(const NadaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &evaluateBinaryOperator(const NadaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &evaluateUnaryOperator(const NadaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &executeFunctionCall(const NadaParser::ASTNodePtr &node, NdaState *state);
-    void        defineProcedure(const NadaParser::ASTNodePtr &node, NdaState *state);
-    void        defineFunction(const NadaParser::ASTNodePtr &node, NdaState *state);
+    NdaVariant  &executeState(const NdaParser::ASTNodePtr &node, NdaState *state);
+    NdaVariant  &executeNumber(const NdaParser::ASTNodePtr &node, NdaState *state);
+    NdaVariant  &executeForLoopRange(const NdaParser::ASTNodePtr &node, NdaState *state);
+    NdaVariant  &evaluateBinaryOperator(const NdaParser::ASTNodePtr &node, NdaState *state);
+    NdaVariant  &evaluateUnaryOperator(const NdaParser::ASTNodePtr &node, NdaState *state);
+    NdaVariant  &executeFunctionCall(const NdaParser::ASTNodePtr &node, NdaState *state);
+    void        defineProcedure(const NdaParser::ASTNodePtr &node, NdaState *state);
+    void        defineFunction(const NdaParser::ASTNodePtr &node, NdaState *state);
 
     enum ExecState {
         RunState,

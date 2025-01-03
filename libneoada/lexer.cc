@@ -7,7 +7,7 @@
 #include "private/utils.h"
 
 //-------------------------------------------------------------------------------------------------
-NadaLexer::NadaLexer(int lookAhead)
+NdaLexer::NdaLexer(int lookAhead)
     : mPos(-1)
     , mReadAhead(lookAhead)
     , mTokenIdx(-1)
@@ -16,7 +16,7 @@ NadaLexer::NadaLexer(int lookAhead)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NadaLexer::setScript(const std::string &script)
+void NdaLexer::setScript(const std::string &script)
 {
     mScript = script;
     mPos    = -1;
@@ -29,7 +29,7 @@ void NadaLexer::setScript(const std::string &script)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::nextToken()
+bool NdaLexer::nextToken()
 {
     while (parseNext()) {
         int availableTokens = (mTokens.size()-1) - mTokenIdx;
@@ -44,7 +44,7 @@ bool NadaLexer::nextToken()
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::token(std::string &token, TokenType &t) const
+bool NdaLexer::token(std::string &token, TokenType &t) const
 {
     if (mTokens.empty() || (mTokenIdx >= (int)mTokens.size()))
         return false;
@@ -56,7 +56,7 @@ bool NadaLexer::token(std::string &token, TokenType &t) const
 }
 
 //-------------------------------------------------------------------------------------------------
-std::string NadaLexer::token(int relativeIndex) const
+std::string NdaLexer::token(int relativeIndex) const
 {
     int absoluteIndex = mTokenIdx + relativeIndex;
     if (mTokens.empty() || (absoluteIndex < 0) || (absoluteIndex >= (int)mTokens.size()))
@@ -67,17 +67,17 @@ std::string NadaLexer::token(int relativeIndex) const
 }
 
 //-------------------------------------------------------------------------------------------------
-NadaLexer::TokenType NadaLexer::tokenType(int relativeIndex) const
+NdaLexer::TokenType NdaLexer::tokenType(int relativeIndex) const
 {
     int absoluteIndex = mTokenIdx + relativeIndex;
     if (mTokens.empty() || (absoluteIndex < 0) || (absoluteIndex >= (int)mTokens.size()))
-        return NadaLexer::TokenType::Unknown;
+        return NdaLexer::TokenType::Unknown;
 
     return mTokens[absoluteIndex].type;
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::tokenPosition(int &row, int &column, int relativeIndex) const
+bool NdaLexer::tokenPosition(int &row, int &column, int relativeIndex) const
 {
     row    = 0;
     column = 0;
@@ -93,7 +93,7 @@ bool NadaLexer::tokenPosition(int &row, int &column, int relativeIndex) const
 }
 
 //-------------------------------------------------------------------------------------------------
-std::string NadaLexer::positionToText(int relativeIndex) const
+std::string NdaLexer::positionToText(int relativeIndex) const
 {
     int r, c;
     if (!tokenPosition(r,c,relativeIndex))
@@ -103,25 +103,25 @@ std::string NadaLexer::positionToText(int relativeIndex) const
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::tokenIsValid() const
+bool NdaLexer::tokenIsValid() const
 {
     return mTokenIdx >= 0 && mTokenIdx < (int)mTokens.size();
 }
 
 //-------------------------------------------------------------------------------------------------
-int NadaLexer::line() const
+int NdaLexer::line() const
 {
     return tokenIsValid() ? mTokens[mTokenIdx].row : mRow;
 }
 
 //-------------------------------------------------------------------------------------------------
-int NadaLexer::column() const
+int NdaLexer::column() const
 {
     return tokenIsValid() ? mTokens[mTokenIdx].column : mColumn;
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::parseNext()
+bool NdaLexer::parseNext()
 {
     mPos++;
     if (!atEnd() && currentChar() == '\n') {
@@ -318,34 +318,34 @@ bool NadaLexer::parseNext()
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::isWhitespace(char c) const {
+bool NdaLexer::isWhitespace(char c) const {
     return std::isspace(c);
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::isIdentifierStart(char c) const {
+bool NdaLexer::isIdentifierStart(char c) const {
     return std::isalpha(c) || c == '_'; // Buchstaben oder Unterstrich
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::isIdentifierPart(char c) const {
+bool NdaLexer::isIdentifierPart(char c) const {
     return std::isalnum(c) || c == '_'; // Buchstaben, Ziffern oder Unterstrich
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::isDigit(char c) const {
+bool NdaLexer::isDigit(char c) const {
     return std::isdigit(c);
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::isNumericSuffix(char c) const
+bool NdaLexer::isNumericSuffix(char c) const
 {
     return (c == 'n') || (c == 'u') || (c == 'd') || (c == 'b');
 
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::shiftToNext(int step)
+bool NdaLexer::shiftToNext(int step)
 {
     assert(step != 0);
 
@@ -363,20 +363,20 @@ bool NadaLexer::shiftToNext(int step)
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NadaLexer::atEnd() const
+bool NdaLexer::atEnd() const
 {
     return mPos >= mScript.length();
 }
 
 //-------------------------------------------------------------------------------------------------
-const char &NadaLexer::currentChar() const
+const char &NdaLexer::currentChar() const
 {
     assert(!atEnd());
     return mScript[mPos];
 }
 
 //-------------------------------------------------------------------------------------------------
-char NadaLexer::nextChar() const
+char NdaLexer::nextChar() const
 {
     return (mPos + 1 < mScript.size()) ? mScript[mPos + 1] : '\0';
 }

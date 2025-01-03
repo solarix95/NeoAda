@@ -35,7 +35,7 @@ struct FunctionEntry {
     std::string        returnType;
     FncParameters parameters;
 
-    std::shared_ptr<NadaParser::ASTNode> block;          // NeoAda-Code
+    std::shared_ptr<NdaParser::ASTNode> block;          // NeoAda-Code
     FncCallback                     nativeFncCallback;   // c++ Built-in
     PrcCallback                     nativePrcCallback;   // c++ Built-in
 
@@ -56,7 +56,7 @@ public:
     bool              bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // c++ function  callback
     bool              bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // c++ procedure callback
 
-    bool              bind(const std::string &name, const Nda::FncParameters &parameters, const NadaParser::ASTNodePtr &block);
+    bool              bind(const std::string &name, const Nda::FncParameters &parameters, const NdaParser::ASTNodePtr &block);
 
     // Runtime
     bool               contains(const std::string &name, const NadaValues &parameters);

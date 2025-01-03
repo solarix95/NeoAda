@@ -137,7 +137,7 @@ bool NdaState::bindPrc(const std::string &name, const Nda::FncParameters &parame
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block)
+bool NdaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block)
 {
     assert(!name.empty());
     return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block);
@@ -266,6 +266,8 @@ bool NdaState::inLoopScope(const NadaSymbolTables &tables) const
 //-------------------------------------------------------------------------------------------------
 void NdaState::destroy()
 {
+    mRetValue.reset(); // detach references
+
     while (!mCallStack.empty()) {
         auto *tables = mCallStack.back();
         while (!tables->empty()) {

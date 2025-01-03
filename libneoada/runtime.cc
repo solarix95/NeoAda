@@ -40,8 +40,8 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
     if (!mState)
         reset();
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaInterpreter  interpreter(mState);
 
     try {

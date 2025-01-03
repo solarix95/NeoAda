@@ -155,6 +155,7 @@ private slots:
     void test_interpreter_ProcedureCall();
     void test_interpreter_ifStatement();
     void test_interpreter_ifElseStatement();
+    void test_interpreter_ifElseIfStatement();
     void test_interpreter_whileStatement();
     void test_interpreter_whileBreak();
     void test_interpreter_whileBreakWhen();
@@ -602,7 +603,7 @@ void TstParser::test_core_List_Concat()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_Numbers()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("123 1_000.0 42E+3 16#FF# 2#1010#E+2");
@@ -620,7 +621,7 @@ void TstParser::test_lexer_Numbers()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_OperatorsAndSymbols()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript(":= ** <= >= + - * / > < ( ) ;");
@@ -647,7 +648,7 @@ void TstParser::test_lexer_OperatorsAndSymbols()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_Identifiers()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("myVar _private x123");
@@ -663,7 +664,7 @@ void TstParser::test_lexer_Identifiers()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_Boolean()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("true false True False");
@@ -680,7 +681,7 @@ void TstParser::test_lexer_Boolean()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_Strings()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("\"Hello, World!\" \"NeoAda\" \"Test String\" \"Double\"\"Quotes\"");
@@ -696,7 +697,7 @@ void TstParser::test_lexer_Strings()
 
 void TstParser::test_lexer_Range()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("1..10");
@@ -712,7 +713,7 @@ void TstParser::test_lexer_Range()
 
 void TstParser::test_lexer_ArrayAccess()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("x[7] :=");
@@ -729,7 +730,7 @@ void TstParser::test_lexer_ArrayAccess()
 }
 
 void TstParser::test_lexer_Comments() {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript(R"(
@@ -763,7 +764,7 @@ void TstParser::test_lexer_Comments() {
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_Expression1()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("(42)");
@@ -779,7 +780,7 @@ void TstParser::test_lexer_Expression1()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_Expression2()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("x := (42);");
@@ -798,7 +799,7 @@ void TstParser::test_lexer_Expression2()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_HelloWorld()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("print(\"Hello World\");");
@@ -816,7 +817,7 @@ void TstParser::test_lexer_HelloWorld()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_lexer_HelloWorld2()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     std::vector<std::string> results;
 
     lexer.setScript("print(\"Hello World\");print(\"Hello World\");");
@@ -843,8 +844,8 @@ void TstParser::test_parser_Declaration1()
         declare x : Number;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -863,8 +864,8 @@ void TstParser::test_parser_Declaration2()
         declare x : Number := 42;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -884,8 +885,8 @@ void TstParser::test_parser_Declaration3()
         volatile x : Number := 42;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -905,8 +906,8 @@ void TstParser::test_parser_Declaration4_List()
         declare x : List;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -926,8 +927,8 @@ void TstParser::test_parser_Declaration5_List_Init()
         declare x : List := [1,2,3];
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -950,8 +951,8 @@ void TstParser::test_parser_With()
         with Ada.Lovelace;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -969,8 +970,8 @@ void TstParser::test_parser_Factor()
         x := a**b;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -992,8 +993,8 @@ void TstParser::test_parser_Primary1()
         x := a();
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1013,8 +1014,8 @@ void TstParser::test_parser_Primary2()
         x := (a());
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1035,8 +1036,8 @@ void TstParser::test_parser_Primary3_List_Access()
         x[1] := 7;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1059,8 +1060,8 @@ void TstParser::test_parser_Relation1()
         x := a and b;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1082,8 +1083,8 @@ void TstParser::test_parser_Relation2()
         x := a and b and c;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1107,8 +1108,8 @@ void TstParser::test_parser_Relation3()
         x := a and b or c xor d;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1134,8 +1135,8 @@ void TstParser::test_parser_SimpleExpression1()
         x := -a;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1156,8 +1157,8 @@ void TstParser::test_parser_SimpleExpression2()
         x := a > b;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1179,8 +1180,8 @@ void TstParser::test_parser_SimpleExpression3()
         x := a() > b;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1203,8 +1204,8 @@ void TstParser::test_parser_SimpleExpression4()
         x := a(z) + 1;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1227,8 +1228,8 @@ void TstParser::test_parser_SimpleExpression5()
         x := -1 * -2;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1252,8 +1253,8 @@ void TstParser::test_parser_SimpleExpression6()
         x := x - 1;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1275,8 +1276,8 @@ void TstParser::test_parser_Expression1()
         x := 42;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1296,8 +1297,8 @@ void TstParser::test_parser_Expression2()
         x := (42);
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1318,8 +1319,8 @@ void TstParser::test_parser_SimpleProgram()
         x := 42;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1341,8 +1342,8 @@ void TstParser::test_parser_SimpleExpression()
         x := 42 + 23;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1368,8 +1369,8 @@ void TstParser::test_parser_Expression3()
         x := 42 + 23;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1391,8 +1392,8 @@ void TstParser::test_parser_Expression4()
         x := 1 + 2 - 3;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1416,8 +1417,8 @@ void TstParser::test_parser_Expression5()
         x := 1 + 2 - 3 + 4;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1443,8 +1444,8 @@ void TstParser::test_parser_Expression6()
         x := a**b + 7;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1468,8 +1469,8 @@ void TstParser::test_parser_Expression7()
         x := 7 + a**b;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1493,8 +1494,8 @@ void TstParser::test_parser_Expression8()
         x := test();
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1514,8 +1515,8 @@ void TstParser::test_parser_Expression9()
         x := 42 + (y * foo(z)) - 5 ** 2;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1546,8 +1547,8 @@ void TstParser::test_parser_HelloWorld()
         print("Hello World");
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1568,8 +1569,8 @@ void TstParser::test_parser_HelloWorld2()
         print("Hello World");
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1590,8 +1591,8 @@ void TstParser::test_parser_FunctionCall1()
         print();
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1610,8 +1611,8 @@ void TstParser::test_parser_MethodCall1()
         string:print(x);
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1632,8 +1633,8 @@ void TstParser::test_parser_MethodCall2()
         x.print();
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1658,8 +1659,8 @@ end loop;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1691,8 +1692,8 @@ end loop;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1720,8 +1721,8 @@ end loop;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1752,8 +1753,8 @@ end loop;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1782,8 +1783,8 @@ end if;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1814,8 +1815,8 @@ end if;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1853,8 +1854,8 @@ end if;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1895,8 +1896,8 @@ end if;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1944,8 +1945,8 @@ end if;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -1988,8 +1989,8 @@ void TstParser::test_parser_return()
         return 42;
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -2014,8 +2015,8 @@ end;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -2043,8 +2044,8 @@ end;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -2074,8 +2075,8 @@ end;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -2109,8 +2110,8 @@ end;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -2137,8 +2138,8 @@ end;
 
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     auto ast = parser.parse(script);
 
     std::string expectedAST = R"(
@@ -2213,8 +2214,8 @@ void TstParser::test_interpreter_Declarations1()
 
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2244,8 +2245,8 @@ void TstParser::test_interpreter_Declarations2()
         return y;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2264,8 +2265,8 @@ void TstParser::test_interpreter_WithAddon()
         with My.Addon;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2292,8 +2293,8 @@ void TstParser::test_interpreter_ProcedureCall()
         print(42);
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2322,8 +2323,8 @@ void TstParser::test_interpreter_ifStatement()
         end if;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2353,8 +2354,8 @@ void TstParser::test_interpreter_ifElseStatement()
         end if;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2374,6 +2375,42 @@ void TstParser::test_interpreter_ifElseStatement()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ifElseIfStatement()
+{
+    std::string script = R"(
+        declare x : Number := 8.0;
+        if x > 10 then
+            print("x>5");
+        elsif x > 7 then
+            print("x>7");
+        else
+            print("x<=7");
+        end if;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
+        results.push_back(args.at("message").toString());
+        return true;
+    });
+
+    interpreter.execute(ast);
+
+    QVERIFY(results.size() == 1);
+    QVERIFY(results[0] == "x>7");
+
+}
+
+
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_whileStatement()
 {
     std::string script = R"(
@@ -2384,8 +2421,8 @@ void TstParser::test_interpreter_whileStatement()
         end loop;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2418,8 +2455,8 @@ void TstParser::test_interpreter_whileBreak()
         end loop;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2450,8 +2487,8 @@ void TstParser::test_interpreter_whileBreakWhen()
         end loop;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2485,8 +2522,8 @@ void TstParser::test_interpreter_whileContinue()
         end loop;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2511,8 +2548,8 @@ void TstParser::test_interpreter_Return1()
         return 42;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2529,8 +2566,8 @@ void TstParser::test_interpreter_Return2()
         return true;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2547,8 +2584,8 @@ void TstParser::test_interpreter_Return3()
         return false;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2565,8 +2602,8 @@ void TstParser::test_interpreter_Volatile_CTor()
         volatile x : Natural;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2592,8 +2629,8 @@ void TstParser::test_interpreter_static_method()
         return string:number(10);
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2619,138 +2656,149 @@ void TstParser::test_interpreter_static_method()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Literals()
 {
-    QVERIFY(NeoAda::evaluate("return true;").toBool() == true);
-    QVERIFY(NeoAda::evaluate("return false;").toBool() == false);
-    QVERIFY(NeoAda::evaluate("return 42;").toInt64() == 42);
-    QVERIFY(NeoAda::evaluate("return -1;").toInt64() == -1);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate("return true;",state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return false;",state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return 42;",state).toInt64() == 42);
+    QVERIFY(NeoAda::evaluate("return -1;",state).toInt64() == -1);
 
-    QVERIFY(NeoAda::evaluate("return  10_000;").toInt64() == +10000);
-    QVERIFY(NeoAda::evaluate("return -10_000;").toInt64() == -10000);
-    QVERIFY(NeoAda::evaluate("return +10_000;").toInt64() == +10000);
+    QVERIFY(NeoAda::evaluate("return  10_000;",state).toInt64() == +10000);
+    QVERIFY(NeoAda::evaluate("return -10_000;",state).toInt64() == -10000);
+    QVERIFY(NeoAda::evaluate("return +10_000;",state).toInt64() == +10000);
 
-    QVERIFY(NeoAda::evaluate("return  2#1001_1000#;").toInt64() ==  152);
+    QVERIFY(NeoAda::evaluate("return  2#1001_1000#;",state).toInt64() ==  152);
 
-    QVERIFY(NeoAda::evaluate("return \"NeoAda\";").toString() == "NeoAda");
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\";",state).toString() == "NeoAda");
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Length()
 {
-    QVERIFY(NeoAda::evaluate("return  #1;").toInt64()   == 1);
-    QVERIFY(NeoAda::evaluate("return  #1.1;").toInt64() == 1);
-    QVERIFY(NeoAda::evaluate("return #\"\";").toInt64() == 0);
-    QVERIFY(NeoAda::evaluate("return #\"NeoAda\";").toInt64() == 6);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate("return  #1;", state).toInt64()   == 1);
+    QVERIFY(NeoAda::evaluate("return  #1.1;", state).toInt64() == 1);
+    QVERIFY(NeoAda::evaluate("return #\"\";", state).toInt64() == 0);
+    QVERIFY(NeoAda::evaluate("return #\"NeoAda\";", state).toInt64() == 6);
 
-    QVERIFY(NeoAda::evaluate("return #[];").toInt64()      == 0);
-    QVERIFY(NeoAda::evaluate("return #[1];").toInt64()     == 1);
-    QVERIFY(NeoAda::evaluate("return #[1,2,3];").toInt64() == 3);
+    QVERIFY(NeoAda::evaluate("return #[];", state).toInt64()      == 0);
+    QVERIFY(NeoAda::evaluate("return #[1];", state).toInt64()     == 1);
+    QVERIFY(NeoAda::evaluate("return #[1,2,3];", state).toInt64() == 3);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Equal()
 {
-    QVERIFY(NeoAda::evaluate("return true = true;").toBool()  == true);
-    QVERIFY(NeoAda::evaluate("return true = false;").toBool() == false);
-    QVERIFY(NeoAda::evaluate("return 42 = 42;").toBool()      == true);
-    QVERIFY(NeoAda::evaluate("return 42.5 = 42.5;").toBool()  == true);
-    QVERIFY(NeoAda::evaluate("return 42 = 23;").toBool()      == false);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate("return true = true;", state).toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return true = false;", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return 42 = 42;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42.5 = 42.5;", state).toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return 42 = 23;", state).toBool()      == false);
 
-    QVERIFY(NeoAda::evaluate("return \"NeoAda\" = \"NeoAda\";").toBool() == true);
-    QVERIFY(NeoAda::evaluate("return \"NeoAda\" = \"neoada\";").toBool() == false); // case insensitive as in Ada95
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" = \"NeoAda\";", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" = \"neoada\";", state).toBool() == false); // case insensitive as in Ada95
 
 
-    QVERIFY(NeoAda::evaluate("return (true = true);" ).toBool() == true);
-    QVERIFY(NeoAda::evaluate("return (true = false);").toBool() == false);
+    QVERIFY(NeoAda::evaluate("return (true = true);", state ).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return (true = false);", state).toBool() == false);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_NotEqual()
 {
-    QVERIFY(NeoAda::evaluate("return true <> true;").toBool()  == false);
-    QVERIFY(NeoAda::evaluate("return true <> false;").toBool() == true);
-    QVERIFY(NeoAda::evaluate("return 42   <> 42;").toBool()      == false);
-    QVERIFY(NeoAda::evaluate("return 42.5 <> 42.5;").toBool()  == false);
-    QVERIFY(NeoAda::evaluate("return 42   <> 23;").toBool()      == true);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate("return true <> true;", state).toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return true <> false;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 42   <> 42;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 42.5 <> 42.5;", state).toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return 42   <> 23;", state).toBool()      == true);
 
-    QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"NeoAda\";").toBool() == false);
-    QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"neoada\";").toBool() == true); // case insensitive as in Ada95
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"NeoAda\";", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"neoada\";", state).toBool() == true); // case insensitive as in Ada95
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_LessThan()
 {
+    NdaState state;
+
     // Natural
-    QVERIFY(NeoAda::evaluate("return 42 < 42;").toBool()      == false);
-    QVERIFY(NeoAda::evaluate("return 23 < 42;").toBool()      == true);
-    QVERIFY(NeoAda::evaluate("return 42 < 23;").toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 42 < 42;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23 < 42;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42 < 23;", state).toBool()      == false);
 
     // Number
-    QVERIFY(NeoAda::evaluate("return 42.0 < 42.0;").toBool()      == false);
-    QVERIFY(NeoAda::evaluate("return 23.0 < 42.0;").toBool()      == true);
-    QVERIFY(NeoAda::evaluate("return 42.0 < 23.0;").toBool()      == false);
-
+    QVERIFY(NeoAda::evaluate("return 42.0 < 42.0;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23.0 < 42.0;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42.0 < 23.0;", state).toBool()      == false);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_LessEqualThan()
 {
+    NdaState state;
+
     // Natural
-    QVERIFY(NeoAda::evaluate("return 42 <= 42;").toBool()      == true);
-    QVERIFY(NeoAda::evaluate("return 23 <= 42;").toBool()      == true);
-    QVERIFY(NeoAda::evaluate("return 42 <= 23;").toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 42 <= 42;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 23 <= 42;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42 <= 23;", state).toBool()      == false);
 
     // Number
-    QVERIFY(NeoAda::evaluate("return 42.0 <= 42.0;").toBool()      == true);
-    QVERIFY(NeoAda::evaluate("return 23.0 <= 42.0;").toBool()      == true);
-    QVERIFY(NeoAda::evaluate("return 42.0 <= 23.0;").toBool()      == false);
-
+    QVERIFY(NeoAda::evaluate("return 42.0 <= 42.0;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 23.0 <= 42.0;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42.0 <= 23.0;", state).toBool()      == false);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_ConcatString()
 {
-    QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\";").toString()            == "NeoAda");
-    QVERIFY(NeoAda::evaluate("return \"Neo\" & \" \" & \"Ada\";").toString()    == "Neo Ada");
-    QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\" = \"NeoAda\";").toBool() == true);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\";", state).toString()            == "NeoAda");
+    QVERIFY(NeoAda::evaluate("return \"Neo\" & \" \" & \"Ada\";", state).toString()    == "Neo Ada");
+    QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\" = \"NeoAda\";", state).toBool() == true);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Modulo()
 {
-    QVERIFY(NeoAda::evaluate("return 42 mod 21;").toInt64() == 0);
-    QVERIFY(NeoAda::evaluate("return 42 mod 20;").toInt64() == 2);
-    QVERIFY(NeoAda::evaluate("return  5 mod 6;").toInt64()  == 5);
-    QVERIFY(NeoAda::evaluate("return  4 mod 4;").toInt64()  == 0);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate("return 42 mod 21;", state).toInt64() == 0);
+    QVERIFY(NeoAda::evaluate("return 42 mod 20;", state).toInt64() == 2);
+    QVERIFY(NeoAda::evaluate("return  5 mod 6;", state).toInt64()  == 5);
+    QVERIFY(NeoAda::evaluate("return  4 mod 4;", state).toInt64()  == 0);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Multiply()
 {
-    QVERIFY(NeoAda::evaluate("return 2   * 21;").toInt64()   == 42);
-    QVERIFY(NeoAda::evaluate("return 2.0 * 21.0;").toInt64() == 42);
-    QVERIFY(NeoAda::evaluate("return -42 * -1;").toInt64()   == 42);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate("return 2   * 21;", state).toInt64()   == 42);
+    QVERIFY(NeoAda::evaluate("return 2.0 * 21.0;", state).toInt64() == 42);
+    QVERIFY(NeoAda::evaluate("return -42 * -1;", state).toInt64()   == 42);
 }
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Relations()
 {
+    NdaState state;
+
     // AND
-    QVERIFY(NeoAda::evaluate("return true  and true;").toBool()   == true);
-    QVERIFY(NeoAda::evaluate("return false and true;").toBool()   == false);
-    QVERIFY(NeoAda::evaluate("return true  and false;").toBool()  == false);
-    QVERIFY(NeoAda::evaluate("return false and false;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return true  and true;", state).toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return false and true;", state).toBool()   == false);
+    QVERIFY(NeoAda::evaluate("return true  and false;", state).toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return false and false;", state).toBool()  == false);
 
     // OR
-    QVERIFY(NeoAda::evaluate("return true  or true;").toBool()   == true);
-    QVERIFY(NeoAda::evaluate("return false or true;").toBool()   == true);
-    QVERIFY(NeoAda::evaluate("return true  or false;").toBool()  == true);
-    QVERIFY(NeoAda::evaluate("return false or false;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return true  or true;", state).toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return false or true;", state).toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return true  or false;", state).toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return false or false;", state).toBool()  == false);
 
     // XOR
-    QVERIFY(NeoAda::evaluate("return true  xor true;").toBool()   == false);
-    QVERIFY(NeoAda::evaluate("return false xor true;").toBool()   == true);
-    QVERIFY(NeoAda::evaluate("return true  xor false;").toBool()  == true);
-    QVERIFY(NeoAda::evaluate("return false xor false;").toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return true  xor true;", state).toBool()   == false);
+    QVERIFY(NeoAda::evaluate("return false xor true;", state).toBool()   == true);
+    QVERIFY(NeoAda::evaluate("return true  xor false;", state).toBool()  == true);
+    QVERIFY(NeoAda::evaluate("return false xor false;", state).toBool()  == false);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2761,8 +2809,8 @@ void TstParser::test_api_evaluate_List_Init()
         print(x);
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2788,8 +2836,8 @@ void TstParser::test_api_evaluate_List_Read1()
         print(x[1]);
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2817,8 +2865,8 @@ void TstParser::test_api_evaluate_List_Read2()
         return y;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2842,8 +2890,8 @@ void TstParser::test_api_evaluate_List_Write()
         return x;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2872,8 +2920,8 @@ void TstParser::test_api_evaluate_List_Swap()
         return x;
     )";
 
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
     NdaState       state;
     NdaInterpreter interpreter(&state);
 
@@ -2905,7 +2953,8 @@ void TstParser::test_api_evaluate_GlobalValue()
     return false;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toBool() == true);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toBool() == true);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2926,7 +2975,8 @@ void TstParser::test_api_evaluate_ScopeValue()
     return false;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toBool() == false);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toBool() == false);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2950,7 +3000,8 @@ void TstParser::test_api_evaluate_WhileBreak()
     return false;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toBool() == true);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toBool() == true);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2977,7 +3028,8 @@ void TstParser::test_api_evaluate_WhileContinue()
     return false;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toBool() == true);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toBool() == true);
 
 }
 
@@ -2995,7 +3047,8 @@ void TstParser::test_api_evaluate_ForLoop()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toInt64() == 10);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 10);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3013,7 +3066,8 @@ void TstParser::test_api_evaluate_ForLoopBreak()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toInt64() == 6);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 6);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3031,7 +3085,8 @@ void TstParser::test_api_evaluate_ForLoopContinue()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toInt64() == 5);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 5);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3052,7 +3107,8 @@ void TstParser::test_api_evaluate_Procedure1()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toInt64() == 2*42);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 2*42);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3072,7 +3128,8 @@ void TstParser::test_api_evaluate_Procedure2()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3096,7 +3153,8 @@ void TstParser::test_api_evaluate_Procedure3_Return()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3117,7 +3175,8 @@ void TstParser::test_api_evaluate_Procedure4_Out()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
 
@@ -3138,7 +3197,8 @@ void TstParser::test_api_evaluate_Function1()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toInt64() == 42);
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3156,7 +3216,8 @@ void TstParser::test_api_evaluate_Function2()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3174,7 +3235,8 @@ void TstParser::test_api_evaluate_Function2_Uppercase()
     RETURN x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3194,7 +3256,8 @@ void TstParser::test_api_evaluate_Static_Method1()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3212,7 +3275,8 @@ void TstParser::test_api_evaluate_Static_Method2()
     return x;
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
 
@@ -3231,7 +3295,8 @@ void TstParser::test_api_evaluate_Instance_Method1()
     return x.hello();
     )";
 
-    QVERIFY(NeoAda::evaluate(script).toString() == "Hello, World");
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3445,7 +3510,7 @@ void TstParser::test_api_runtime_AdaList_Clear_Append()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_error_lexer_invalidCharacter()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     NdaException ex;
 
     lexer.setScript("$");
@@ -3473,7 +3538,7 @@ void TstParser::test_error_lexer_invalidCharacter()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_error_lexer_invalidString()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     NdaException ex;
 
     lexer.setScript("\"23456789");
@@ -3490,7 +3555,7 @@ void TstParser::test_error_lexer_invalidString()
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_error_lexer_invalidBasedLiteral()
 {
-    NadaLexer lexer;
+    NdaLexer lexer;
     NdaException ex;
 
     //               2#1000_0100#
@@ -3532,8 +3597,8 @@ void TstParser::test_error_parser_declaration1()
         declare 23
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     NdaException ex;
 
     try {
@@ -3552,8 +3617,8 @@ void TstParser::test_error_parser_declaration2()
         declare x =
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     NdaException ex;
 
     try {
@@ -3572,8 +3637,8 @@ void TstParser::test_error_parser_declaration3()
         declare x : 23
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     NdaException ex;
 
     try {
@@ -3592,8 +3657,8 @@ void TstParser::test_error_parser_declaration4()
         declare x : Number :=
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     NdaException ex;
 
     try {
@@ -3612,8 +3677,8 @@ void TstParser::test_error_parser_if1()
         if x
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     NdaException ex;
 
     try { parser.parse(script); } catch (NdaException &e) {
@@ -3679,8 +3744,8 @@ void TstParser::test_error_parser_ifElse1()
         if x then f(); else
     )";
 
-    NadaLexer lexer;
-    NadaParser parser(lexer);
+    NdaLexer lexer;
+    NdaParser parser(lexer);
     NdaException ex;
 
     try { parser.parse(script); } catch (NdaException &e) {
@@ -3757,7 +3822,8 @@ void TstParser::test_error_interpreter_stringAssignment()
     )";
 
         NeoAda::Exception ex;
-        NeoAda::evaluate(script, &ex);
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
     }
 
@@ -3770,7 +3836,8 @@ void TstParser::test_error_interpreter_stringAssignment()
     )";
 
         NeoAda::Exception ex;
-        NeoAda::evaluate(script, &ex);
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
     }
 
@@ -3782,7 +3849,8 @@ void TstParser::test_error_interpreter_stringAssignment()
     )";
 
         NeoAda::Exception ex;
-        NeoAda::evaluate(script, &ex);
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
     }
 
@@ -3794,7 +3862,8 @@ void TstParser::test_error_interpreter_stringAssignment()
     )";
 
         NeoAda::Exception ex;
-        NeoAda::evaluate(script, &ex);
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
     }
 }
@@ -3809,7 +3878,8 @@ void TstParser::test_error_interpreter_boolAssignment()
     )";
 
         NeoAda::Exception ex;
-        NeoAda::evaluate(script, &ex);
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
     }
 
@@ -3821,7 +3891,8 @@ void TstParser::test_error_interpreter_boolAssignment()
     )";
 
         NeoAda::Exception ex;
-        NeoAda::evaluate(script, &ex);
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
     }
 }

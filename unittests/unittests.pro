@@ -1,5 +1,6 @@
 QT += testlib
 QT -= gui
+CONFIG += debug
 
 CONFIG += qt console warn_on depend_includepath testcase c++11
 CONFIG -= app_bundle

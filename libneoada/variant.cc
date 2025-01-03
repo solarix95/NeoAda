@@ -683,7 +683,7 @@ NdaVariant NdaVariant::subtract(const NdaVariant &other, bool *ok) const
         return cInternalReference()->subtract(other, ok);
 
     if (ok) *ok = false;
-    if (myType()  != other.myType())
+    if (myType()  != other.type())
         return NdaVariant();
 
     switch (myType()) {
@@ -1286,6 +1286,13 @@ NdaVariant &NdaVariant::operator=(const NdaVariant &other)
 {
     assignOther(other);
     return *this;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaVariant::dereference()
+{
+    while (myType() == Nda::Reference)
+        assignOther(*internalReference());
 }
 
 //-------------------------------------------------------------------------------------------------

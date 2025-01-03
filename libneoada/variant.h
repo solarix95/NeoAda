@@ -1,5 +1,5 @@
-#ifndef VARIANT_H
-#define VARIANT_H
+#ifndef LIB_NEOADA_VARIANT_H
+#define LIB_NEOADA_VARIANT_H
 
 #include <stdint.h>
 #include <vector>
@@ -84,6 +84,8 @@ public:
     const Nda::RuntimeType *runtimeType() const;
 
     NdaVariant& operator=(const NdaVariant&other);
+
+    void dereference();
 
     // Unit-Test only
     int         refCount() const;

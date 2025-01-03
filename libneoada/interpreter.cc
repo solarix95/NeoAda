@@ -10,7 +10,7 @@ NdaInterpreter::NdaInterpreter(NdaState *state)
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant NdaInterpreter::execute(const NadaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant NdaInterpreter::execute(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
     assert(node);
     if (!state && !mState)
@@ -23,30 +23,30 @@ NdaVariant NdaInterpreter::execute(const NadaParser::ASTNodePtr &node, NdaState 
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant &NdaInterpreter::executeState(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
     assert(state);
     assert(node);
 
     switch (node->type) {
-    case NadaParser::ASTNodeType::Program:
+    case NdaParser::ASTNodeType::Program:
         for (const auto &child : node->children) {
             executeState(child, state);
             if (mExecState == ReturnState)
                 break;
         }
         break;
-    case NadaParser::ASTNodeType::WithAddon:
+    case NdaParser::ASTNodeType::WithAddon:
         state->requestAddon(node->value.lowerValue);
         break;
-    case NadaParser::ASTNodeType::Procedure:
+    case NdaParser::ASTNodeType::Procedure:
         defineProcedure(node,state);
         break;
-    case NadaParser::ASTNodeType::Function:
+    case NdaParser::ASTNodeType::Function:
         defineFunction(node,state);
         break;
-    case NadaParser::ASTNodeType::Block:
-        state->pushScope(node->parent->type == NadaParser::ASTNodeType::WhileLoop ? NadaSymbolTable::LoopScope : NadaSymbolTable::ConditionalScope);
+    case NdaParser::ASTNodeType::Block:
+        state->pushScope(node->parent->type == NdaParser::ASTNodeType::WhileLoop ? NadaSymbolTable::LoopScope : NadaSymbolTable::ConditionalScope);
         for (const auto &child : node->children) {
             executeState(child, state);
             if (mExecState == ReturnState)
@@ -58,14 +58,14 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
         }
         state->popScope();
         break;
-    case NadaParser::ASTNodeType::Expression: // just "()"
+    case NdaParser::ASTNodeType::Expression: // just "()"
         assert(node->children.size() == 1);
         return executeState(node->children[0],state);
         break;
-    case NadaParser::ASTNodeType::VolatileDeclaration:
-    case NadaParser::ASTNodeType::Declaration:
+    case NdaParser::ASTNodeType::VolatileDeclaration:
+    case NdaParser::ASTNodeType::Declaration:
         assert(node->children.size() >= 1);
-        if (!state->define(node->value.lowerValue, node->children[0]->value.lowerValue, node->type == NadaParser::ASTNodeType::VolatileDeclaration)) {
+        if (!state->define(node->value.lowerValue, node->children[0]->value.lowerValue, node->type == NdaParser::ASTNodeType::VolatileDeclaration)) {
             state->ret().reset();
             return state->ret(); // FIXME: Runtime-Error
         }
@@ -80,22 +80,39 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
                 throw NdaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
         }
         break;
-    case NadaParser::ASTNodeType::IfStatement: {
-        assert(node->children.size() >= 1);
+    case NdaParser::ASTNodeType::IfStatement: {
+        assert(node->children.size() >= 2);
         bool conditionValid;
         bool condition = executeState(node->children[0], state).toBool(&conditionValid);
         // if (!conditionValid) // TODO: runtime error
         if (condition) {
             return executeState(node->children[1],state);
-        } else if (node->children.size() == 3) {
-            return executeState(node->children[2],state);
+        } else {
+            int elsIfIndex = 2;
+            while (!condition &&
+                   node->children.size() > (size_t)elsIfIndex &&
+                   node->children[elsIfIndex]->type == NdaParser::ASTNodeType::Elsif)
+            {
+                assert(node->children[elsIfIndex]->children.size() == 2);
+                condition = executeState(node->children[elsIfIndex]->children[0], state).toBool(&conditionValid);
+                if (condition)
+                    return executeState(node->children[elsIfIndex]->children[1],state);
+                elsIfIndex++;
+            }
+
+            if (!condition && node->children.back()->type == NdaParser::ASTNodeType::Else) {
+                assert(node->children.back()->children.size() == 1);
+                return executeState(node->children.back()->children[0],state);
+            }
+
         }
+
     } break;
-    case NadaParser::ASTNodeType::Else: {
+    case NdaParser::ASTNodeType::Else: {
         assert(node->children.size() == 1);
         return executeState(node->children[0],state);
     } break;
-    case NadaParser::ASTNodeType::WhileLoop: {
+    case NdaParser::ASTNodeType::WhileLoop: {
         assert(node->children.size() == 2);
         bool conditionValid;
         bool condition;
@@ -108,24 +125,27 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
                 mExecState = RunState;
                 break;
             }
+            if (mExecState == ReturnState) {
+                break;
+            }
             if (mExecState == ContinueState) {
                 mExecState = RunState;
             }
         } while (condition && conditionValid);
     } break;
-    case NadaParser::ASTNodeType::ForLoop: {
+    case NdaParser::ASTNodeType::ForLoop: {
         assert(node->children.size() == 2); // range + body
-        if (node->children[0]->type == NadaParser::ASTNodeType::Range)
+        if (node->children[0]->type == NdaParser::ASTNodeType::Range)
             executeForLoopRange(node,state);
         return state->ret();
     } break;
-    case NadaParser::ASTNodeType::Return: {
+    case NdaParser::ASTNodeType::Return: {
         if (node->children.size() == 1)
             executeState(node->children[0], state);
         mExecState = ReturnState;
         return state->ret();
     } break;
-    case NadaParser::ASTNodeType::Break: {
+    case NdaParser::ASTNodeType::Break: {
         if (state->inLoopScope()) {
             if (node->children.size() == 1) { // when condition
                 bool conditionValid;
@@ -139,7 +159,7 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
             std::cerr << "INVALID BREAK ignored!"; // FIXME: runtime error
         return state->ret();
     } break;
-    case NadaParser::ASTNodeType::Continue: {
+    case NdaParser::ASTNodeType::Continue: {
         if (state->inLoopScope()) {
             if (node->children.size() == 1) { // when condition
                 bool conditionValid;
@@ -153,10 +173,10 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
             std::cerr << "INVALID CONTINUE ignored!"; // FIXME: runtime error
         return state->ret();
     } break;
-    case NadaParser::ASTNodeType::FunctionCall: {
+    case NdaParser::ASTNodeType::FunctionCall: {
         executeFunctionCall(node, state);
     }   break;
-    case NadaParser::ASTNodeType::Assignment: {
+    case NdaParser::ASTNodeType::Assignment: {
         assert(node->children.size() == 2);
 
         executeState(node->children[0], state);
@@ -171,10 +191,10 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
         if (!targetValue.assign(state->ret()))
             throw NdaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
     }   break;
-    case NadaParser::ASTNodeType::Literal:
+    case NdaParser::ASTNodeType::Literal:
         state->ret().fromString(state->typeByName("string"),node->value.displayValue);
         break;
-    case NadaParser::ASTNodeType::ListLiteral: {
+    case NdaParser::ASTNodeType::ListLiteral: {
         NdaVariant ret;
         ret.initType(state->typeByName("list"));
         for (const auto &child : node->children) {
@@ -182,7 +202,7 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
         }
         state->ret() = ret;
     } break;
-    case NadaParser::ASTNodeType::BooleanLiteral:
+    case NdaParser::ASTNodeType::BooleanLiteral:
         if (node->variantCache) {
             state->ret() = *node->variantCache;
         } else {
@@ -190,16 +210,16 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
             node->variantCache = new NdaVariant(state->ret());
         }
         break;
-    case NadaParser::ASTNodeType::Number: {
+    case NdaParser::ASTNodeType::Number: {
         executeNumber(node,state);
     }   break;
-    case NadaParser::ASTNodeType::BinaryOperator: {
+    case NdaParser::ASTNodeType::BinaryOperator: {
         return evaluateBinaryOperator(node, state);
     }   break;
-    case NadaParser::ASTNodeType::UnaryOperator: {
+    case NdaParser::ASTNodeType::UnaryOperator: {
         return evaluateUnaryOperator(node, state);
     }   break;
-    case NadaParser::ASTNodeType::Identifier: {
+    case NdaParser::ASTNodeType::Identifier: {
         auto *value = state->valuePtr(node->value.lowerValue);
         if (value)
             state->ret().fromReference(state->typeByName("reference"),value);
@@ -207,15 +227,15 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
             state->ret().reset();
         // TODO: runtime error
     }   break;
-    case NadaParser::ASTNodeType::StaticMethodCall: {
+    case NdaParser::ASTNodeType::StaticMethodCall: {
         executeFunctionCall(node, state);
     }   break;
-    case NadaParser::ASTNodeType::InstanceMethodCall: {
+    case NdaParser::ASTNodeType::InstanceMethodCall: {
         executeFunctionCall(node, state);
     }   break;
-    case NadaParser::ASTNodeType::AccessOperator: {
+    case NdaParser::ASTNodeType::AccessOperator: {
         assert(node->children.size() == 2);
-        assert(node->children[0]->type == NadaParser::ASTNodeType::Identifier);
+        assert(node->children[0]->type == NdaParser::ASTNodeType::Identifier);
 
         if (state->typeOf(node->children[0]->value.lowerValue) == Nda::Undefined)
             throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->value.displayValue);
@@ -250,7 +270,7 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaInterpreter::executeNumber(const NadaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant &NdaInterpreter::executeNumber(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
     if (node->variantCache) {
         state->ret() = *node->variantCache;
@@ -285,7 +305,7 @@ NdaVariant &NdaInterpreter::executeNumber(const NadaParser::ASTNodePtr &node, Nd
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaInterpreter::executeForLoopRange(const NadaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant &NdaInterpreter::executeForLoopRange(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
     assert(node->children.size() == 2);
 
@@ -343,7 +363,7 @@ NdaVariant &NdaInterpreter::executeForLoopRange(const NadaParser::ASTNodePtr &no
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
     assert(node->children.size() == 2);
     // static NadaValue left;
@@ -489,7 +509,7 @@ NdaVariant &NdaInterpreter::evaluateBinaryOperator(const NadaParser::ASTNodePtr 
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaInterpreter::evaluateUnaryOperator(const NadaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant &NdaInterpreter::evaluateUnaryOperator(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
     assert(node->children.size() == 1);
 
@@ -506,20 +526,20 @@ NdaVariant &NdaInterpreter::evaluateUnaryOperator(const NadaParser::ASTNodePtr &
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant &NdaInterpreter::executeFunctionCall(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
     NadaValues values;
     for (const auto &node : node->children) {
-        if (node->type == NadaParser::ASTNodeType::MethodContext)
+        if (node->type == NdaParser::ASTNodeType::MethodContext)
             continue;
         values.push_back(executeState(node, state));
     }
 
     Nda::Symbol symbol;
     std::string typeName;
-    if (node->type == NadaParser::ASTNodeType::StaticMethodCall) {
+    if (node->type == NdaParser::ASTNodeType::StaticMethodCall) {
         typeName = node->children[0]->value.lowerValue;
-    } else if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
+    } else if (node->type == NdaParser::ASTNodeType::InstanceMethodCall) {
         if (!state->find(node->children[0]->value.lowerValue,symbol))
             throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->children[0]->value.lowerValue);
         typeName = symbol.type->name.lowerValue;
@@ -545,13 +565,13 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
             */
 
         // Creating "this":
-        if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
+        if (node->type == NdaParser::ASTNodeType::InstanceMethodCall) {
             state->define("this", symbol.type);
             // TODO: if !define -> runtime error!
             NdaVariant &valueRef = state->valueRef("this");
             valueRef.fromReference(state->typeByName("reference"),symbol.value);
         }
-        for (int i = 0; i< fnc.parameters.size(); i++) {
+        for (int i = 0; i< (int)fnc.parameters.size(); i++) {
             state->define(fnc.parameters[i].name, fnc.parameters[i].type);
             // TODO: if !define -> runtime error!
             NdaVariant &valueRef = state->valueRef(fnc.parameters[i].name);
@@ -566,12 +586,14 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
 
         if (mExecState == ReturnState)
             mExecState = RunState;
+
+        state->ret().dereference();
         state->popStack();
     } else {
         auto parameters = fnc.fncValues(values);
 
         // Creating "this":
-        if (node->type == NadaParser::ASTNodeType::InstanceMethodCall) {
+        if (node->type == NdaParser::ASTNodeType::InstanceMethodCall) {
             NdaVariant thisRef;
             thisRef.fromReference(state->typeByName("reference"),symbol.value);
             parameters["this"] = thisRef;
@@ -587,15 +609,15 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
 }
 
 //-------------------------------------------------------------------------------------------------
-void NdaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NdaState *state)
+void NdaInterpreter::defineProcedure(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
-    assert(node->type == NadaParser::ASTNodeType::Procedure);
+    assert(node->type == NdaParser::ASTNodeType::Procedure);
     assert(node->children.size() >= 2);
 
     std::string name = node->value.lowerValue;
     std::string typeName;
     int parameterIndex = 0;
-    if (node->children[0]->type == NadaParser::ASTNodeType::MethodContext) {
+    if (node->children[0]->type == NdaParser::ASTNodeType::MethodContext) {
         typeName = node->children[0]->value.lowerValue;
         parameterIndex = 1;
     }
@@ -603,15 +625,15 @@ void NdaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NdaStat
     auto parameters = node->children[parameterIndex+0];
     auto block      = node->children[parameterIndex+1];
 
-    assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
-    assert(block->type      == NadaParser::ASTNodeType::Block);
+    assert(parameters->type == NdaParser::ASTNodeType::FormalParameters);
+    assert(block->type      == NdaParser::ASTNodeType::Block);
 
     Nda::FncParameters fncParameters;
     for (const auto &p : parameters->children) {
         assert(p->children.size() >= 1); // TODO: in/out, child # 2
         Nda::ParameterMode mode = Nda::InMode;
         if (p->children.size() == 2) {
-            assert(p->children[1]->type == NadaParser::ASTNodeType::FormalParameterMode);
+            assert(p->children[1]->type == NdaParser::ASTNodeType::FormalParameterMode);
             mode = p->children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
         }
         fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue,mode});
@@ -621,15 +643,15 @@ void NdaInterpreter::defineProcedure(const NadaParser::ASTNodePtr &node, NdaStat
 }
 
 //-------------------------------------------------------------------------------------------------
-void NdaInterpreter::defineFunction(const NadaParser::ASTNodePtr &node, NdaState *state)
+void NdaInterpreter::defineFunction(const NdaParser::ASTNodePtr &node, NdaState *state)
 {
-    assert(node->type == NadaParser::ASTNodeType::Function);
+    assert(node->type == NdaParser::ASTNodeType::Function);
     assert(node->children.size() >= 3);
 
     std::string name = node->value.lowerValue;
     std::string typeName;
     int parameterIndex = 0;
-    if (node->children[0]->type == NadaParser::ASTNodeType::MethodContext) {
+    if (node->children[0]->type == NdaParser::ASTNodeType::MethodContext) {
         typeName = node->children[0]->value.lowerValue;
         parameterIndex = 1;
     }
@@ -638,15 +660,15 @@ void NdaInterpreter::defineFunction(const NadaParser::ASTNodePtr &node, NdaState
     auto returntype = node->children[parameterIndex+1];
     auto block      = node->children[parameterIndex+2];
 
-    assert(parameters->type == NadaParser::ASTNodeType::FormalParameters);
-    assert(block->type      == NadaParser::ASTNodeType::Block);
+    assert(parameters->type == NdaParser::ASTNodeType::FormalParameters);
+    assert(block->type      == NdaParser::ASTNodeType::Block);
 
     Nda::FncParameters fncParameters;
     for (const auto &p : parameters->children) {
         Nda::ParameterMode mode = Nda::InMode;
         assert(p->children.size() >= 1);
         if (p->children.size() == 2) {
-            assert(p->children[1]->type == NadaParser::ASTNodeType::FormalParameterMode);
+            assert(p->children[1]->type == NdaParser::ASTNodeType::FormalParameterMode);
             mode = p->children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
         }
         fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue, mode});

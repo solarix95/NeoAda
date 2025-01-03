@@ -35,6 +35,7 @@ public:
         ConditionalScope    // Enter if..
     };
     NadaSymbolTable(Scope s);
+    ~NadaSymbolTable();
 
     inline Scope scope() const { return mScope; }
 

@@ -6,6 +6,14 @@ NadaSymbolTable::NadaSymbolTable(Scope s)
 {}
 
 //-------------------------------------------------------------------------------------------------
+NadaSymbolTable::~NadaSymbolTable()
+{
+    for (auto& pair : mTable) {
+        delete pair.second.value;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NadaSymbolTable::contains(const std::string& name) const {
     return mTable.find(name) != mTable.end();
 }

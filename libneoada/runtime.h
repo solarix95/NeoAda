@@ -1,5 +1,5 @@
-#ifndef NEOADA_RUNTIME_H
-#define NEOADA_RUNTIME_H
+#ifndef LIB_NEOADA_RUNTIME_H
+#define LIB_NEOADA_RUNTIME_H
 
 #include <string>
 #include "variant.h"

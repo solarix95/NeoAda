@@ -5,7 +5,7 @@
 #include <vector>
 
 class NdaException;
-class NadaLexer {
+class NdaLexer {
 public:
     enum class TokenType {
         Identifier,    // Variable oder Funktionsname
@@ -18,15 +18,15 @@ public:
         Unknown        // Unerwartete oder nicht erkannte Token
     };
 
-    NadaLexer(int lookAhead = 2);
+    NdaLexer(int lookAhead = 2);
 
     // Hauptmethode: Skript analysieren und für jedes Token den Callback aufrufen
     void setScript(const std::string& script);
     bool nextToken();
-    bool token(std::string& token, NadaLexer::TokenType &t) const;
+    bool token(std::string& token, NdaLexer::TokenType &t) const;
 
     std::string          token(int relativeIndex = 0) const;
-    NadaLexer::TokenType tokenType(int relativeIndex = 0) const;
+    NdaLexer::TokenType tokenType(int relativeIndex = 0) const;
     bool                 tokenPosition(int &row, int &column, int relativeIndex = 0) const;
     std::string          positionToText(int relativeIndex = 0) const;
 

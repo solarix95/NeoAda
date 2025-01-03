@@ -1,5 +1,5 @@
-#ifndef NEOADA_STATE_H
-#define NEOADA_STATE_H
+#ifndef LIB_NEOADA_STATE_H
+#define LIB_NEOADA_STATE_H
 
 #include <string>
 #include "private/symboltable.h"
@@ -27,7 +27,7 @@ public:
     // procedure/function
     bool               bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // function
     bool               bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // procedure
-    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NadaParser::ASTNode> &block);
+    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block);
     bool               hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters);
     Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
 

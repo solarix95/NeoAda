@@ -7,7 +7,7 @@
 #include "private/utils.h"
 
 class NdaVariant;
-class NadaParser
+class NdaParser
 {
 public:
     enum class ASTNodeType {
@@ -70,7 +70,7 @@ public:
         ASTNodeType       type;
         Nda::LowerString  value; // Der Wert (z. B. Literal, Operator, Identifier)
         std::vector<std::shared_ptr<ASTNode>> children; // Unterknoten
-        std::shared_ptr<ASTNode>              parent;
+        ASTNode                              *parent;
 
         int                                   line;
         int                                   column;
@@ -87,49 +87,49 @@ public:
 
     using ASTNodePtr = std::shared_ptr<ASTNode>;
 
-    NadaParser(NadaLexer &lexer);
+    NdaParser(NdaLexer &lexer);
 
-    NadaParser::ASTNodePtr parse(const std::string &script);
+    NdaParser::ASTNodePtr parse(const std::string &script);
 
 private:
-    NadaParser::ASTNodePtr parseStatement();
-    NadaParser::ASTNodePtr parseDeclaration();
-    NadaParser::ASTNodePtr parseWith();
-    NadaParser::ASTNodePtr parseIdentifier();  // "call()" or "var :="
-    NadaParser::ASTNodePtr parseProcedureOrFunction();
-    NadaParser::ASTNodePtr parseWhileLoop();
-    NadaParser::ASTNodePtr parseForLoop();
-    NadaParser::ASTNodePtr parseIfStatement();
-    NadaParser::ASTNodePtr parseReturn();
-    NadaParser::ASTNodePtr parseBreak();
-    NadaParser::ASTNodePtr parseContinue();
+    NdaParser::ASTNodePtr parseStatement();
+    NdaParser::ASTNodePtr parseDeclaration();
+    NdaParser::ASTNodePtr parseWith();
+    NdaParser::ASTNodePtr parseIdentifier();  // "call()" or "var :="
+    NdaParser::ASTNodePtr parseProcedureOrFunction();
+    NdaParser::ASTNodePtr parseWhileLoop();
+    NdaParser::ASTNodePtr parseForLoop();
+    NdaParser::ASTNodePtr parseIfStatement();
+    NdaParser::ASTNodePtr parseReturn();
+    NdaParser::ASTNodePtr parseBreak();
+    NdaParser::ASTNodePtr parseContinue();
 
     // Parse Sub-Elements
-    NadaParser::ASTNodePtr parseBlockEnd(const std::string& endToken1,
+    NdaParser::ASTNodePtr parseBlockEnd(const std::string& endToken1,
                                            const std::string& endToken2 = "");         // block/scope from "if"/"else"/"elsif" to "end"
-    NadaParser::ASTNodePtr parseSeparator(const NadaParser::ASTNodePtr &currentNode);
+    NdaParser::ASTNodePtr parseSeparator(const NdaParser::ASTNodePtr &currentNode);
 
-    NadaParser::ASTNodePtr parseFormalParameterList();                                 // procedure/function parameters;
+    NdaParser::ASTNodePtr parseFormalParameterList();                                 // procedure/function parameters;
 
 
-    NadaParser::ASTNodePtr parseExpression();
+    NdaParser::ASTNodePtr parseExpression();
 
-    NadaParser::ASTNodePtr parseSimpleExpression();   // a > b
-    NadaParser::ASTNodePtr parseTerm();               // a * b
-    NadaParser::ASTNodePtr parseFactor();             // a**b
-    NadaParser::ASTNodePtr parsePrimary();            // a
-    NadaParser::ASTNodePtr parseFunctionCall(NadaParser::ASTNodePtr &funcNode);        // a()
-    NadaParser::ASTNodePtr parseMethodCall(NadaParser::ASTNodePtr &funcNode);          // type:a()
-    NadaParser::ASTNodePtr parseIterableOrRange();    // for x in [IterableOrRange]
-    bool                   handleIdentifierCall(NadaParser::ASTNodePtr &identNode);    // is function or procedure or method-call
-    bool                   handleIdentifierAccess(NadaParser::ASTNodePtr &identNode);  // is array/dict access operator
-    NadaParser::ASTNodePtr parseListLiteral();         // is function or procedure or method-call
+    NdaParser::ASTNodePtr parseSimpleExpression();   // a > b
+    NdaParser::ASTNodePtr parseTerm();               // a * b
+    NdaParser::ASTNodePtr parseFactor();             // a**b
+    NdaParser::ASTNodePtr parsePrimary();            // a
+    NdaParser::ASTNodePtr parseFunctionCall(NdaParser::ASTNodePtr &funcNode);        // a()
+    NdaParser::ASTNodePtr parseMethodCall(NdaParser::ASTNodePtr &funcNode);          // type:a()
+    NdaParser::ASTNodePtr parseIterableOrRange();    // for x in [IterableOrRange]
+    bool                   handleIdentifierCall(NdaParser::ASTNodePtr &identNode);    // is function or procedure or method-call
+    bool                   handleIdentifierAccess(NdaParser::ASTNodePtr &identNode);  // is array/dict access operator
+    NdaParser::ASTNodePtr parseListLiteral();         // is function or procedure or method-call
 
     static std::string nodeTypeToString(ASTNodeType type);
 
-    NadaLexer               &mLexer;
+    NdaLexer               &mLexer;
     ParserState              mState;
-    NadaParser::ASTNodePtr mCurrentNode;
+    NdaParser::ASTNodePtr mCurrentNode;
 };
 
 
