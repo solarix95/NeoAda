@@ -10,6 +10,12 @@ namespace Nda {
 FunctionTable::FunctionTable() {}
 
 //-------------------------------------------------------------------------------------------------
+void FunctionTable::clear()
+{
+    mFunctions.clear();
+}
+
+//-------------------------------------------------------------------------------------------------
 bool FunctionTable::bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb)
 {
     std::string lowerName = Nda::toLower(name);

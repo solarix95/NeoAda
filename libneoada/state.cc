@@ -268,6 +268,8 @@ void NdaState::destroy()
 {
     mRetValue.reset(); // detach references
 
+    mFunctions.clear();
+
     while (!mCallStack.empty()) {
         auto *tables = mCallStack.back();
         while (!tables->empty()) {

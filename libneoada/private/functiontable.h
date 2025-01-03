@@ -52,6 +52,8 @@ class FunctionTable
 public:
     FunctionTable();
 
+    void clear();
+
     // Init/Setup
     bool              bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // c++ function  callback
     bool              bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // c++ procedure callback
