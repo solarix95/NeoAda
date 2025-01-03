@@ -14,6 +14,7 @@
 NdaRuntime::NdaRuntime()
     : mState(nullptr)
 {
+    reset();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -51,12 +52,20 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
             *exception = ex;
         else
             std::cerr << ex.what() << std::endl;
+    } catch (const std::exception& ex) {
+        std::cerr << "NeoAda Fatal Runtime Error: " << ex.what() << std::endl;
     } catch (...) {
         std::cerr << "NeoAda Fatal Runtime Error!" << std::endl;
     }
 
     return NdaVariant();
 
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaState *NdaRuntime::state()
+{
+    return mState;
 }
 
 //-------------------------------------------------------------------------------------------------

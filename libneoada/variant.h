@@ -92,7 +92,8 @@ public:
     static bool fromNumber(const std::string &value, int64_t &ret);
 
 private:
-    void assignOther(const NdaVariant &other);
+    void assignOther(const NdaVariant &other);     // C++ Operator
+    void assignAny(const NdaVariant &other);       // NeoAdas Any := ...
     void assignOtherString(const NdaVariant &other);
     void assignOtherList(const NdaVariant &other);
 

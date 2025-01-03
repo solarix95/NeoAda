@@ -6,6 +6,7 @@
 #include <lexer.h>
 #include <parser.h>
 #include <interpreter.h>
+#include <runtime.h>
 #include <neoadaapi.h>
 
 int main(int argc, char* argv[]) {
@@ -40,18 +41,15 @@ int main(int argc, char* argv[]) {
     // Zum Testen geben wir es einfach aus.
     // std::cout << "Eingelesener Inhalt:\n" << script << "\n";
     
-    NadaLexer       lexer;
-    NadaParser      parser(lexer);
-    NdaState       state;
-    NdaInterpreter interpreter(&state);
+    NdaRuntime   runTime;
 
-    state.bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
+
+    runTime.state()->bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         std::cout << args.at("message").toString() << std::endl;
         return true;
     });
 
-    auto ast = parser.parse(script);
-    auto ret = interpreter.execute(ast);
+    runTime.runScript(script);
 
     return 0;
 }

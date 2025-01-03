@@ -49,6 +49,7 @@ std::string NdaException::messageByCode() const
     case Nada::Error::IllegalComparison:      return "Illegal comparison";
     case Nada::Error::OperatorTypeError:      return "Unsupported operand type(s)";
     case Nada::Error::InvalidNumericValue:    return "Invalid numeric value";
+    case Nada::Error::UnknownSymbol:          return "Unknown symbol";
 
     }
     return "";

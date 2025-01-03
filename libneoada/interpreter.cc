@@ -75,6 +75,7 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
 
             state->ret().reset();
             executeState(node->children[1],state);
+
             if (!value.assign(state->ret()))
                 throw NdaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
         }
@@ -296,8 +297,11 @@ NdaVariant &NdaInterpreter::executeForLoopRange(const NadaParser::ASTNodePtr &no
     int64_t from,to;
 
     // TODO: runtime error handling
-    NdaVariant::fromNumber(node->children[0]->children[0]->value.lowerValue,from);
-    NdaVariant::fromNumber(node->children[0]->children[1]->value.lowerValue,to);
+    NdaVariant rangeStart = executeState(node->children[0]->children[0], state);
+    NdaVariant rangeEnd   = executeState(node->children[0]->children[1], state);
+
+    from = rangeStart.toInt64();
+    to   = rangeEnd.toInt64();
 
     state->pushScope(NadaSymbolTable::LoopScope);
     state->define(varName,"Natural");
@@ -523,6 +527,7 @@ NdaVariant &NdaInterpreter::executeFunctionCall(const NadaParser::ASTNodePtr &no
 
     if (!state->hasFunction(typeName, node->value.lowerValue,values)) {
         state->ret().reset();
+        throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, typeName + ":" + node->value.lowerValue);
         return state->ret(); // TODO: ERROR
     }
 

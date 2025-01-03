@@ -16,6 +16,7 @@ public:
     void       reset();
     NdaVariant runScript(const std::string &script, NdaException *e = nullptr);
     NdaVariant runFile(const std::string &fileName, NdaException *e = nullptr);
+    NdaState  *state();
 
     void loadAddonAdaString();
     void loadAddonAdaList();

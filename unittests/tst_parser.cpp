@@ -148,7 +148,9 @@ private slots:
     void test_state_Declarations();
     void test_state_GlobalScope();
 
-    void test_interpreter_Declarations();
+    void test_interpreter_Declarations1();
+    void test_interpreter_Declarations2();
+
     void test_interpreter_WithAddon();
     void test_interpreter_ProcedureCall();
     void test_interpreter_ifStatement();
@@ -182,6 +184,7 @@ private slots:
     void test_api_evaluate_List_Read1();
     void test_api_evaluate_List_Read2();
     void test_api_evaluate_List_Write();
+    void test_api_evaluate_List_Swap();
 
     void test_api_evaluate_GlobalValue();
     void test_api_evaluate_ScopeValue();
@@ -2194,7 +2197,7 @@ void TstParser::test_state_GlobalScope()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_interpreter_Declarations()
+void TstParser::test_interpreter_Declarations1()
 {
     //  enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
 
@@ -2227,6 +2230,29 @@ void TstParser::test_interpreter_Declarations()
     QCOMPARE(state.typeOf("d"), Nda::Boolean);
     QCOMPARE(state.typeOf("e"), Nda::Byte);
     QCOMPARE(state.typeOf("g"), Nda::String);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Declarations2()
+{
+    //  enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
+
+    std::string script = R"(
+        declare x: Natural := 3;
+        declare y: Natural := x-2;
+
+        return y;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 1);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2830,6 +2856,36 @@ void TstParser::test_api_evaluate_List_Write()
     QVERIFY(ret.readAccess(0).toString() == "42");
     QVERIFY(ret.readAccess(1).toString() == "43");
     QVERIFY(ret.readAccess(2).toString() == "44");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_List_Swap()
+{
+    std::string script = R"(
+        declare x      : List := [1,2,3];
+        declare current: Any  := x[0];
+        declare next   : Any  := x[2];
+
+        x[0] := next;
+        x[2] := current;
+
+        return x;
+    )";
+
+    NadaLexer       lexer;
+    NadaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.type()     == Nda::List);
+    QVERIFY(ret.listSize() == 3);
+    QVERIFY(ret.readAccess(0).toString() == "3");
+    QVERIFY(ret.readAccess(1).toString() == "2");
+    QVERIFY(ret.readAccess(2).toString() == "1");
 }
 
 //-------------------------------------------------------------------------------------------------

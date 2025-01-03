@@ -369,7 +369,7 @@ bool NdaVariant::assign(const NdaVariant &other)
     case Nda::Reference: return internalReference()->assign(other);
         break;
     case Nda::Any: {
-        assignOther(other);
+        assignAny(other);
         return true;
     } break;
     case Nda::Number: {
@@ -1124,6 +1124,37 @@ void NdaVariant::assignOther(const NdaVariant &other)
 }
 
 //-------------------------------------------------------------------------------------------------
+void NdaVariant::assignAny(const NdaVariant &other)
+{
+    switch (other.type()) {
+    case Nda::Undefined: return;
+    case Nda::Reference: return;
+    case Nda::Any:       return;
+    case Nda::Number:
+    case Nda::Natural:
+    case Nda::Supernatural:
+    case Nda::Boolean:
+    case Nda::Byte: {
+        mRuntimeType  = other.runtimeType();
+        mValue.uInt64 = other.cuValue()->uUInt64;
+        return;
+    } break;
+    case Nda::String:
+        reset();
+        assignOtherString(other);
+        return;
+    case Nda::List:
+        reset();
+        assignOtherList(other);
+        return;
+    case Nda::Dict:
+        reset();
+        assert(0);
+    return;
+}
+}
+
+//-------------------------------------------------------------------------------------------------
 void NdaVariant::assignOtherString(const NdaVariant &other)
 {
     assert(myType()     == Nda::Undefined);
@@ -1326,7 +1357,11 @@ bool NdaVariant::fromNumber(const std::string &value, int64_t &ret)
 {
     std::string cleanLiteral = NadaNumericParser::removeSeparators(value);
 
-    ret = std::stoll(cleanLiteral, nullptr, 0);
+    try {
+        ret = std::stoll(cleanLiteral, nullptr, 0);
+    } catch (...) {
+        return false;
+    }
 
     return true;
 }
