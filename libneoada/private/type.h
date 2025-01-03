@@ -18,6 +18,7 @@ namespace Nda {
 
         RuntimeType() : name(""), dataType(Undefined), baseType(""), instantiable(false) {}
         RuntimeType(std::string n, Type t, std::string bn, bool i) : name(n), dataType(t), baseType(bn), instantiable(i) {}
+        RuntimeType(LowerString n, Type t, std::string bn, bool i) : name(n), dataType(t), baseType(bn), instantiable(i) {}
     };
 
     using RuntimeTypes = std::unordered_map<std::string, Nda::RuntimeType>;

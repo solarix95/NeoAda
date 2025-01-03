@@ -213,6 +213,8 @@ private slots:
     void test_api_runtime_AdaList_IndexOf();
     void test_api_runtime_AdaList_Flip();
     void test_api_runtime_AdaList_Flipped();
+    void test_api_runtime_AdaList_Clear();
+    void test_api_runtime_AdaList_Clear_Append();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -3336,6 +3338,49 @@ void TstParser::test_api_runtime_AdaList_Flipped()
     QVERIFY(ret.toInt64() == 42);
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Clear()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [40,41,42];
+
+    x.clear();
+
+    return #x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 0);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Clear_Append()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [40,41,42];
+
+    x.clear();
+
+    x.append(42);
+
+    return x[0];
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 42);
+}
 
 //-------------------------------------------------------------------------------------------------
 //                                       ERROR HANDLING

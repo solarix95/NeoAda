@@ -23,6 +23,19 @@ void add_AdaList_symbols(NdaState *state)
         return true;
     });
 
+    // ------------------ List.Clear() ---------------------------------------------------------
+    state->bindPrc("list","clear",{}, [](const Nda::FncValues& args) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+
+        self.clearList();
+        return true;
+    });
+
     // ------------------ List.Append() ---------------------------------------------------------
     state->bindPrc("list","append",{{"v", "any", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
 
@@ -132,7 +145,7 @@ void add_AdaList_symbols(NdaState *state)
             return false;
 
         ret.initType(self.runtimeType());
-        ret.assign(ret);
+        ret.assign(self);
         ret.reverseList();
 
         return true;

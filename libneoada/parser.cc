@@ -1,6 +1,7 @@
 
 #include "parser.h"
 #include "exception.h"
+#include "variant.h"
 #include <cassert>
 
 //-------------------------------------------------------------------------------------------------
@@ -607,6 +608,12 @@ std::string NadaParser::nodeTypeToString(ASTNodeType type)
 //-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
+NadaParser::ASTNode::~ASTNode()
+{
+    if (variantCache)
+        delete variantCache;
+}
+
 std::string NadaParser::ASTNode::serialize(int depth) const
 {
     std::string indent(depth * 2, ' '); // Einrückung

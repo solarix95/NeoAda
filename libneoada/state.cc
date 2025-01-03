@@ -44,12 +44,13 @@ void NdaState::reset()
 //-------------------------------------------------------------------------------------------------
 bool NdaState::registerType(std::string name, Nda::Type type, bool instantiable)
 {
-    const auto *currentType = typeByName(name);
+    Nda::LowerString lname(name);
+    const auto *currentType = typeByName(lname.lowerValue);
     if (currentType) {
         return currentType->dataType == type; // already registered -> ok..
     }
 
-    mTypes[Nda::toLower(name)] = Nda::RuntimeType(name,type,"",instantiable);
+    mTypes[lname.lowerValue] = Nda::RuntimeType(lname,type,"",instantiable);
     return true;
 }
 
@@ -74,8 +75,6 @@ bool NdaState::registerType(std::string name, std::string basename)
 //-------------------------------------------------------------------------------------------------
 const Nda::RuntimeType *NdaState::typeByName(std::string name) const
 {
-    name = Nda::toLower(name);
-
     if (mTypes.find(name) == mTypes.end())
         return nullptr;
 
@@ -86,7 +85,7 @@ const Nda::RuntimeType *NdaState::typeByName(std::string name) const
 //-------------------------------------------------------------------------------------------------
 bool NdaState::define(const std::string &name, const std::string &typeName, bool isVolatile)
 {
-    const Nda::RuntimeType *t = typeByName(typeName);
+    const Nda::RuntimeType *t = typeByName(Nda::toLower(typeName));
     if (!t || !t->instantiable)
         return false;
 

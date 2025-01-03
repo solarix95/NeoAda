@@ -6,6 +6,7 @@
 #include "lexer.h"
 #include "private/utils.h"
 
+class NdaVariant;
 class NadaParser
 {
 public:
@@ -73,10 +74,11 @@ public:
 
         int                                   line;
         int                                   column;
+        NdaVariant                           *variantCache;
 
         ASTNode(ASTNodeType type, int l, int c, const std::string& value = "")
-            : type(type), value(value), line(l), column(c) {}
-
+            : type(type), value(value), line(l), column(c), variantCache(nullptr) {}
+        ~ASTNode();
 
         std::string serialize(int depth = 0) const;
         static void addChild(std::shared_ptr<ASTNode> parent, std::shared_ptr<ASTNode> child);

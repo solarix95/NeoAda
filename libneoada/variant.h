@@ -70,6 +70,7 @@ public:
     int               indexInList(const NdaVariant &value) const;
     bool              containsInList(const NdaVariant &value) const;
     void              reverseList();
+    void              clearList();
 
     // String interface
     const std::string &cStringValue() const;
@@ -77,7 +78,9 @@ public:
     bool        setString(const std::string &newValue);
     std::string toString() const;
     Nda::Type   type() const;
-    Nda::Type   myType() const;
+
+    inline Nda::Type   myType() const { return mRuntimeType ? mRuntimeType->dataType : Nda::Undefined; }
+
     const Nda::RuntimeType *runtimeType() const;
 
     NdaVariant& operator=(const NdaVariant&other);

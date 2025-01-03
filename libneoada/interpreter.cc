@@ -182,7 +182,12 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
         state->ret() = ret;
     } break;
     case NadaParser::ASTNodeType::BooleanLiteral:
-        state->ret().fromBool(state->typeByName("boolean"),node->value.lowerValue == "true");
+        if (node->variantCache) {
+            state->ret() = *node->variantCache;
+        } else {
+            state->ret().fromBool(state->typeByName("boolean"),node->value.lowerValue == "true");
+            node->variantCache = new NdaVariant(state->ret());
+        }
         break;
     case NadaParser::ASTNodeType::Number: {
         executeNumber(node,state);
@@ -246,6 +251,11 @@ NdaVariant &NdaInterpreter::executeState(const NadaParser::ASTNodePtr &node, Nda
 //-------------------------------------------------------------------------------------------------
 NdaVariant &NdaInterpreter::executeNumber(const NadaParser::ASTNodePtr &node, NdaState *state)
 {
+    if (node->variantCache) {
+        state->ret() = *node->variantCache;
+        return state->ret();
+    }
+
     auto &ret = state->ret();
     auto identType = NdaVariant::numericType(node->value.lowerValue); // _B -> _b
 
@@ -269,6 +279,7 @@ NdaVariant &NdaInterpreter::executeNumber(const NadaParser::ASTNodePtr &node, Nd
     if (!done)
         throw NdaException(Nada::Error::InvalidNumericValue,node->line,node->column, node->value.displayValue);
 
+    node->variantCache = new NdaVariant(ret);
     return ret;
 }
 
