@@ -9,6 +9,7 @@
 #include "interpreter.h"
 
 #include "addons/AdaList.h"
+#include "addons/AdaString.h"
 
 //-------------------------------------------------------------------------------------------------
 NdaRuntime::NdaRuntime()
@@ -31,6 +32,8 @@ void NdaRuntime::reset()
     mState->onWith([this](const std::string &addonName) {
         if (addonName == "ada.list")
             loadAddonAdaList();
+        if (addonName == "ada.string")
+            loadAddonAdaString();
     });
 }
 
@@ -66,6 +69,14 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
 NdaState *NdaRuntime::state()
 {
     return mState;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::loadAddonAdaString()
+{
+    if (!mState)
+        reset();
+    Nda::add_AdaString_symbols(mState);
 }
 
 //-------------------------------------------------------------------------------------------------

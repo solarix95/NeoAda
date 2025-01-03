@@ -83,7 +83,8 @@ private slots:
     void test_parser_Declaration2();
     void test_parser_Declaration3();
     void test_parser_Declaration4_List();
-    void test_parser_Declaration5_List_Init();
+    void test_parser_Declaration5_List_Init1();
+    void test_parser_Declaration5_List_Init2();
 
     void test_parser_With();
 
@@ -208,7 +209,7 @@ private slots:
 
     void test_api_evaluate_Instance_Method1();
 
-    // runtime addons
+    // runtime LIST addons
     void test_api_runtime_AdaList_Length();
     void test_api_runtime_AdaList_Append();
     void test_api_runtime_AdaList_Insert();
@@ -219,6 +220,9 @@ private slots:
     void test_api_runtime_AdaList_Flipped();
     void test_api_runtime_AdaList_Clear();
     void test_api_runtime_AdaList_Clear_Append();
+
+    // runtime LIST addons
+    void test_api_runtime_AdaString_Length();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -921,7 +925,7 @@ Node(Program, "")
 
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_parser_Declaration5_List_Init()
+void TstParser::test_parser_Declaration5_List_Init1()
 {
     std::string script = R"(
         declare x : List := [1,2,3];
@@ -939,6 +943,39 @@ Node(Program, "")
       Node(Number, "1")
       Node(Number, "2")
       Node(Number, "3")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration5_List_Init2()
+{
+    std::string script = R"(
+        declare matrix : List := [[1,2,3],[4,5,6],[7,8,9]];
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "matrix")
+    Node(Identifier, "List")
+    Node(ListLiteral, "")
+      Node(ListLiteral, "")
+        Node(Number, "1")
+        Node(Number, "2")
+        Node(Number, "3")
+      Node(ListLiteral, "")
+        Node(Number, "4")
+        Node(Number, "5")
+        Node(Number, "6")
+      Node(ListLiteral, "")
+        Node(Number, "7")
+        Node(Number, "8")
+        Node(Number, "9")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -3501,6 +3538,26 @@ void TstParser::test_api_runtime_AdaList_Clear_Append()
     auto ret = r.runScript(script);
 
     QVERIFY(ret.toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Length()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "123456";
+
+    return x.length();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 6);
+
 }
 
 //-------------------------------------------------------------------------------------------------
