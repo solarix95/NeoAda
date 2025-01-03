@@ -54,8 +54,10 @@ NdaVariant &NdaInterpreter::executeState(const NdaParser::ASTNodePtr &node, NdaS
             if (mExecState == BreakState)
                 break;
             if (mExecState == ContinueState)
-                break;
+
+            break;
         }
+        state->ret().dereference();
         state->popScope();
         break;
     case NdaParser::ASTNodeType::Expression: // just "()"
@@ -339,6 +341,7 @@ NdaVariant &NdaInterpreter::executeForLoopRange(const NdaParser::ASTNodePtr &nod
         }
     }
 
+    state->ret().dereference();
     state->popScope();
 
     /*
