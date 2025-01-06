@@ -21,6 +21,8 @@ public:
     void loadAddonAdaString();
     void loadAddonAdaList();
 
+
+
 private:
     void destroy();
 

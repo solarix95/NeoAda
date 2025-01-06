@@ -1,5 +1,5 @@
-#ifndef SHAREDDATA_H
-#define SHAREDDATA_H
+#ifndef LIB_NEOADA_SHAREDDATA_H
+#define LIB_NEOADA_SHAREDDATA_H
 
 /*
     NadaSharedData

@@ -2408,7 +2408,6 @@ void TstParser::test_interpreter_ifElseStatement()
 
     QVERIFY(results.size() == 1);
     QVERIFY(results[0] == "x<=5");
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2442,10 +2441,7 @@ void TstParser::test_interpreter_ifElseIfStatement()
 
     QVERIFY(results.size() == 1);
     QVERIFY(results[0] == "x>7");
-
 }
-
-
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_whileStatement()

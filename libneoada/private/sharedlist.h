@@ -1,5 +1,5 @@
-#ifndef SHAREDLIST_H
-#define SHAREDLIST_H
+#ifndef LIB_NEOADA_SHAREDLIST_H
+#define LIB_NEOADA_SHAREDLIST_H
 
 #include <vector>
 

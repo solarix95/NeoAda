@@ -24,7 +24,7 @@ bool FunctionTable::bindFnc(const std::string &name, const Nda::FncParameters &p
     variants.functionName = lowerName;
 
     // TODO: check if already there..
-    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NdaParser::ASTNodePtr(), std::move(cb), nullptr});
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NdaParser::ASTNodePtr(), nullptr, std::move(cb), nullptr});
 
     return true;
 }
@@ -39,7 +39,7 @@ bool FunctionTable::bindPrc(const std::string &name, const Nda::FncParameters &p
     variants.functionName = lowerName;
 
     // TODO: check if already there..
-    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NdaParser::ASTNodePtr(), nullptr, std::move(cb)});
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,NdaParser::ASTNodePtr(), nullptr, nullptr, std::move(cb)});
 
     return true;
 }
@@ -51,7 +51,7 @@ bool FunctionTable::bind(const std::string &name, const Nda::FncParameters &para
     variants.functionName = name;
 
     // TODO: check if already there..
-    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,block, nullptr, nullptr});
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,block, nullptr, nullptr, nullptr});
 
     return true;
 }

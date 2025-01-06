@@ -1,5 +1,5 @@
-#ifndef SYMBOLTABLE_H
-#define SYMBOLTABLE_H
+#ifndef LIB_NEOADA_SYMBOLTABLE_H
+#define LIB_NEOADA_SYMBOLTABLE_H
 
 #include <functional>
 #include <memory>

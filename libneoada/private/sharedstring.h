@@ -1,5 +1,5 @@
-#ifndef SHAREDSTRING_H
-#define SHAREDSTRING_H
+#ifndef LIB_NEOADA_SHAREDSTRING_H
+#define LIB_NEOADA_SHAREDSTRING_H
 
 #include <string>
 #include "shareddata.h"

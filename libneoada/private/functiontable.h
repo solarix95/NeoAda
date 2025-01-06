@@ -9,6 +9,8 @@
 #include "variant.h"
 #include "parser.h"
 
+#include "private/runnable.h"
+
 namespace Nda {
 
 
@@ -36,6 +38,7 @@ struct FunctionEntry {
     FncParameters parameters;
 
     std::shared_ptr<NdaParser::ASTNode> block;          // NeoAda-Code
+    Nda::Runnable                  *callBlock;
     FncCallback                     nativeFncCallback;   // c++ Built-in
     PrcCallback                     nativePrcCallback;   // c++ Built-in
 

@@ -7,7 +7,6 @@
 //-------------------------------------------------------------------------------------------------
 NdaParser::NdaParser(NdaLexer &lexer)
     : mLexer(lexer)
-    , mState(ParserState::None)
 {
 }
 

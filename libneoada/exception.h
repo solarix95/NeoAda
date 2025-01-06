@@ -30,10 +30,13 @@ enum Error {
     // Runtime Exceptions
     // ----------------------------------------------
     UnknownSymbol,
+    DeclarationError,
     AssignmentError,
     IllegalComparison,
     OperatorTypeError,
     InvalidAssignment,
+    InvalidCondition,
+    InvalidJump,           // break or continue
     InvalidContainerType,
     InvalidAccessValue,
     InvalidNumericValue,

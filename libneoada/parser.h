@@ -49,23 +49,6 @@ public:
         Range,
     };
 
-    enum class ParserState {
-        None,           // Kein spezifischer Zustand
-        ParsingProgram, // Ein Programm wird geparst
-        ParsingDeclaration, // declare ..
-        ParsingIdentifier,  // "x()" oder "x := "
-        ParsingWhileLoop,
-
-        ExpectingTypeSeparator, ExpectingType,
-        ExpectingPostIdentifier, // x ":=" oder x()
-        ParsingExpression, ExpectingOperator, ExpectingExpressionPostIdentifier,
-        ParsingExpressionList,
-        ParsingIfStatement,
-        ParsingLoop,
-
-        ExpectingSeparator
-    };
-
     struct ASTNode {        
         ASTNodeType       type;
         Nda::LowerString  value; // Der Wert (z. B. Literal, Operator, Identifier)
@@ -128,7 +111,6 @@ private:
     static std::string nodeTypeToString(ASTNodeType type);
 
     NdaLexer               &mLexer;
-    ParserState              mState;
     NdaParser::ASTNodePtr mCurrentNode;
 };
 
