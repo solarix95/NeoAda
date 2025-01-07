@@ -35,6 +35,9 @@ struct Runnable
     int               column;
 
     NdaVariant       *variantCache;
+    int               symbolIndex;
+    int               symbolScope;
+    bool              symbolIsGlobal;
 
     Runnable(int l, int c, int ccount, const std::string& v = "");
     Runnable(int l, int c, int ccount, const Nda::LowerString& v);

@@ -35,7 +35,7 @@ using PrcCallback   = std::function<bool (const FncValues&)>;
 
 struct FunctionEntry {
     std::string        returnType;
-    FncParameters parameters;
+    FncParameters      parameters;
 
     std::shared_ptr<NdaParser::ASTNode> block;          // NeoAda-Code
     Nda::Runnable                  *callBlock;
@@ -62,6 +62,8 @@ public:
     bool              bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // c++ procedure callback
 
     bool              bind(const std::string &name, const Nda::FncParameters &parameters, const NdaParser::ASTNodePtr &block);
+    bool              bind(const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block);
+
 
     // Runtime
     bool               contains(const std::string &name, const NadaValues &parameters);

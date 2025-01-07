@@ -66,10 +66,22 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
         ret->call = &NdaInterpreter::runLoadAddon;
         break;
     case NdaParser::ASTNodeType::Procedure:
-        ret->call = &NdaInterpreter::runDefineProcedure;
+        assert(node->children.size() >= 2);
+        if (node->children[0]->type == NdaParser::ASTNodeType::MethodContext) {
+            assert(node->children[1]->type == NdaParser::ASTNodeType::FormalParameters);
+            assert(node->children[2]->type == NdaParser::ASTNodeType::Block);
+            ret->call = &NdaInterpreter::runDefineInstanceProcedure;
+        } else
+            ret->call = &NdaInterpreter::runDefineSingleProcedure;
         break;
     case NdaParser::ASTNodeType::Function:
-        assert(0);
+        assert(node->children.size() >= 2);
+        if (node->children[0]->type == NdaParser::ASTNodeType::MethodContext) {
+            assert(node->children[1]->type == NdaParser::ASTNodeType::FormalParameters);
+            assert(node->children[2]->type == NdaParser::ASTNodeType::Block);
+            ret->call = &NdaInterpreter::runDefineInstanceFunction;
+        } else
+            ret->call = &NdaInterpreter::runDefineSingleFunction;
         break;
     case NdaParser::ASTNodeType::Block:
         if (node->parent->type == NdaParser::ASTNodeType::WhileLoop)
@@ -197,6 +209,12 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
         ret->type = Nda::CallNOP;
         break;
     case NdaParser::ASTNodeType::FormalParameters:
+        ret->type = Nda::CallNOP;
+        break;
+    case NdaParser::ASTNodeType::FormalParameterMode:
+        ret->type = Nda::CallNOP;
+        break;
+    case NdaParser::ASTNodeType::ReturnType:
         ret->type = Nda::CallNOP;
         break;
     default:
@@ -883,7 +901,15 @@ void NdaInterpreter::run(Nda::Runnable *node)
         mState->ret().fromString(mState->stringType(),node->value.displayValue);
     } break;
     case Nda::NcIdentifier: {
-        auto *value = mState->valuePtr(node->value.lowerValue);
+
+        if (node->symbolIndex < 0) {
+            if (!mState->find(node->value.lowerValue,node->symbolIndex, node->symbolScope, node->symbolIsGlobal)) {
+                assert(0); // TODO: runtime error
+            }
+        }
+        auto *value = mState->valuePtr(node->symbolIndex, node->symbolScope, node->symbolIsGlobal);
+
+        // auto *value = mState->valuePtr(node->value.lowerValue);
         if (value)
             mState->ret().fromReference(mState->referenceType(),value);
         else // TODO: Runtime-Error?
@@ -1625,9 +1651,115 @@ void NdaInterpreter::runLoadAddon( Nda::Runnable *node)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NdaInterpreter::runDefineProcedure( Nda::Runnable *node)
+void NdaInterpreter::runDefineInstanceProcedure( Nda::Runnable *node)
 {
-    assert(0);
+    assert(node->childrenCount == 3);
+
+    std::string name     = node->value.lowerValue;
+    std::string typeName = node->children[0]->value.lowerValue;
+
+    auto parameters = node->children[1];
+    auto block      = node->children[2];
+
+    Nda::FncParameters fncParameters;
+    for (int i=0; i<parameters->childrenCount; i++) {
+        assert(parameters[i].childrenCount >= 1);
+        Nda::ParameterMode mode = Nda::InMode;
+        if (parameters[i].childrenCount == 2) {
+            // assert(parameters[i].children[1]->type == NdaParser::ASTNodeType::FormalParameterMode);
+            mode = parameters[i].children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
+        }
+        fncParameters.push_back({parameters[i].value.lowerValue,parameters[i].children[0]->value.lowerValue,mode});
+    }
+
+    mState->bind(typeName,name,fncParameters,block);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runDefineSingleProcedure(Nda::Runnable *node)
+{
+    assert(node->childrenCount == 2);
+
+    std::string name     = node->value.lowerValue;
+
+    auto parameters = node->children[0];
+    auto block      = node->children[1];
+
+    Nda::FncParameters fncParameters;
+    for (int i=0; i<parameters->childrenCount; i++) {
+        assert(parameters[i].childrenCount >= 1);
+        auto *p = parameters[0].children[0];
+
+        Nda::ParameterMode mode = Nda::InMode;
+        if (p->childrenCount == 2) {
+            // assert(parameters[i].children[1]->type == NdaParser::ASTNodeType::FormalParameterMode);
+            mode = p->children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
+        }
+
+        fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue,mode});
+    }
+
+    mState->bind("",name,fncParameters,block);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runDefineInstanceFunction(Nda::Runnable *node)
+{
+    assert(node->childrenCount == 3);
+
+    std::string name     = node->value.lowerValue;
+    std::string typeName = node->children[0]->value.lowerValue;
+
+    auto parameters = node->children[1];
+    auto returntype = node->children[2];
+    auto block      = node->children[3];
+
+    Nda::FncParameters fncParameters;
+    for (int i=0; i<parameters->childrenCount; i++) {
+        assert(parameters[i].childrenCount >= 1);
+        auto *p = parameters[0].children[0];
+
+        Nda::ParameterMode mode = Nda::InMode;
+        if (p->childrenCount == 2) {
+            // assert(parameters[i].children[1]->type == NdaParser::ASTNodeType::FormalParameterMode);
+            mode = p->children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
+        }
+
+        fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue,mode});
+    }
+
+    mState->bind("",name,fncParameters,block);
+
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runDefineSingleFunction(Nda::Runnable *node)
+{
+    assert(node->childrenCount == 3);
+
+    std::string name     = node->value.lowerValue;
+
+    auto parameters = node->children[0];
+    auto returntype = node->children[1];
+    auto block      = node->children[2];
+
+    Nda::FncParameters fncParameters;
+    for (int i=0; i<parameters->childrenCount; i++) {
+        assert(parameters[i].childrenCount >= 1);
+        auto *p = parameters[0].children[0];
+
+        Nda::ParameterMode mode = Nda::InMode;
+        if (p->childrenCount == 2) {
+            // assert(parameters[i].children[1]->type == NdaParser::ASTNodeType::FormalParameterMode);
+            mode = p->children[1]->value.lowerValue == "out" ? Nda::OutMode : Nda::InMode;
+        }
+
+        fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue,mode});
+    }
+
+    mState->bind("",name,fncParameters,block);
+
 }
 
 //-------------------------------------------------------------------------------------------------

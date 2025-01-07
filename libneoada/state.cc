@@ -151,6 +151,13 @@ bool NdaState::bind(const std::string &type, const std::string &name, const Nda:
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NdaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block)
+{
+    assert(!name.empty());
+    return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block);
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NdaState::hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters)
 {
     return mFunctions.contains(type.empty() ? name : BUILD_METHOD(type,name),parameters);
@@ -217,6 +224,48 @@ bool NdaState::find(const std::string &symbolName, Nda::Symbol **symbol) const
     return false;
 }
 
+//-------------------------------------------------------------------------------------------------
+bool NdaState::find(const std::string &symbolName, int &index, int &scope, bool &isGlobal) const
+{
+    // First priority: current function scope:
+    if (!mCallStack.empty()) {
+        const auto& currentFrame = mCallStack.back();
+
+        /*
+        for (auto it = currentFrame->rbegin(); it != currentFrame->rend(); ++it) {
+            if ((*it)->get2(symbolName,symbol)) {
+                return true;
+            }
+        }
+        */
+        for (int i=(*currentFrame).size()-1; i >= 0; i-- ) {
+            if ((index = (*currentFrame)[i]->indexOf(symbolName)) >= 0) {
+                scope    = i;
+                isGlobal = false;
+                return true;
+            }
+        }
+    }
+
+    // second: globals:
+    /*
+    for (auto it = mGlobals.rbegin(); it != mGlobals.rend(); ++it) {
+        if ((*it)->get2(symbolName,symbol)) {
+            return true;
+        }
+    }
+    */
+    for (int i=mGlobals.size()-1; i >= 0; i-- ) {
+        if ((index = mGlobals[i]->indexOf(symbolName)) >= 0) {
+            scope    = i;
+            isGlobal = true;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 //-------------------------------------------------------------------------------------------------
 NdaVariant NdaState::value(const std::string &symbolName) const
@@ -230,6 +279,7 @@ NdaVariant NdaState::value(const std::string &symbolName) const
 //-------------------------------------------------------------------------------------------------
 NdaVariant &NdaState::valueRef(const std::string &symbolName)
 {
+    assert(!symbolName.empty());
     Nda::Symbol *symbol;
     bool done = find(symbolName,&symbol);
     assert(done);
@@ -242,6 +292,19 @@ NdaVariant *NdaState::valuePtr(const std::string &symbolName)
     Nda::Symbol *symbol;
     bool done = find(symbolName,&symbol);
     assert(done);
+    return symbol->value;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant *NdaState::valuePtr(int index, int scope, bool isGlobal)
+{
+    Nda::Symbol *symbol;
+
+    if (isGlobal)
+        mGlobals[scope]->lookUp(index,&symbol);
+    else
+        (*mCallStack.back())[scope]->lookUp(index,&symbol);
+
     return symbol->value;
 }
 

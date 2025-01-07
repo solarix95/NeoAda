@@ -40,10 +40,12 @@ public:
     inline Scope scope() const { return mScope; }
 
     bool contains(const std::string& name) const;
+    int  indexOf(const std::string& name) const;
 
     bool add(const Nda::Symbol &symbol);
-    bool get(const std::string& name, Nda::Symbol &symbol) const;
+    // bool get(const std::string& name, Nda::Symbol &symbol) const;
     bool get2(const std::string& name, Nda::Symbol **symbol) const;
+    void lookUp(int index, Nda::Symbol **symbol) const;
     bool initValue(const std::string& name);
 
 private:
@@ -57,8 +59,9 @@ private:
         }
     };
 
-    std::unordered_map<std::string, Nda::Symbol*> mTable;
-    Scope                                       mScope;
+    // std::unordered_map<std::string, Nda::Symbol*> mTable;
+    std::vector<Nda::Symbol*>   mTable;
+    Scope                       mScope;
 };
 
 using NadaSymbolTables = std::vector<NadaSymbolTable*>;

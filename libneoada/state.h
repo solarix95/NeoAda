@@ -36,6 +36,7 @@ public:
     bool               bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // function
     bool               bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // procedure
     bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block);
+    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block);
     bool               hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters);
     Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
 
@@ -44,10 +45,12 @@ public:
     bool               bindPrc(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb);
 
     bool               find(const std::string &symbolName,Nda::Symbol **symbol) const;
+    bool               find(const std::string &symbolName,int &index, int &scope, bool &isGlobal) const;
 
     NdaVariant          value(const std::string &symbolName) const;
     NdaVariant         &valueRef(const std::string &symbolName);
     NdaVariant         *valuePtr(const std::string &symbolName);
+    NdaVariant         *valuePtr(int index, int scope, bool isGlobal);
 
     // Volatile interface
     // Volatile Callbacks

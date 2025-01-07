@@ -57,6 +57,19 @@ bool FunctionTable::bind(const std::string &name, const Nda::FncParameters &para
 }
 
 //-------------------------------------------------------------------------------------------------
+bool FunctionTable::bind(const std::string &name, const FncParameters &parameters,Runnable *block)
+{
+    Nda::OverloadedFunction &variants = mFunctions[name];
+    variants.functionName = name;
+
+    // TODO: check if already there..
+    variants.overloads.push_back(Nda::FunctionEntry{"",parameters,nullptr, block, nullptr, nullptr});
+
+    return true;
+
+}
+
+//-------------------------------------------------------------------------------------------------
 bool FunctionTable::contains(const std::string &name, const NadaValues &parameters)
 {
     std::string lowerName = Nda::toLower(name);
