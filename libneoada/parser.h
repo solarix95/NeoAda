@@ -57,10 +57,9 @@ public:
 
         int                                   line;
         int                                   column;
-        NdaVariant                           *variantCache;
 
         ASTNode(ASTNodeType type, int l, int c, const std::string& value = "")
-            : type(type), value(value), line(l), column(c), variantCache(nullptr) {}
+            : type(type), value(value), line(l), column(c) {}
         ~ASTNode();
 
         std::string serialize(int depth = 0) const;

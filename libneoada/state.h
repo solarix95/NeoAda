@@ -77,13 +77,14 @@ public:
     bool               inLoopScope() const;
     bool               inLoopScope(const NadaSymbolTables &tables) const;
 
-
-    inline NdaVariant  &ret() { return mRetValue; }
+    inline NdaVariant  &ret()  { return mRetValue; }
 
 private:
     void destroy();
 
     NdaVariant         mRetValue;
+
+
     NadaSymbolTables   mGlobals;
     NadaStackFrames    mCallStack;
 

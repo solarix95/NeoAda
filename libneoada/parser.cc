@@ -609,8 +609,6 @@ std::string NdaParser::nodeTypeToString(ASTNodeType type)
 //-------------------------------------------------------------------------------------------------
 NdaParser::ASTNode::~ASTNode()
 {
-    if (variantCache)
-        delete variantCache;
 }
 
 std::string NdaParser::ASTNode::serialize(int depth) const

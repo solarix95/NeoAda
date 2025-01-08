@@ -30,15 +30,6 @@ private:
         ContinueState
     };
 
-    NdaVariant  &executeState(const NdaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &executeNumber(const NdaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &executeForLoopRange(const NdaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &evaluateBinaryOperator(const NdaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &evaluateUnaryOperator(const NdaParser::ASTNodePtr &node, NdaState *state);
-    NdaVariant  &executeFunctionCall(const NdaParser::ASTNodePtr &node, NdaState *state);
-    void        defineProcedure(const NdaParser::ASTNodePtr &node, NdaState *state);
-    void        defineFunction(const NdaParser::ASTNodePtr &node, NdaState *state);
-
     void run(Nda::Runnable *node);
     void runProgramm(Nda::Runnable *node);
     void runLoopBlock(Nda::Runnable *node);
