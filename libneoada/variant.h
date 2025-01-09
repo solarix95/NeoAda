@@ -72,9 +72,7 @@ public:
     void              reverseList();
     void              clearList();
 
-    // String interface
-    const std::string &cStringValue() const;
-
+    // generic string interface
     bool        setString(const std::string &newValue);
     std::string toString() const;
     Nda::Type   type() const;

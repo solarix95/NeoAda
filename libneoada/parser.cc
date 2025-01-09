@@ -785,7 +785,6 @@ NdaParser::ASTNodePtr NdaParser::parsePrimary()
         node = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator, mLexer.line(), mLexer.column(),unaryOperator);
         ASTNode::addChild(node,term);
     }
-
     return node;
 }
 

@@ -169,7 +169,6 @@ private slots:
 
     void test_interpreter_static_method();
 
-
     void test_api_evaluate_Literals();
     void test_api_evaluate_Length();
     void test_api_evaluate_Equal();
@@ -221,8 +220,22 @@ private slots:
     void test_api_runtime_AdaList_Clear();
     void test_api_runtime_AdaList_Clear_Append();
 
-    // runtime LIST addons
+    // runtime String addons
     void test_api_runtime_AdaString_Length();
+    void test_api_runtime_AdaString_Append();
+    void test_api_runtime_AdaString_Insert();
+    void test_api_runtime_AdaString_ToUppper();
+    void test_api_runtime_AdaString_ToLower();
+    void test_api_runtime_AdaString_Uppper();
+    void test_api_runtime_AdaString_Lower();
+    void test_api_runtime_AdaString_Contains();
+    void test_api_runtime_AdaString_IndexOf();
+    void test_api_runtime_AdaString_Trim();
+    void test_api_runtime_AdaString_Trimmed();
+    void test_api_runtime_AdaString_Chop1();
+    void test_api_runtime_AdaString_Chop2();
+
+
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -3553,7 +3566,249 @@ void TstParser::test_api_runtime_AdaString_Length()
     auto ret = r.runScript(script);
 
     QVERIFY(ret.toInt64() == 6);
+}
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Append()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "123456";
+
+    x.append("789");
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "123456789");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Insert()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "123789";
+
+    x.insert(3,"456");
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "123456789");
+
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_ToUppper()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    return x.toUpper();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "NEOADA");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_ToLower()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    return x.toLower();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "neoada");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Uppper()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    x.upper();
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "NEOADA");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Lower()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    x.lower();
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "neoada");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Contains()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    return x.contains("Ada");
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toBool() == true);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_IndexOf()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    return x.indexOf("Ada");
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 3);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Trim()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "  NeoAda  ";
+
+    x.trim();
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "NeoAda");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Trimmed()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "  NeoAda  ";
+
+    return x.trimmed();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "NeoAda");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Chop1()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda  ";
+
+    x.chop(2);
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "NeoAda");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Chop2()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda  ";
+
+    x.chop(27);
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "");
 }
 
 //-------------------------------------------------------------------------------------------------
