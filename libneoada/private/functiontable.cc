@@ -70,7 +70,7 @@ bool FunctionTable::bind(const std::string &name, const FncParameters &parameter
 }
 
 //-------------------------------------------------------------------------------------------------
-bool FunctionTable::contains(const std::string &name, const NadaValues &parameters)
+bool FunctionTable::contains(const std::string &name, const NdaVariants &parameters)
 {
     std::string lowerName = Nda::toLower(name);
     if (mFunctions.count(lowerName) <= 0)
@@ -89,7 +89,7 @@ bool FunctionTable::contains(const std::string &name, const NadaValues &paramete
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::FunctionEntry &FunctionTable::symbol(const std::string &name, const NadaValues &parameters)
+Nda::FunctionEntry &FunctionTable::symbol(const std::string &name, const NdaVariants &parameters)
 {
     std::string lowerName = Nda::toLower(name);
 
@@ -110,7 +110,7 @@ Nda::FunctionEntry &FunctionTable::symbol(const std::string &name, const NadaVal
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::FncValues Nda::FunctionEntry::fncValues(const NadaValues &values) const
+Nda::FncValues Nda::FunctionEntry::fncValues(const NdaVariants &values) const
 {
     Nda::FncValues ret;
     assert(values.size() == parameters.size());

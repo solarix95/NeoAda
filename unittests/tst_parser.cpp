@@ -10,7 +10,7 @@
 #include <libneoada/state.h>
 #include <libneoada/interpreter.h>
 #include <libneoada/runtime.h>
-
+#include <libneoada/value.h>
 #include <libneoada/private/sharedstring.h>
 
 
@@ -63,6 +63,8 @@ private slots:
     void test_core_List_REF();
     void test_core_List_Contains();
     void test_core_List_Concat();
+
+    void test_core_Value_CTor();
 
 
     // Lexer Literals
@@ -208,6 +210,7 @@ private slots:
 
     void test_api_evaluate_Instance_Method1();
 
+
     // runtime LIST addons
     void test_api_runtime_AdaList_Length();
     void test_api_runtime_AdaList_Append();
@@ -234,8 +237,13 @@ private slots:
     void test_api_runtime_AdaString_Trimmed();
     void test_api_runtime_AdaString_Chop1();
     void test_api_runtime_AdaString_Chop2();
+    void test_api_runtime_AdaString_Chopped();
+    void test_api_runtime_AdaString_Slice();
+    void test_api_runtime_AdaString_Sliced();
 
-
+    // invoke API
+    void test_api_runtime_invoke_Fnc1();
+    void test_api_runtime_invoke_Fnc2();
 
     // static ERROR HANDLING
     void test_error_lexer_invalidCharacter();
@@ -610,6 +618,15 @@ void TstParser::test_core_List_Concat()
     QVERIFY(a1.listSize() == 1);
     QVERIFY(a2.listSize() == 1);
     QVERIFY(a3.listSize() == 2);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_Value_CTor()
+{
+    QVERIFY(NdaValue(23.42).toDouble()   == 23.42);
+    QVERIFY(NdaValue(9000000000).toInt64()   == 9000000000);
+    QVERIFY(NdaValue("Hello").toString() == "Hello");
+    QVERIFY(NdaValue(true).toBool()   == true);
 }
 
 /*-----------------------------------------------------------------------------------------------*\
@@ -3809,6 +3826,107 @@ void TstParser::test_api_runtime_AdaString_Chop2()
     auto ret = r.runScript(script);
 
     QVERIFY(ret.toString() == "");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Chopped()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda  ";
+
+    return x.chopped(2);
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "NeoAda");
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Slice()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    x.slice(0,3);
+
+    return x;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "Neo");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaString_Sliced()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda";
+
+    return x.sliced(0,3);
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "Neo");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_invoke_Fnc1()
+{
+    std::string script = R"(
+
+
+    function Hello() return String is
+    begin
+        return "Hello World";
+    end;
+
+
+    )";
+
+    NdaRuntime r;
+    r.runScript(script);
+
+    QVERIFY(r.invokeFnc("Hello").toString() == "Hello World");
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_invoke_Fnc2()
+{
+    std::string script = R"(
+
+
+    function Add(a : Natural; b : Natural) return Natural is
+    begin
+        return a + b;
+    end;
+
+
+    )";
+
+    NdaRuntime r;
+    r.runScript(script);
+
+    QVERIFY(r.invokeFnc("Add",NdaValue((int64_t)23),NdaValue((int64_t)42)).toInt64() == (23+42));
 }
 
 //-------------------------------------------------------------------------------------------------

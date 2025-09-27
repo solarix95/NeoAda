@@ -9,7 +9,15 @@
 //-------------------------------------------------------------------------------------------------
 NdaInterpreter::NdaInterpreter(NdaState *state)
     : mState(state)
+    , mRunnable(nullptr)
 {
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaInterpreter::~NdaInterpreter()
+{
+    if (mRunnable)
+        delete mRunnable;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -19,11 +27,15 @@ NdaVariant NdaInterpreter::execute(const NdaParser::ASTNodePtr &node, NdaState *
     if (!state && !mState)
         return NdaVariant();
 
+    if (mRunnable)
+        delete mRunnable;
+
     mExecState = RunState;
 
-    auto *runnable = prepare(node);
-    execute(runnable,state);
-    delete runnable;
+    mRunnable = prepare(node);
+    execute(mRunnable,state);
+
+    // lets keep "mRunnable" here -> later invoke!!
 
     return (state ? state : mState)->ret();
 }
@@ -230,6 +242,50 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
 }
 
 //-------------------------------------------------------------------------------------------------
+void NdaInterpreter::invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args)
+{
+    auto &fnc = mState->function(typeName,fncName,args);
+
+    if (fnc.callBlock) {
+        mState->pushStack(NadaSymbolTable::LocalScope);
+        assert(args.size() == fnc.parameters.size());
+
+        /*
+                parameter: "x"  : "any"
+                value:     "42" : Type = Natural
+
+                Push to stack   : declare x : Natural := 42;
+        */
+
+        for (int i = 0; i< (int)fnc.parameters.size(); i++) {
+            mState->define(fnc.parameters[i].name, fnc.parameters[i].type);
+            // TODO: if !define -> runtime error!
+            NdaVariant &valueRef = mState->valueRef(fnc.parameters[i].name);
+            if (fnc.parameters[i].mode == Nda::OutMode) {
+                valueRef.fromReference(mState->typeByName("reference"),&args[i]);
+            } else {
+                valueRef.assign(args[i]);
+            }
+        }
+
+        run(fnc.callBlock);
+
+        if (mExecState == ReturnState)
+            mExecState = RunState;
+
+        mState->ret().dereference();
+        mState->popStack();
+    } else {
+        auto parameters = fnc.fncValues(args);
+        if (fnc.nativeFncCallback)
+            fnc.nativeFncCallback(parameters, mState->ret());
+        else
+            fnc.nativePrcCallback(parameters);
+    }
+
+}
+
+//-------------------------------------------------------------------------------------------------
 void NdaInterpreter::run(Nda::Runnable *node)
 {
     switch(node->type) {
@@ -389,56 +445,20 @@ void NdaInterpreter::runAssignment(Nda::Runnable *node)
 //-------------------------------------------------------------------------------------------------
 void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
 {
-    NadaValues values;
+    NdaVariants values;
     for (int i=0; i<node->childrenCount; i++) {
         run(node->children[i]);
         values.push_back(mState->ret());
     }
+    const std::string &name = node->value.lowerValue;
 
-    auto &fnc = mState->function("",node->value.lowerValue,values);
-
-    if (fnc.callBlock) {
-        mState->pushStack(NadaSymbolTable::LocalScope);
-        assert(values.size() == fnc.parameters.size());
-
-        /*
-                parameter: "x"  : "any"
-                value:     "42" : Type = Natural
-
-                Push to stack   : declare x : Natural := 42;
-        */
-
-        for (int i = 0; i< (int)fnc.parameters.size(); i++) {
-            mState->define(fnc.parameters[i].name, fnc.parameters[i].type);
-            // TODO: if !define -> runtime error!
-            NdaVariant &valueRef = mState->valueRef(fnc.parameters[i].name);
-            if (fnc.parameters[i].mode == Nda::OutMode) {
-                valueRef.fromReference(mState->typeByName("reference"),&values[i]);
-            } else {
-                valueRef.assign(values[i]);
-            }
-        }
-
-        run(fnc.callBlock);
-
-        if (mExecState == ReturnState)
-            mExecState = RunState;
-
-        mState->ret().dereference();
-        mState->popStack();
-    } else {
-        auto parameters = fnc.fncValues(values);
-        if (fnc.nativeFncCallback)
-            fnc.nativeFncCallback(parameters, mState->ret());
-        else
-            fnc.nativePrcCallback(parameters);
-    }
+    invokeFnc("",name,values);
 }
 
 //-------------------------------------------------------------------------------------------------
 void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
 {
-    NadaValues values;
+    NdaVariants values;
     for (int i=0; i<node->childrenCount; i++) {
         if (node->children[i]->type == Nda::NcMethodContext)
             continue;
@@ -495,7 +515,7 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
 //-------------------------------------------------------------------------------------------------
 void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
 {
-    NadaValues values;
+    NdaVariants values;
     for (int i=0; i<node->childrenCount; i++) {
         if (node->children[i]->type == Nda::NcMethodContext)
             continue;

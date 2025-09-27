@@ -181,7 +181,7 @@ void add_AdaString_symbols(NdaState *state)
         return true;
     });
 
-    // ------------------ String.Trim() ---------------------------------------------------------
+    // ------------------ String.Trimmed() ---------------------------------------------------------
     state->bindFnc("string","trimmed",{}, [](const Nda::FncValues& args,  NdaVariant &ret) -> bool {
 
         CHECK_INSTANCE_CALL;
@@ -198,7 +198,7 @@ void add_AdaString_symbols(NdaState *state)
         return true;
     });
 
-    // ------------------ String.Upper() ---------------------------------------------------------
+    // ------------------ String.Chop() ---------------------------------------------------------
     state->bindPrc("string","chop",{{"i", "natural", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
 
         CHECK_INSTANCE_CALL;
@@ -212,6 +212,62 @@ void add_AdaString_symbols(NdaState *state)
         std::string s = self.toString();
         s = count >= s.length() ? "" : s.substr(0,s.length()-count);
         self.setString(s);
+
+        return true;
+    });
+
+    // ------------------ String.Chopped() ---------------------------------------------------------
+    state->bindFnc("string","chopped",{{"i", "natural", Nda::InMode}}, [](const Nda::FncValues& args,  NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self  = args.at("this");
+        auto count = args.at("i").toInt64();
+
+        if (self.type() != Nda::String)
+            return false;
+
+        std::string s = self.toString();
+        s = count >= s.length() ? "" : s.substr(0,s.length()-count);
+        ret.fromString(self.runtimeType(),s);
+
+        return true;
+    });
+
+    // ------------------ String.Slice() ---------------------------------------------------------
+    state->bindPrc("string","slice",{{"pos", "natural", Nda::InMode},{"n", "natural", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self  = args.at("this");
+        auto pos   = args.at("pos").toInt64();
+        auto count = args.at("n").toInt64();
+
+        if (self.type() != Nda::String)
+            return false;
+
+        std::string s = self.toString();
+        s = pos >= s.length() ? "" : s.substr(pos,count);
+        self.setString(s);
+
+        return true;
+    });
+
+    // ------------------ String.Sliced() ---------------------------------------------------------
+    state->bindFnc("string","sliced",{{"pos", "natural", Nda::InMode},{"n", "natural", Nda::InMode}}, [](const Nda::FncValues& args,  NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self  = args.at("this");
+        auto pos   = args.at("pos").toInt64();
+        auto count = args.at("n").toInt64();
+
+        if (self.type() != Nda::String)
+            return false;
+
+        std::string s = self.toString();
+        s = pos >= s.length() ? "" : s.substr(pos,count);
+        ret.fromString(self.runtimeType(),s);
 
         return true;
     });

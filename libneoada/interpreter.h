@@ -16,11 +16,14 @@ class NdaInterpreter
 {
 public:
     NdaInterpreter(NdaState *state);
+    ~NdaInterpreter();
 
     NdaVariant execute(const NdaParser::ASTNodePtr &node, NdaState *state = nullptr);
     NdaVariant execute(Nda::Runnable *node, NdaState *state = nullptr);
 
     Nda::Runnable *prepare(const NdaParser::ASTNodePtr &node);
+
+    void invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args);
 
 private:
     enum ExecState {
@@ -79,8 +82,9 @@ private:
     void evalBoolean(Nda::Runnable *node);
     void evalListLiteral(Nda::Runnable *node);
 
-    ExecState  mExecState;
-    NdaState *mState;
+    ExecState       mExecState;
+    NdaState       *mState;
+    Nda::Runnable  *mRunnable;
 };
 
 #endif // INTERPRETER_H

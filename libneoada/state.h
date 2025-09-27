@@ -5,6 +5,7 @@
 #include "private/symboltable.h"
 #include "private/functiontable.h"
 #include "parser.h"
+#include "value.h"
 
 class NdaState
 {
@@ -37,8 +38,8 @@ public:
     bool               bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // procedure
     bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block);
     bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block);
-    bool               hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters);
-    Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NadaValues &parameters);
+    bool               hasFunction(const std::string &type, const std::string &name, const NdaVariants &parameters);
+    Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NdaVariants &parameters);
 
     // methods
     bool               bindFnc(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb);
@@ -47,10 +48,15 @@ public:
     bool               find(const std::string &symbolName,Nda::Symbol **symbol) const;
     bool               find(const std::string &symbolName,int &index, int &scope, bool &isGlobal) const;
 
+    // Variant lookup
     NdaVariant          value(const std::string &symbolName) const;
     NdaVariant         &valueRef(const std::string &symbolName);
     NdaVariant         *valuePtr(const std::string &symbolName);
     NdaVariant         *valuePtr(int index, int scope, bool isGlobal);
+
+    // variant to value and vice versa
+    NdaVariant          toVariant(const NdaValue &value) const;
+    NdaValue            toValue(const NdaVariant &value) const;
 
     // Volatile interface
     // Volatile Callbacks

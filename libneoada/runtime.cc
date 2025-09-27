@@ -1,3 +1,4 @@
+#include <cassert>
 #include <iostream>
 #include <ostream>
 
@@ -14,6 +15,7 @@
 //-------------------------------------------------------------------------------------------------
 NdaRuntime::NdaRuntime()
     : mState(nullptr)
+    , mInterpreter(nullptr)
 {
     reset();
 }
@@ -28,7 +30,9 @@ NdaRuntime::~NdaRuntime()
 void NdaRuntime::reset()
 {
     destroy();
-    mState = new NdaState();
+    mState       = new NdaState();
+    mInterpreter = new NdaInterpreter(mState);
+
     mState->onWith([this](const std::string &addonName) {
         if (addonName == "ada.list")
             loadAddonAdaList();
@@ -45,11 +49,10 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
 
     NdaLexer       lexer;
     NdaParser      parser(lexer);
-    NdaInterpreter  interpreter(mState);
 
     try {
         auto ast = parser.parse(script);
-        return interpreter.execute(ast);
+        return mInterpreter->execute(ast);
     } catch (NdaException &ex) {
         if (exception)
             *exception = ex;
@@ -62,13 +65,51 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
     }
 
     return NdaVariant();
-
 }
 
 //-------------------------------------------------------------------------------------------------
 NdaState *NdaRuntime::state()
 {
     return mState;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+NdaValue NdaRuntime::invokeFnc(const std::string &fncName)
+{
+    assert(mInterpreter);
+
+    NdaVariants args;
+
+    mInterpreter->invokeFnc("", fncName, args);
+
+    return mState->toValue(mState->ret());
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaValue NdaRuntime::invokeFnc(const std::string &fncName, const NdaValue &arg1)
+{
+    assert(mInterpreter);
+
+    NdaVariants args;
+    args.push_back(mState->toVariant(arg1));
+
+    mInterpreter->invokeFnc("", fncName, args);
+    return mState->toValue(mState->ret());
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaValue NdaRuntime::invokeFnc(const std::string &fncName, const NdaValue &arg1, const NdaValue &arg2)
+{
+    assert(mInterpreter);
+
+    NdaVariants args;
+    args.push_back(mState->toVariant(arg1));
+    args.push_back(mState->toVariant(arg2));
+
+    mInterpreter->invokeFnc("", fncName, args);
+
+    return mState->toValue(mState->ret());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -90,6 +131,11 @@ void NdaRuntime::loadAddonAdaList()
 //-------------------------------------------------------------------------------------------------
 void NdaRuntime::destroy()
 {
+    if (mInterpreter) {
+        delete mInterpreter;
+        mInterpreter = nullptr;
+    }
+
     if (mState) {
         delete mState;
         mState = nullptr;

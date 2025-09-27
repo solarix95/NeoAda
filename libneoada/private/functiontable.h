@@ -42,7 +42,7 @@ struct FunctionEntry {
     FncCallback                     nativeFncCallback;   // c++ Built-in
     PrcCallback                     nativePrcCallback;   // c++ Built-in
 
-    FncValues     fncValues(const NadaValues &values) const;
+    FncValues     fncValues(const NdaVariants &values) const;
 };
 
 struct OverloadedFunction {
@@ -66,8 +66,8 @@ public:
 
 
     // Runtime
-    bool               contains(const std::string &name, const NadaValues &parameters);
-    Nda::FunctionEntry &symbol(const std::string &name, const NadaValues &parameters);
+    bool               contains(const std::string &name, const NdaVariants &parameters);
+    Nda::FunctionEntry &symbol(const std::string &name, const NdaVariants &parameters);
 
 private:
     std::unordered_map<std::string, Nda::OverloadedFunction> mFunctions;

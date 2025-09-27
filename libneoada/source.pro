@@ -23,7 +23,8 @@ HEADERS += \
     $$NEOADA_PATH/runtime.h \
     $$NEOADA_PATH/addons/AdaList.h \
     $$NEOADA_PATH/addons/AdaString.h \
-    $$NEOADA_PATH/private/runnable.h
+    $$NEOADA_PATH/private/runnable.h \
+    $$NEOADA_PATH/value.h
 
 SOURCES += \
     $$NEOADA_PATH/private/type.cc \
@@ -44,7 +45,8 @@ SOURCES += \
     $$NEOADA_PATH/runtime.cc \
     $$NEOADA_PATH/addons/AdaList.cc \
     $$NEOADA_PATH/addons/AdaString.cc \
-    $$NEOADA_PATH/private/runnable.cc
+    $$NEOADA_PATH/private/runnable.cc \
+    $$NEOADA_PATH/value.cc
 
 DISTFILES += \
     $$NEOADA_PATH/ebnf.txt

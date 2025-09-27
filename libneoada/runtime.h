@@ -3,9 +3,11 @@
 
 #include <string>
 #include "variant.h"
+#include "value.h"
 
 class NdaException;
 class NdaState;
+class NdaInterpreter;
 
 class NdaRuntime
 {
@@ -18,15 +20,20 @@ public:
     NdaVariant runFile(const std::string &fileName, NdaException *e = nullptr);
     NdaState  *state();
 
-    void loadAddonAdaString();
-    void loadAddonAdaList();
+    NdaValue   invokeFnc(const std::string &fncName);    // function fncName(arg1: any) return any;
+    NdaValue   invokeFnc(const std::string &fncName, const NdaValue &arg1);    // function fncName(arg1: any) return any;
+    NdaValue   invokeFnc(const std::string &fncName, const NdaValue &arg1, const NdaValue &arg2);
 
+    void       invokePrc(const std::string &prcName, const NdaValue &arg1);    // function fncName(arg1: any) return any;
 
+    virtual void loadAddonAdaString();
+    virtual void loadAddonAdaList();
 
 private:
     void destroy();
 
-    NdaState *mState;
+    NdaState        *mState;
+    NdaInterpreter  *mInterpreter;
 };
 
 #endif // NDARUNTIME_H

@@ -308,6 +308,41 @@ bool NdaVariant::toBool(bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
+double NdaVariant::toDouble(bool *ok) const
+{
+    if (ok) *ok = false;
+    switch (myType()) {
+    case Nda::Undefined: return 0; break;
+    case Nda::Reference: return cInternalReference()->toDouble(ok);
+    case Nda::Any:       return 0; break;
+    case Nda::Number:
+        if (ok) *ok = true;
+        return mValue.uDouble;
+        break;
+    case Nda::Natural:
+        if (ok) *ok = true;
+        return (double)mValue.uInt64;
+        break;
+    case Nda::Supernatural:
+        if (ok) *ok = true;
+        return (double)mValue.uUInt64;
+        break;
+    case Nda::Boolean:
+        if (ok) *ok = true;
+        return (double)mValue.uByte;
+        break;
+    case Nda::Byte:
+        if (ok) *ok = true;
+        return (double)mValue.uByte;
+        break;
+
+    case Nda::String:    return 0.0; break;
+
+    }
+    return 0.0;
+}
+
+//-------------------------------------------------------------------------------------------------
 int64_t NdaVariant::toInt64(bool *ok) const
 {
     if (ok) *ok = false;

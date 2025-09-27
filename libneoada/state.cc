@@ -158,13 +158,13 @@ bool NdaState::bind(const std::string &type, const std::string &name, const Nda:
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaState::hasFunction(const std::string &type, const std::string &name, const NadaValues &parameters)
+bool NdaState::hasFunction(const std::string &type, const std::string &name, const NdaVariants &parameters)
 {
     return mFunctions.contains(type.empty() ? name : BUILD_METHOD(type,name),parameters);
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::FunctionEntry &NdaState::function(const std::string &type, const std::string &name, const NadaValues &parameters)
+Nda::FunctionEntry &NdaState::function(const std::string &type, const std::string &name, const NdaVariants &parameters)
 {
     return mFunctions.symbol(type.empty() ? name : BUILD_METHOD(type,name),parameters);
 }
@@ -306,6 +306,51 @@ NdaVariant *NdaState::valuePtr(int index, int scope, bool isGlobal)
         (*mCallStack.back())[scope]->lookUp(index,&symbol);
 
     return symbol->value;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaState::toVariant(const NdaValue &value) const
+{
+    NdaVariant ret;
+
+    switch(value.type()) {
+        case Nda::String:
+            ret.fromString(stringType(),value.toString());
+            break;
+        case Nda::Number:
+            ret.fromNumber(numberType(),value.toDouble());
+            break;
+        case Nda::Natural:
+            ret.fromNatural(naturalType(),value.toInt64());
+            break;
+        case Nda::Boolean:
+            ret.fromNatural(booleanType(),value.toBool());
+            break;
+        default:
+            assert(0);
+    }
+    return ret;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaValue NdaState::toValue(const NdaVariant &value) const
+{
+    switch(value.type()) {
+    case Nda::String:
+        return NdaValue(value.toString());
+        break;
+    case Nda::Number:
+        return NdaValue(value.toDouble());
+        break;
+    case Nda::Natural:
+        return NdaValue(value.toInt64());
+        break;
+    case Nda::Boolean:
+        return NdaValue(value.toBool());
+        break;
+    default:
+        assert(0);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------

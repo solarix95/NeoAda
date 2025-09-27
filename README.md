@@ -1,6 +1,6 @@
 # NeoAda
 
-NeoAda is a lightweight scripting language inspired by Ada95, designed for simplicity, readability, and integration with compiled languages like C++.
+NeoAda is a lightweight scripting language inspired by the Ada programmiung language, designed for simplicity, readability, and integration with compiled languages like C++.
 
 ## **Features**
 
@@ -10,17 +10,16 @@ NeoAda is a lightweight scripting language inspired by Ada95, designed for simpl
 - **Control structures:** Includes `if`, `for`, `while`, and Ada95-style `break when` and `continue when` constructs.
 - **Extendable:** Designed for integration into compiled languages with bindings to C++.
 
+## **Highlights**
+- **Volatile datatypes:** Offers simple read/write callbacks to C++ 
+- **Any datatype:** auto datatype as in C++
+
 ## **Hello, World!**
 Here’s a simple NeoAda program to get started:
 
 ```neoada
-function string:length() return Natural is
-begin
-    return 11;
-end;
-
 declare msg : string := "Hello, world!";
-print(msg.length());
+print(msg);
 ```
 
 ## **Core Syntax Overview**
