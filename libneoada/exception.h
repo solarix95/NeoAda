@@ -30,9 +30,11 @@ enum Error {
     // Runtime Exceptions
     // ----------------------------------------------
     UnknownSymbol,
+    UnknownFunctionCall,
     DeclarationError,
     AssignmentError,
     IllegalComparison,
+    DivisionByZero,
     OperatorTypeError,
     InvalidAssignment,
     InvalidCondition,

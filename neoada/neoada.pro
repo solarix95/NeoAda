@@ -9,7 +9,7 @@ QT -= widgets
 CONFIG += debug
 
 NEOADA_PATH = ../libneoada
-include(../libneoada/source.pro)
+include(../libneoada/libneoada.pro)
 
 # Input
 SOURCES += main.cc

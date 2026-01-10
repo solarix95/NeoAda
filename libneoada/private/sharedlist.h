@@ -19,7 +19,6 @@ public:
 
 private:
     std::vector<NdaVariant>  mArray;
-
 };
 
 }

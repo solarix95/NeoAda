@@ -9,5 +9,5 @@ INCLUDEPATH += ../
 TEMPLATE = app
 
 NEOADA_PATH = ../libneoada
-include(../libneoada/source.pro)
+include(../libneoada/libneoada.pro)
 SOURCES +=  tst_parser.cpp

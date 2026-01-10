@@ -15,7 +15,10 @@ public:
     NdaRuntime();
     virtual ~NdaRuntime();
 
-    void       reset();
+    void        reset();
+    bool        hasError() const;
+    std::string lastError() const;
+
     NdaVariant runScript(const std::string &script, NdaException *e = nullptr);
     NdaVariant runFile(const std::string &fileName, NdaException *e = nullptr);
     NdaState  *state();
@@ -34,6 +37,8 @@ private:
 
     NdaState        *mState;
     NdaInterpreter  *mInterpreter;
+
+    std::string      mLastError;
 };
 
 #endif // NDARUNTIME_H

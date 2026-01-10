@@ -3,9 +3,6 @@
 #include <sstream>
 #include <string>
 
-#include <lexer.h>
-#include <parser.h>
-#include <interpreter.h>
 #include <runtime.h>
 #include <neoadaapi.h>
 

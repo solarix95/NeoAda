@@ -1,5 +1,6 @@
 #include "neoadaapi.h"
 #include <QtTest>
+#include <QDebug>
 
 #include <iostream>
 #include <sstream>
@@ -64,6 +65,8 @@ private slots:
     void test_core_List_Contains();
     void test_core_List_Concat();
 
+    void test_core_Dict_COW();
+
     void test_core_Value_CTor();
 
 
@@ -74,7 +77,9 @@ private slots:
     void test_lexer_Boolean();
     void test_lexer_Strings();
     void test_lexer_Range();
+    void test_lexer_ArrayInit();
     void test_lexer_ArrayAccess();
+    void test_lexer_DictInit();
     void test_lexer_Comments();
     void test_lexer_Expression1();
     void test_lexer_Expression2();
@@ -87,6 +92,7 @@ private slots:
     void test_parser_Declaration4_List();
     void test_parser_Declaration5_List_Init1();
     void test_parser_Declaration5_List_Init2();
+    void test_parser_Declaration6_Expression();
 
     void test_parser_With();
 
@@ -139,7 +145,8 @@ private slots:
     void test_parser_ElseIf2();
     void test_parser_ElseIf3();
 
-    void test_parser_return();
+    void test_parser_return1();
+    void test_parser_return2();
 
     void test_parser_Procedure1();
     void test_parser_Procedure2();
@@ -166,6 +173,11 @@ private slots:
     void test_interpreter_Return1();
     void test_interpreter_Return2();
     void test_interpreter_Return3();
+    void test_interpreter_Return4();
+    void test_interpreter_Return5_Natural();
+    void test_interpreter_Return6_Supernatural();
+    void test_interpreter_Return7_Number();
+    void test_interpreter_Return8_Byte();
 
     void test_interpreter_Volatile_CTor();
 
@@ -261,6 +273,11 @@ private slots:
     // runtime ERROR HANDLING
     void test_error_interpreter_stringAssignment();
     void test_error_interpreter_boolAssignment();
+    void test_error_runtime_symbolLookup();
+    void test_error_runtime_divisionByZero();
+
+
+
 
 
 };
@@ -462,9 +479,9 @@ void TstParser::test_core_List_COW()
         NdaVariant a1;
         a1.initType(state.typeByName("list"));
 
-        QCOMPARE(a1.listSize(), 0);
+        QCOMPARE(a1.lengthOperator(), 0);
         a1.appendToList(vs);
-        QCOMPARE(a1.listSize(), 1);
+        QCOMPARE(a1.lengthOperator(), 1);
         QVERIFY(a1.readAccess(0).toString() == "1");
 
         vs.fromString(state.typeByName("string"), "0");
@@ -474,7 +491,7 @@ void TstParser::test_core_List_COW()
         a1.takeFromList(0);
         QVERIFY(a1.readAccess(0).toString() == "1");
         a1.takeFromList(0);
-        QCOMPARE(a1.listSize(), 0);
+        QCOMPARE(a1.lengthOperator(), 0);
     }
 
     { // shared list
@@ -620,6 +637,96 @@ void TstParser::test_core_List_Concat()
     QVERIFY(a3.listSize() == 2);
 }
 
+void TstParser::test_core_Dict_COW()
+{
+    NdaState   state;
+    NdaVariant vkey;
+    vkey.fromString(state.typeByName("string"),"1");
+    NdaVariant vvalue;
+    vvalue.fromString(state.typeByName("string"),"2");
+
+    { // append, insert remove
+        NdaVariant a1;
+        a1.initType(state.typeByName("dict"));
+
+        QCOMPARE(a1.dictSize(), 0);
+
+        a1.appendToDict(vkey,vvalue);
+
+        QCOMPARE(a1.dictSize(), 1);
+        QCOMPARE(a1.contains(vkey), true);
+        QCOMPARE(a1.contains(vvalue), false);
+
+        QCOMPARE(a1.dictValue(vkey).toString(),vvalue.toString());
+
+        a1.takeFromDict(vkey);
+    }
+
+    { // shared dict
+        NdaVariant a1;
+        a1.initType(state.typeByName("dict"));
+
+        {
+            NdaVariant a2;
+            a2.initType(state.typeByName("dict"));
+            a2.appendToDict(vkey, vvalue);
+
+            QCOMPARE(a1.dictSize(), 0);
+            QCOMPARE(a2.dictSize(), 1);
+
+            a1 = a2;
+            QCOMPARE(a1.dictSize(), 1);
+        } // destroy a2
+
+        QCOMPARE(a1.dictSize(), 1);
+        QCOMPARE(a1.dictValue(vkey).toString(),vvalue.toString());
+    }
+
+    { // copy-on-write: source changes
+        NdaVariant a1;
+        a1.initType(state.typeByName("dict"));
+
+        NdaVariant a2;
+        a2.initType(state.typeByName("dict"));
+
+        vvalue.fromString(state.typeByName("string"),"2");
+        a1.appendToDict(vkey, vvalue);
+
+        a2 = a1;
+        QCOMPARE(a1.dictValue(vkey).toString(),"2");
+        QCOMPARE(a2.dictValue(vkey).toString(),"2");
+
+        vvalue.fromString(state.typeByName("string"),"42");
+        a1.appendToDict(vkey, vvalue);
+
+        qDebug() << QString::fromStdString(a1.dictValue(vkey).toString()) << QString::fromStdString(a2.dictValue(vkey).toString());
+
+        QVERIFY(a1.dictValue(vkey).toString() == "42");
+        QVERIFY(a2.dictValue(vkey).toString() == "2");
+    }
+
+    { // copy-on-write: target changes
+        NdaVariant a1;
+        a1.initType(state.typeByName("dict"));
+
+        NdaVariant a2;
+        a2.initType(state.typeByName("dict"));
+
+        vvalue.fromString(state.typeByName("string"),"2");
+        a1.appendToDict(vkey, vvalue);
+
+        a2 = a1;
+        QCOMPARE(a1.dictValue(vkey).toString(),"2");
+        QCOMPARE(a2.dictValue(vkey).toString(),"2");
+
+        vvalue.fromString(state.typeByName("string"),"42");
+        a2.appendToDict(vkey, vvalue);
+
+        QVERIFY(a1.dictValue(vkey).toString() == "2");
+        QVERIFY(a2.dictValue(vkey).toString() == "42");
+    }
+}
+
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_core_Value_CTor()
 {
@@ -640,16 +747,19 @@ void TstParser::test_lexer_Numbers()
     NdaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.setScript("123 1_000.0 42E+3 16#FF# 2#1010#E+2");
+    lexer.setScript("123 1_000.0 42E+3 16#FF# 2#1010#E+2 0_n 0_u 0_d");
     while (lexer.nextToken())
         results.push_back(lexer.token());
 
-    QVERIFY(results.size() == 5);
+    QVERIFY(results.size() == 8);
     QVERIFY(results[0] == "123");
     QVERIFY(results[1] == "1_000.0");
     QVERIFY(results[2] == "42E+3");
     QVERIFY(results[3] == "16#FF#");
     QVERIFY(results[4] == "2#1010#E+2");
+    QVERIFY(results[5] == "0_n"); // Natural
+    QVERIFY(results[6] == "0_u"); // Supernatural
+    QVERIFY(results[7] == "0_d"); // Supernatural
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -745,6 +855,24 @@ void TstParser::test_lexer_Range()
     QVERIFY(results[2] == "10");
 }
 
+void TstParser::test_lexer_ArrayInit()
+{
+    NdaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("[0,1]");
+
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 5);
+    QVERIFY(results[0] == "[");
+    QVERIFY(results[1] == "0");
+    QVERIFY(results[2] == ",");
+    QVERIFY(results[3] == "1");
+    QVERIFY(results[4] == "]");
+}
+
 void TstParser::test_lexer_ArrayAccess()
 {
     NdaLexer lexer;
@@ -761,6 +889,28 @@ void TstParser::test_lexer_ArrayAccess()
     QVERIFY(results[2] == "7");
     QVERIFY(results[3] == "]");
     QVERIFY(results[4] == ":=");
+}
+
+void TstParser::test_lexer_DictInit()
+{
+    NdaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("{0:1,1:2}");
+
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 9);;
+    QVERIFY(results[0] == "{");
+    QVERIFY(results[1] == "0");
+    QVERIFY(results[2] == ":");
+    QVERIFY(results[3] == "1");
+    QVERIFY(results[4] == ",");
+    QVERIFY(results[5] == "1");
+    QVERIFY(results[6] == ":");
+    QVERIFY(results[7] == "2");
+    QVERIFY(results[8] == "}");
 }
 
 void TstParser::test_lexer_Comments() {
@@ -1006,6 +1156,29 @@ Node(Program, "")
         Node(Number, "7")
         Node(Number, "8")
         Node(Number, "9")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration6_Expression()
+{
+    std::string script = R"(
+        declare x : Natural := n / 7;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "x")
+    Node(Identifier, "Natural")
+    Node(BinaryOperator, "/")
+      Node(Identifier, "n")
+      Node(Number, "7")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -2050,7 +2223,7 @@ Node(Program, "")
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_parser_return()
+void TstParser::test_parser_return1()
 {
     std::string script = R"(
         return 42;
@@ -2064,6 +2237,29 @@ void TstParser::test_parser_return()
 Node(Program, "")
   Node(Return, "")
     Node(Number, "42")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_return2()
+{
+    std::string script = R"(
+        return a & "x";
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Return, "")
+    Node(BinaryOperator, "&")
+      Node(Identifier, "a")
+      Node(Literal, "x")
 )";
 
     std::string currentAST =  ast->serialize();
@@ -2659,6 +2855,80 @@ void TstParser::test_interpreter_Return3()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Return4()
+{
+    std::string script = R"(
+        return "NeoAda";
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "NeoAda");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Return5_Natural()
+{
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse("return 0_n;");
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.type() == Nda::Natural);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Return6_Supernatural()
+{
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse("return 0_u;");
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.type() == Nda::Supernatural);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Return7_Number()
+{
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse("return 0_d;");
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.type() == Nda::Number);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Return8_Byte()
+{
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse("return 0_b;");
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.type() == Nda::Byte);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_Volatile_CTor()
 {
     std::string script = R"(
@@ -2819,6 +3089,7 @@ void TstParser::test_api_evaluate_ConcatString()
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\";", state).toString()            == "NeoAda");
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \" \" & \"Ada\";", state).toString()    == "Neo Ada");
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\" = \"NeoAda\";", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("declare neo: String := \"Neo\"; return (neo & \"Ada\") = \"NeoAda\";", state).toBool() == true);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4320,6 +4591,82 @@ void TstParser::test_error_interpreter_boolAssignment()
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
         QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_runtime_symbolLookup()
+{
+    {
+        std::string script = R"(
+
+            unknownFunctionCall("42");
+
+    )";
+
+        NeoAda::Exception ex;
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
+        QVERIFY(ex.code() == Nada::Error::UnknownFunctionCall);
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_runtime_divisionByZero()
+{
+    {
+        std::string script = R"(
+
+            declare n : Natural := 42;
+            declare x : Natural := n / 0;
+
+    )";
+
+        NeoAda::Exception ex;
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
+        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
+    }
+
+    {
+        std::string script = R"(
+
+            declare n : Supernatural := 42;
+            declare x : Supernatural := n / 0;
+
+    )";
+
+        NeoAda::Exception ex;
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
+        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
+    }
+
+    {
+        std::string script = R"(
+
+            declare n : Number := 42;
+            declare x : Number := n / 0;
+
+    )";
+
+        NeoAda::Exception ex;
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
+        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
+    }
+
+    {
+        std::string script = R"(
+
+            declare n : Any := 42 / 0;
+
+    )";
+
+        NeoAda::Exception ex;
+        NdaState state;
+        NeoAda::evaluate(script, state, &ex);
+        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
     }
 }
 

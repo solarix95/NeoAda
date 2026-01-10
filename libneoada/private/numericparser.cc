@@ -1,7 +1,7 @@
 #include "numericparser.h"
+#include <limits>
 #include <cmath>
 #include <regex>
-
 
 
 std::string NadaNumericParser::removeSeparators(const std::string &str)
@@ -79,4 +79,24 @@ uint64_t NadaNumericParser::parseUBasedLiteral(const std::string &literal, bool 
 
     ok = true;
     return value;
+}
+
+bool NadaNumericParser::isInteger32(const std::string &str, long long *avalue)
+{
+    try {
+        size_t pos;
+        long long value = std::stoll(str, &pos);
+        if (pos == str.size() &&
+            value >= std::numeric_limits<int32_t>::min() &&
+            value <= std::numeric_limits<int32_t>::max())
+        {
+            if (avalue)
+                *avalue = value;
+            return true;
+        }
+    } catch (...)
+    {
+    }
+    return false;
+
 }

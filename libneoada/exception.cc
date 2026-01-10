@@ -47,9 +47,11 @@ std::string NdaException::messageByCode() const
     case Nada::Error::UnexpectedClosure:      return "Unexpected closure";
     case Nada::Error::AssignmentError:        return "Incompatible datatype";
     case Nada::Error::IllegalComparison:      return "Illegal comparison";
+    case Nada::Error::DivisionByZero:         return "Division by zero";
     case Nada::Error::OperatorTypeError:      return "Unsupported operand type(s)";
     case Nada::Error::InvalidNumericValue:    return "Invalid numeric value";
     case Nada::Error::UnknownSymbol:          return "Unknown symbol";
+    case Nada::Error::UnknownFunctionCall:    return "Unknown function call";
 
     }
     return "";

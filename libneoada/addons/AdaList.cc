@@ -17,7 +17,7 @@ void add_AdaList_symbols(NdaState *state)
 
         auto self = args.at("this");
         if (self.type() == Nda::List)
-            ret.fromNatural(state->typeByName("natural"),self.listSize());
+            ret.fromNatural(state->typeByName("natural"),self.lengthOperator());
         else
             return false;
         return true;

@@ -230,6 +230,14 @@ bool NdaLexer::parseNext()
 
             // Schritt 1: Numeral oder Base erkennen
             while (!atEnd() && (isDigit(currentChar()) || currentChar() == '_')) {
+                if (currentChar() == '_' && (nextChar() == 'n' || nextChar() == 'N'))
+                    shiftToNext();
+                if (currentChar() == '_' && (nextChar() == 'u' || nextChar() == 'U'))
+                    shiftToNext();
+                if (currentChar() == '_' && (nextChar() == 'd' || nextChar() == 'D'))
+                    shiftToNext();
+                if (currentChar() == '_' && (nextChar() == 'b' || nextChar() == 'B'))
+                    shiftToNext();
                 shiftToNext();
             }
 
@@ -303,7 +311,8 @@ bool NdaLexer::parseNext()
         // Separatoren
         if (currentChar() == ';' || currentChar() == ',' || currentChar() == '.' || currentChar() == ':' ||
             currentChar() == '(' || currentChar() == ')' ||
-            currentChar() == '[' || currentChar() == ']') {
+            currentChar() == '[' || currentChar() == ']' ||
+            currentChar() == '{' || currentChar() == '}') {
             mTokens.push_back(Token(std::string(1, currentChar()),TokenType::Separator, mRow, mColumn));
             return true;
         }

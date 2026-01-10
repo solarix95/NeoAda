@@ -242,8 +242,11 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
 }
 
 //-------------------------------------------------------------------------------------------------
-void NdaInterpreter::invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args)
+Nada::Error NdaInterpreter::invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args)
 {
+    if (!mState->hasFunction(typeName,fncName,args))
+        return Nada::Error::UnknownFunctionCall;
+
     auto &fnc = mState->function(typeName,fncName,args);
 
     if (fnc.callBlock) {
@@ -283,6 +286,7 @@ void NdaInterpreter::invokeFnc(const std::string &typeName, const std::string &f
             fnc.nativePrcCallback(parameters);
     }
 
+    return Nada::Error::NoError;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -452,7 +456,9 @@ void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
     }
     const std::string &name = node->value.lowerValue;
 
-    invokeFnc("",name,values);
+    auto error = invokeFnc("",name,values);
+    if (error != Nada::Error::NoError)
+        throw NdaException(error,node->line, node->column);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -952,7 +958,10 @@ void NdaInterpreter::runBinaryDivide(Nda::Runnable *node)
     auto right = mState->ret();
 
     bool done;
-    left = left.division(right, &done);
+    bool dbz;
+    left = left.division(right, dbz, &done);
+    if (dbz)
+        throw NdaException(Nada::Error::DivisionByZero,node->line,node->column, node->value.displayValue);
     if (!done)
         throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
 
@@ -1237,10 +1246,10 @@ void NdaInterpreter::evalNumber(Nda::Runnable *node)
         done = ret.fromNaturalLiteral(mState->typeByName("natural") ,node->value.lowerValue);
         break;
     case Nda::Supernatural:
-        done = ret.fromNaturalLiteral(mState->typeByName("supernatural") ,node->value.lowerValue);
+        done = ret.fromSNaturalLiteral(mState->typeByName("supernatural") ,node->value.lowerValue);
         break;
     case Nda::Byte:
-        done = ret.fromNaturalLiteral(mState->typeByName("byte") ,node->value.lowerValue);
+        done = ret.fromByteLiteral(mState->typeByName("byte") ,node->value.lowerValue);
         break;
     default: break;
     }

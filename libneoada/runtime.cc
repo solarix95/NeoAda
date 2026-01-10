@@ -32,6 +32,7 @@ void NdaRuntime::reset()
     destroy();
     mState       = new NdaState();
     mInterpreter = new NdaInterpreter(mState);
+    mLastError.clear();
 
     mState->onWith([this](const std::string &addonName) {
         if (addonName == "ada.list")
@@ -39,6 +40,18 @@ void NdaRuntime::reset()
         if (addonName == "ada.string")
             loadAddonAdaString();
     });
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaRuntime::hasError() const
+{
+    return !mLastError.empty();
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NdaRuntime::lastError() const
+{
+    return mLastError;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -50,17 +63,21 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
     NdaLexer       lexer;
     NdaParser      parser(lexer);
 
+    mLastError.clear();
     try {
         auto ast = parser.parse(script);
         return mInterpreter->execute(ast);
     } catch (NdaException &ex) {
+        mLastError = ex.what();
         if (exception)
             *exception = ex;
         else
             std::cerr << ex.what() << std::endl;
     } catch (const std::exception& ex) {
+        mLastError = ex.what();
         std::cerr << "NeoAda Fatal Runtime Error: " << ex.what() << std::endl;
     } catch (...) {
+        mLastError = "NeoAda Unknown Fatal Runtime Error";
         std::cerr << "NeoAda Fatal Runtime Error!" << std::endl;
     }
 

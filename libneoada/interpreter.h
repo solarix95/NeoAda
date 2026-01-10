@@ -5,6 +5,7 @@
 #include "variant.h"
 #include "state.h"
 #include "private/runnable.h"
+#include "exception.h"
 
 /*
     NadaInterpreter: main NeoAda Engine.
@@ -23,7 +24,7 @@ public:
 
     Nda::Runnable *prepare(const NdaParser::ASTNodePtr &node);
 
-    void invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args);
+    Nada::Error invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args);
 
 private:
     enum ExecState {
