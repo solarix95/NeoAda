@@ -10,7 +10,7 @@ namespace Nda {
 class SharedString : public Nda::SharedData
 {
 public:
-    SharedString(const std::string &value);
+    SharedString(const std::string &value = "");
 
     inline std::string        &value()        { return mValue; }
     inline const std::string  &cValue() const { return mValue; }

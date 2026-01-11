@@ -42,9 +42,7 @@ void NdaState::reset()
     mBooleanType = registerType("Boolean",Nda::Boolean, true); assert(mBooleanType);
     mStringType  = registerType("String",Nda::String, true);   assert(mStringType);
     mListType    = registerType("List",Nda::List, true);       assert(mListType);
-
-    registerType("Dict",Nda::Dict, true);
-
+    mDictType    = registerType("Dict",Nda::Dict, true);       assert(mDictType);
 }
 
 //-------------------------------------------------------------------------------------------------

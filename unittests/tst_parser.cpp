@@ -80,6 +80,7 @@ private slots:
     void test_lexer_ArrayInit();
     void test_lexer_ArrayAccess();
     void test_lexer_DictInit();
+    void test_lexer_DictAccess();
     void test_lexer_Comments();
     void test_lexer_Expression1();
     void test_lexer_Expression2();
@@ -93,6 +94,8 @@ private slots:
     void test_parser_Declaration5_List_Init1();
     void test_parser_Declaration5_List_Init2();
     void test_parser_Declaration6_Expression();
+
+    void test_parser_Declaration10_Dict();
 
     void test_parser_With();
 
@@ -201,6 +204,8 @@ private slots:
     void test_api_evaluate_List_Write();
     void test_api_evaluate_List_Swap();
 
+    void test_api_evaluate_Dict_Init();
+
     void test_api_evaluate_GlobalValue();
     void test_api_evaluate_ScopeValue();
     void test_api_evaluate_WhileBreak();
@@ -299,7 +304,7 @@ void TstParser::test_core_SharedString()
     QCOMPARE(s1.refCount(), 0);
 
     s1.fromString(state.typeByName("string"),"");
-    QCOMPARE(s1.refCount(), 0);
+    QCOMPARE(s1.refCount(), 1);
     QCOMPARE(s1.toString(), "");
 
     s1.fromString(state.typeByName("string"),"1");
@@ -674,8 +679,13 @@ void TstParser::test_core_Dict_COW()
             QCOMPARE(a1.dictSize(), 0);
             QCOMPARE(a2.dictSize(), 1);
 
+            QCOMPARE(a1.refCount(), 1);
+            QCOMPARE(a2.refCount(), 1);
+
             a1 = a2;
             QCOMPARE(a1.dictSize(), 1);
+            QCOMPARE(a1.refCount(), 2);
+            QCOMPARE(a2.refCount(), 2);
         } // destroy a2
 
         QCOMPARE(a1.dictSize(), 1);
@@ -692,14 +702,21 @@ void TstParser::test_core_Dict_COW()
         vvalue.fromString(state.typeByName("string"),"2");
         a1.appendToDict(vkey, vvalue);
 
+        QCOMPARE(a1.refCount(),1);
+        QCOMPARE(a2.refCount(),1);
+
         a2 = a1;
-        QCOMPARE(a1.dictValue(vkey).toString(),"2");
-        QCOMPARE(a2.dictValue(vkey).toString(),"2");
+
+        QCOMPARE(a1.refCount(),2);
+        QCOMPARE(a2.refCount(),2);
 
         vvalue.fromString(state.typeByName("string"),"42");
         a1.appendToDict(vkey, vvalue);
 
-        qDebug() << QString::fromStdString(a1.dictValue(vkey).toString()) << QString::fromStdString(a2.dictValue(vkey).toString());
+        QCOMPARE(a1.refCount(),1);
+        QCOMPARE(a2.refCount(),1);
+
+        // qDebug() << QString::fromStdString(a1.toString()) << QString::fromStdString(a2.toString());
 
         QVERIFY(a1.dictValue(vkey).toString() == "42");
         QVERIFY(a2.dictValue(vkey).toString() == "2");
@@ -716,8 +733,6 @@ void TstParser::test_core_Dict_COW()
         a1.appendToDict(vkey, vvalue);
 
         a2 = a1;
-        QCOMPARE(a1.dictValue(vkey).toString(),"2");
-        QCOMPARE(a2.dictValue(vkey).toString(),"2");
 
         vvalue.fromString(state.typeByName("string"),"42");
         a2.appendToDict(vkey, vvalue);
@@ -911,6 +926,24 @@ void TstParser::test_lexer_DictInit()
     QVERIFY(results[6] == ":");
     QVERIFY(results[7] == "2");
     QVERIFY(results[8] == "}");
+}
+
+void TstParser::test_lexer_DictAccess()
+{
+    NdaLexer lexer;
+    std::vector<std::string> results;
+
+    lexer.setScript("x{7} :=");
+
+    while (lexer.nextToken())
+        results.push_back(lexer.token());
+
+    QVERIFY(results.size() == 5);
+    QVERIFY(results[0] == "x");
+    QVERIFY(results[1] == "{");
+    QVERIFY(results[2] == "7");
+    QVERIFY(results[3] == "}");
+    QVERIFY(results[4] == ":=");
 }
 
 void TstParser::test_lexer_Comments() {
@@ -1179,6 +1212,26 @@ Node(Program, "")
     Node(BinaryOperator, "/")
       Node(Identifier, "n")
       Node(Number, "7")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Declaration10_Dict()
+{
+    std::string script = R"(
+        declare x : Dict;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Declaration, "x")
+    Node(Identifier, "Dict")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -3268,6 +3321,18 @@ void TstParser::test_api_evaluate_List_Swap()
     QVERIFY(ret.readAccess(0).toString() == "3");
     QVERIFY(ret.readAccess(1).toString() == "2");
     QVERIFY(ret.readAccess(2).toString() == "1");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_Init()
+{
+    std::string script = R"(
+        declare x : Dict := {1:42};
+        return x{1};
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
 }
 
 //-------------------------------------------------------------------------------------------------

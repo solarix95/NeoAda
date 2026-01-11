@@ -82,6 +82,7 @@ private:
     void evalNumber(Nda::Runnable *node);
     void evalBoolean(Nda::Runnable *node);
     void evalListLiteral(Nda::Runnable *node);
+    void evalDictLiteral(Nda::Runnable *node);
 
     ExecState       mExecState;
     NdaState       *mState;

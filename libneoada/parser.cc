@@ -760,8 +760,10 @@ NdaParser::ASTNodePtr NdaParser::parsePrimary()
         if (!handleIdentifierCall(node))   // call()  ?
             handleIdentifierAccess(node);  // array[] ?
 
-     } else if (token == "[") {
+    } else if (token == "[") {
         node = parseListLiteral();
+    } else if (token == "{") {
+         node = parseDictLiteral();
     } else if (token == "(") {
         if (!mLexer.nextToken()) // Überspringe '('
             throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
@@ -887,7 +889,10 @@ bool NdaParser::handleIdentifierCall(ASTNodePtr &identNode)
 //-------------------------------------------------------------------------------------------------
 bool NdaParser::handleIdentifierAccess(ASTNodePtr &identNode)
 {
-    if (mLexer.token(1) != "[")
+    bool isListAccess = mLexer.token(1) == "[";
+    bool isDictAccess = mLexer.token(1) == "{";
+
+    if (!isListAccess && !isDictAccess)
         return false;
 
     auto accessNode = std::make_shared<ASTNode>(ASTNodeType::AccessOperator, mLexer.line(), mLexer.column());
@@ -905,10 +910,9 @@ bool NdaParser::handleIdentifierAccess(ASTNodePtr &identNode)
     if (!mLexer.nextToken())    // jump to "]"
         throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
-    if (mLexer.token() != "]") {
+    if (mLexer.token() != (isListAccess ? "]" : "}")) {
         throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     }
-
 
     identNode = accessNode;
     return true;
@@ -943,5 +947,50 @@ NdaParser::ASTNodePtr NdaParser::parseListLiteral()
     }
 
     return ret;
+}
+
+NdaParser::ASTNodePtr NdaParser::parseDictLiteral()
+{
+    assert(mLexer.token() == "{");
+
+    auto ret = std::make_shared<ASTNode>(ASTNodeType::DictLiteral, mLexer.line(), mLexer.column());
+
+    if (!mLexer.nextToken())    // Überspringe '{'
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    while (mLexer.token() != "}") {
+        // Parse ein Element der Liste
+        auto keyElement = parseExpression();
+
+        if (keyElement)
+            ASTNode::addChild(ret,keyElement);
+
+        if (!mLexer.nextToken())    // jump to ":"
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        if (mLexer.token() != ":")
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+
+        if (!mLexer.nextToken())    // jump over ":"
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        auto valueElement = parseExpression();
+
+        if (valueElement)
+            ASTNode::addChild(ret,valueElement);
+
+        if (!mLexer.nextToken())    // jump over ":"
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        // Optionales Komma
+        if (mLexer.token() == ",") {
+            mLexer.nextToken(); // Consume ','
+        } else if (mLexer.token() != "}") {
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        }
+    }
+
+    return ret;
+
 }
 

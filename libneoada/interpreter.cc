@@ -159,6 +159,9 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
     case NdaParser::ASTNodeType::ListLiteral:
         ret->type = Nda::NcListLiteral;
         break;
+    case NdaParser::ASTNodeType::DictLiteral:
+        ret->type = Nda::NcDictLiteral;
+        break;
     case NdaParser::ASTNodeType::BooleanLiteral:
         ret->type = Nda::NcBoolLiteral;
         break;
@@ -325,6 +328,9 @@ void NdaInterpreter::run(Nda::Runnable *node)
     } break;
     case Nda::NcListLiteral: {
         evalListLiteral(node);
+    } break;
+    case Nda::NcDictLiteral: {
+        evalDictLiteral(node);
     } break;
     default:
         assert(0);
@@ -1280,6 +1286,25 @@ void NdaInterpreter::evalListLiteral(Nda::Runnable *node)
     for (int i=0; i<node->childrenCount; i++) {
         run(node->children[i]);
         ret.appendToList(mState->ret());
+    }
+
+    mState->ret() = ret;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::evalDictLiteral(Nda::Runnable *node)
+{
+    NdaVariant ret;
+    ret.initType(mState->dictType());
+
+    assert((node->childrenCount % 2) == 0); // map pairs
+
+    for (int i=0; i<node->childrenCount/2; i++) {
+        run(node->children[i*2 + 0]);
+        auto key   = mState->ret();
+        run(node->children[i*2 + 1]);
+        auto value = mState->ret();
+        ret.appendToDict(key,value);
     }
 
     mState->ret() = ret;

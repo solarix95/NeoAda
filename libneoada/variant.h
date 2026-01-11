@@ -7,6 +7,7 @@
 #include "private/type.h"
 
 namespace Nda {
+class  SharedData;
 class  SharedString;
 class  SharedList;
 class  SharedDict;
@@ -121,6 +122,8 @@ private:
     Nda::SharedDict         *internalDict();
     const Nda::SharedDict   *cInternalDict() const;
     void                     detachDict();
+
+    Nda::SharedData         *internalSharedObject();
 
     bool exact32BitInt(int &value) const;
     bool exact64BitDbl(double &value) const;

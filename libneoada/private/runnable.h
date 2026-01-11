@@ -18,6 +18,7 @@ enum CallMetaType {
     NcNumberLiteral,
     NcBoolLiteral,
     NcListLiteral,
+    NcDictLiteral,
     NcMethodContext,
 };
 

@@ -26,6 +26,7 @@ public:
         ExpressionList,
         Literal,
         ListLiteral,
+        DictLiteral,
         Number,
         Identifier,
         BooleanLiteral,
@@ -106,7 +107,7 @@ private:
     bool                   handleIdentifierCall(NdaParser::ASTNodePtr &identNode);    // is function or procedure or method-call
     bool                   handleIdentifierAccess(NdaParser::ASTNodePtr &identNode);  // is array/dict access operator
     NdaParser::ASTNodePtr parseListLiteral();         // is function or procedure or method-call
-
+    NdaParser::ASTNodePtr parseDictLiteral();
     static std::string nodeTypeToString(ASTNodeType type);
 
     NdaLexer               &mLexer;
