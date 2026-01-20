@@ -579,6 +579,7 @@ std::string NdaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::ExpressionList: return "ExpressionList";
     case ASTNodeType::Literal:      return "Literal";
     case ASTNodeType::ListLiteral:  return "ListLiteral";
+    case ASTNodeType::DictLiteral:  return "DictLiteral";
     case ASTNodeType::Number:       return  "Number";
     case ASTNodeType::Identifier:   return "Identifier";
     case ASTNodeType::UnaryOperator:  return "UnaryOperator";

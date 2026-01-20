@@ -355,9 +355,8 @@ double NdaVariant::toDouble(bool *ok) const
         if (ok) *ok = true;
         return (double)mValue.uByte;
         break;
-
-    case Nda::String:    return 0.0; break;
-
+    default:
+        return 0.0; break;
     }
     return 0.0;
 }
@@ -384,18 +383,18 @@ int64_t NdaVariant::toInt64(bool *ok) const
         return mValue.uInt64;
         break;
     case Nda::Supernatural:
-        if (mValue.uInt64 >= 0) {
+        if (mValue.uInt64 >= 0) { // test unsigned overflow
             if (ok) *ok = true;
             return (int64_t)mValue.uUInt64;
         }
         break;
     case Nda::Boolean:
         if (ok) *ok = true;
-        return mValue.uByte;
+        return (bool)mValue.uByte;
         break;
     case Nda::Byte:
         if (ok) *ok = true;
-        return (bool)mValue.uByte;
+        return mValue.uByte;
         break;
 
     case Nda::String:    return false; break;
@@ -863,6 +862,11 @@ NdaVariant NdaVariant::multiply(const NdaVariant &other, bool *ok) const
         return cInternalReference()->multiply(other, ok);
 
     if (ok) *ok = false;
+
+    if ((type() == Nda::Number) || (other.type() == Nda::Number))
+        return doubleMultiply(other, ok);
+
+
     if (myType()  != other.type())
         return NdaVariant();
 
@@ -901,6 +905,9 @@ NdaVariant NdaVariant::division(const NdaVariant &other, bool &dbz, bool *ok) co
 
     if (ok) *ok = false;
 
+    if ((type() == Nda::Number) || (other.type() == Nda::Number))
+        return doubleDivision(other, dbz, ok);
+
     switch (myType()) {
     case Nda::Number: {
 
@@ -935,22 +942,24 @@ NdaVariant NdaVariant::division(const NdaVariant &other, bool &dbz, bool *ok) co
     } break;
     case Nda::Supernatural: {
 
-        int64_t divisor;
+        uint64_t divisor;
         if (other.type() == Nda::Supernatural) {
             divisor = other.cuValue()->uUInt64;
         } else {
             bool isLong;
-            divisor = other.toInt64(&isLong);
-            if (!isLong)
+            auto intDivisor = other.toInt64(&isLong);
+            if (!isLong || intDivisor < 0)
                 return NdaVariant();
+            divisor = intDivisor;
         }
 
         if (divisor == 0) {
             dbz = true;
             return NdaVariant();
         }
+
         NdaVariant ret;
-        ret.fromNatural(mRuntimeType, mValue.uUInt64 / divisor);
+        ret.fromSNatural(mRuntimeType, mValue.uUInt64 / divisor);
         if (ok) *ok = true;
         return ret;
     } break;
@@ -1099,11 +1108,11 @@ void NdaVariant::takeFromList(int index)
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaVariant::writeAccess(int index)
+NdaVariant &NdaVariant::writeListAccess(int index)
 {
     assert(type() == Nda::List);
     if (myType() == Nda::Reference)
-        return internalReference()->writeAccess(index);
+        return internalReference()->writeListAccess(index);
 
     assert(index >= 0);
     assert(index < lengthOperator());
@@ -1206,17 +1215,16 @@ bool NdaVariant::contains(const NdaVariant &key) const
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant &NdaVariant::dictValue(const NdaVariant &key)
+NdaVariant &NdaVariant::writeDictAccess(const NdaVariant &key)
 {
     assert(type() == Nda::Dict);
     if (myType() == Nda::Reference)
-        return internalReference()->dictValue(key);
+        return internalReference()->writeDictAccess(key);
 
-    if (!internalDict())
-        mValue.uPtr = new Nda::SharedDict();
+    assert(mValue.uPtr);
     detachDict();
 
-    return internalDict()->dict().at(key);
+    return internalDict()->dict()[key]; // read only: internalDict()->dict().at(key);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1343,6 +1351,45 @@ void NdaVariant::assignOtherDict(const NdaVariant &other)
         return;
     mValue.uPtr = other.cuValue()->uPtr;
     internalDict()->addRef();
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaVariant::doubleDivision(const NdaVariant &other, bool &dbz, bool *ok) const
+{
+    bool isDouble;
+    auto divisor = other.toDouble(&isDouble);
+    if (!isDouble)
+        return NdaVariant();
+
+    if (divisor == 0) {
+        dbz = true;
+        return NdaVariant();
+    }
+
+    auto value = toDouble(ok);
+
+    NdaVariant ret;
+    ret.fromNumber(type() == Nda::Number ? runtimeType() : other.runtimeType(), value/divisor);
+
+    if (ok) *ok = true;
+    return ret;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaVariant::doubleMultiply(const NdaVariant &other, bool *ok) const
+{
+    bool isDouble;
+    auto divisor = other.toDouble(&isDouble);
+    if (!isDouble)
+        return NdaVariant();
+
+    auto value = toDouble(ok);
+
+    NdaVariant ret;
+    ret.fromNumber(type() == Nda::Number ? runtimeType() : other.runtimeType(), value*divisor);
+
+    if (ok) *ok = true;
+    return ret;
 }
 
 //-------------------------------------------------------------------------------------------------

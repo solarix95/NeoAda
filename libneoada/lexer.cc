@@ -1,5 +1,4 @@
 #include "lexer.h"
-#include <iostream>
 #include <assert.h>
 #include <unordered_set>
 

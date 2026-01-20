@@ -103,6 +103,8 @@ private slots:
     void test_parser_Primary1();
     void test_parser_Primary2();
     void test_parser_Primary3_List_Access();
+    void test_parser_Primary4_ListInList();
+    void test_parser_Primary5_DictInDict();
 
     void test_parser_Relation1();
     void test_parser_Relation2();
@@ -205,6 +207,8 @@ private slots:
     void test_api_evaluate_List_Swap();
 
     void test_api_evaluate_Dict_Init();
+    void test_api_evaluate_Dict_Append();
+    void test_api_evaluate_Dict_Embedded();
 
     void test_api_evaluate_GlobalValue();
     void test_api_evaluate_ScopeValue();
@@ -227,6 +231,14 @@ private slots:
 
     void test_api_evaluate_Instance_Method1();
 
+
+    // Division Operator
+    void test_api_evaluate_div_Number();
+    void test_api_evaluate_div_Natural();
+    void test_api_evaluate_div_Supernatural();
+
+    // Multiply Operator
+    void test_api_evaluate_mul_Number();
 
     // runtime LIST addons
     void test_api_runtime_AdaList_Length();
@@ -662,7 +674,7 @@ void TstParser::test_core_Dict_COW()
         QCOMPARE(a1.contains(vkey), true);
         QCOMPARE(a1.contains(vvalue), false);
 
-        QCOMPARE(a1.dictValue(vkey).toString(),vvalue.toString());
+        QCOMPARE(a1.writeDictAccess(vkey).toString(),vvalue.toString());
 
         a1.takeFromDict(vkey);
     }
@@ -689,7 +701,7 @@ void TstParser::test_core_Dict_COW()
         } // destroy a2
 
         QCOMPARE(a1.dictSize(), 1);
-        QCOMPARE(a1.dictValue(vkey).toString(),vvalue.toString());
+        QCOMPARE(a1.writeDictAccess(vkey).toString(),vvalue.toString());
     }
 
     { // copy-on-write: source changes
@@ -718,8 +730,8 @@ void TstParser::test_core_Dict_COW()
 
         // qDebug() << QString::fromStdString(a1.toString()) << QString::fromStdString(a2.toString());
 
-        QVERIFY(a1.dictValue(vkey).toString() == "42");
-        QVERIFY(a2.dictValue(vkey).toString() == "2");
+        QVERIFY(a1.writeDictAccess(vkey).toString() == "42");
+        QVERIFY(a2.writeDictAccess(vkey).toString() == "2");
     }
 
     { // copy-on-write: target changes
@@ -737,8 +749,8 @@ void TstParser::test_core_Dict_COW()
         vvalue.fromString(state.typeByName("string"),"42");
         a2.appendToDict(vkey, vvalue);
 
-        QVERIFY(a1.dictValue(vkey).toString() == "2");
-        QVERIFY(a2.dictValue(vkey).toString() == "42");
+        QVERIFY(a1.writeDictAccess(vkey).toString() == "2");
+        QVERIFY(a2.writeDictAccess(vkey).toString() == "42");
     }
 }
 
@@ -1343,6 +1355,53 @@ Node(Program, "")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Primary4_ListInList()
+{
+    std::string script = R"(
+        x := [[]];
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
+    Node(ListLiteral, "")
+      Node(ListLiteral, "")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Primary5_DictInDict()
+{
+    std::string script = R"(
+        x := {1:{}};
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Assignment, ":=")
+    Node(Identifier, "x")
+    Node(DictLiteral, "")
+      Node(Number, "1")
+      Node(DictLiteral, "")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+
 }
 
 
@@ -3336,6 +3395,31 @@ void TstParser::test_api_evaluate_Dict_Init()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_Append()
+{
+    std::string script = R"(
+        declare x : Dict;
+        x{"42"} := 23;
+        return x{"42"};
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 23);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_Embedded()
+{
+    std::string script = R"(
+        declare x : Dict := {1:{2:42}};
+        return x{1}{2};
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_GlobalValue()
 {
     std::string script = R"(
@@ -3698,6 +3782,97 @@ void TstParser::test_api_evaluate_Instance_Method1()
     QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_div_Number()
+{
+    NdaState state;
+
+    // Number/Number
+    QVERIFY(NeoAda::evaluate("return 42_d/2_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 42_d/2_d;", state).toInt64() == 21);
+
+    // Number/Natural
+    QVERIFY(NeoAda::evaluate("return 42_d/2_n;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 42_d/2_n;", state).toInt64() == 21);
+
+    // Number/Supernatural
+    QVERIFY(NeoAda::evaluate("return 42_d/2_u;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 42_d/2_u;", state).toInt64() == 21);
+
+    // Number/Byte
+    QVERIFY(NeoAda::evaluate("return 42_d/2_b;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 42_d/2_b;", state).toInt64() == 21);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_div_Natural()
+{
+    NdaState state;
+
+    // Natural/Natural
+    QVERIFY(NeoAda::evaluate("return 42_n/2_n;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 42_n/2_n;", state).toInt64() == 21);
+
+    // Natural/Number
+    QVERIFY(NeoAda::evaluate("return 42_n/2_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 42_n/2_d;", state).toInt64() == 21);
+
+    // Natural/Supernatural
+    QVERIFY(NeoAda::evaluate("return 42_n/2_u;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 42_n/2_u;", state).toInt64() == 21);
+
+    // Natural/Byte
+    QVERIFY(NeoAda::evaluate("return 42_n/2_b;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 42_n/2_b;", state).toInt64() == 21);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_div_Supernatural()
+{
+    NdaState state;
+
+    // Supernatural/Natural
+    QVERIFY(NeoAda::evaluate("return 42_u/2_n;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 42_u/2_n;", state).toInt64() == 21);
+
+    // Supernatural/Number
+    QVERIFY(NeoAda::evaluate("return 42_u/2_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 42_u/2_d;", state).toInt64() == 21);
+
+    // Supernatural/Supernatural
+    QVERIFY(NeoAda::evaluate("return 42_u/2_u;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 42_u/2_u;", state).toInt64() == 21);
+
+    // Supernatural/Byte
+    QVERIFY(NeoAda::evaluate("return 42_u/2_b;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 42_u/2_b;", state).toInt64() == 21);
+
+    // unsigned / negative signed
+    QVERIFY(NeoAda::evaluate("return 42_u/-2_n;", state).type() == Nda::Undefined);
+    QVERIFY(NeoAda::evaluate("return 42_u/-2_b;", state).type() == Nda::Undefined);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_mul_Number()
+{
+    NdaState state;
+
+    // Number/Number
+    QVERIFY(NeoAda::evaluate("return 21_d*2_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 21_d*2_d;", state).toInt64() == 42);
+
+    // Number/Natural
+    QVERIFY(NeoAda::evaluate("return 21_d*2_n;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 21_d*2_n;", state).toInt64() == 42);
+
+    // Number/Supernatural
+    QVERIFY(NeoAda::evaluate("return 21_d*2_u;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 21_d*2_u;", state).toInt64() == 42);
+
+    // Number/Byte
+    QVERIFY(NeoAda::evaluate("return 21_d*2_b;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 21_d*2_b;", state).toInt64() == 42);
+}
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_runtime_AdaList_Length()
 {

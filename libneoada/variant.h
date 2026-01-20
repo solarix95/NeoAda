@@ -69,7 +69,7 @@ public:
     void              appendToList(const NdaVariant &value);
     void              insertIntoList(int index, const NdaVariant &value);
     void              takeFromList(int index);
-    NdaVariant&       writeAccess(int index);
+    NdaVariant&       writeListAccess(int index);
     const NdaVariant& readAccess(int index) const;
     int               indexInList(const NdaVariant &value) const;
     bool              containsInList(const NdaVariant &value) const;
@@ -80,7 +80,7 @@ public:
     inline int        dictSize() const { return lengthOperator(); }
     void              appendToDict(const NdaVariant &key, const NdaVariant &value);
     bool              contains(const NdaVariant&) const;
-    NdaVariant&       dictValue(const NdaVariant&);
+    NdaVariant&       writeDictAccess(const NdaVariant &key);
     void              takeFromDict(const NdaVariant&);
 
     // generic string interface
@@ -108,6 +108,8 @@ private:
     void assignOtherString(const NdaVariant &other);
     void assignOtherList(const NdaVariant &other);
     void assignOtherDict(const NdaVariant &other);
+    NdaVariant doubleDivision(const NdaVariant &other, bool &dbz, bool *ok= nullptr) const;
+    NdaVariant doubleMultiply(const NdaVariant &other, bool *ok= nullptr) const;
 
     // Helper unterschiedlicher Datentypen
     Nda::SharedString       *internalString();
