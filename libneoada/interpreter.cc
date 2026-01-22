@@ -309,7 +309,7 @@ void NdaInterpreter::run(Nda::Runnable *node)
 
         if (node->symbolIndex < 0) {
             if (!mState->find(node->value.lowerValue,node->symbolIndex, node->symbolScope, node->symbolIsGlobal)) {
-                assert(0); // TODO: runtime error
+                throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->value.displayValue);
             }
         }
         auto *value = mState->valuePtr(node->symbolIndex, node->symbolScope, node->symbolIsGlobal);

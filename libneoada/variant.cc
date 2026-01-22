@@ -227,6 +227,17 @@ bool NdaVariant::fromByteLiteral(const Nda::RuntimeType *t, const std::string &v
 }
 
 //-------------------------------------------------------------------------------------------------
+void NdaVariant::fromByte(const Nda::RuntimeType *t, unsigned char value)
+{
+    assert(t);
+    if (mRuntimeType) reset();
+
+    mRuntimeType = t;
+    assert(type() == Nda::Byte);
+    mValue.uByte = value;
+}
+
+//-------------------------------------------------------------------------------------------------
 #if 0
 bool NdaVariant::fromNumber(const std::string &value)
 {
@@ -830,22 +841,50 @@ NdaVariant NdaVariant::modulo(const NdaVariant &other, bool *ok) const
     if (myType() == Nda::Reference)
         return cInternalReference()->modulo(other, ok);
 
-
     if (ok) *ok = false;
-    if (myType()  != other.type())
+    if ((type() == Nda::Number) || (other.type() == Nda::Number))
         return NdaVariant();
 
     switch (myType()) {
     case Nda::Natural: {
+        bool isLong;
+        auto divisor = other.toInt64(&isLong);
+        if (!isLong)
+            return NdaVariant();
+
         NdaVariant ret;
+        ret.fromNatural(mRuntimeType, mValue.uInt64 % divisor);
         if (ok) *ok = true;
-        ret.fromNatural(mRuntimeType,mValue.uInt64 % other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
+
+        uint64_t divisor;
+        if (other.type() == Nda::Supernatural) {
+            divisor = other.cuValue()->uUInt64;
+        } else {
+            bool isLong;
+            auto intDivisor = other.toInt64(&isLong);
+            if (!isLong || intDivisor < 0)
+                return NdaVariant();
+            divisor = intDivisor;
+        }
+
         NdaVariant ret;
+        ret.fromSNatural(mRuntimeType, mValue.uUInt64 % divisor);
         if (ok) *ok = true;
-        ret.fromSNatural(mRuntimeType,mValue.uUInt64 % other.cuValue()->uUInt64);
+        return ret;
+    } break;
+    case Nda::Byte: {
+
+        bool isLong;
+        auto intDivisor = other.toInt64(&isLong);
+        if (!isLong || intDivisor < 0 || intDivisor > 255)
+            return NdaVariant();
+
+        NdaVariant ret;
+        ret.fromByte(mRuntimeType, mValue.uByte % intDivisor);
+        if (ok) *ok = true;
         return ret;
     } break;
     default:
@@ -866,27 +905,46 @@ NdaVariant NdaVariant::multiply(const NdaVariant &other, bool *ok) const
     if ((type() == Nda::Number) || (other.type() == Nda::Number))
         return doubleMultiply(other, ok);
 
-
-    if (myType()  != other.type())
-        return NdaVariant();
-
     switch (myType()) {
-    case Nda::Number: {
-        NdaVariant ret;
-        if (ok) *ok = true;
-        ret.fromNumber(mRuntimeType, mValue.uDouble * other.cuValue()->uDouble);
-        return ret;
-    } break;
     case Nda::Natural: {
+        bool isLong;
+        auto factor = other.toInt64(&isLong);
+        if (!isLong)
+            return NdaVariant();
+
         NdaVariant ret;
+        ret.fromNatural(mRuntimeType, mValue.uInt64 * factor);
         if (ok) *ok = true;
-        ret.fromNatural(mRuntimeType, mValue.uInt64 * other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
+
+        uint64_t factor;
+        if (other.type() == Nda::Supernatural) {
+            factor = other.cuValue()->uUInt64;
+        } else {
+            bool isLong;
+            auto intFactor = other.toInt64(&isLong);
+            if (!isLong || intFactor < 0)
+                return NdaVariant();
+            factor = intFactor;
+        }
+
         NdaVariant ret;
+        ret.fromSNatural(mRuntimeType, mValue.uUInt64 * factor);
         if (ok) *ok = true;
-        ret.fromSNatural(mRuntimeType, mValue.uUInt64 * other.cuValue()->uUInt64);
+        return ret;
+    } break;
+    case Nda::Byte: {
+
+        bool isLong;
+        auto intFactor = other.toInt64(&isLong);
+        if (!isLong || intFactor < 0 || intFactor > 255)
+            return NdaVariant();
+
+        NdaVariant ret;
+        ret.fromByte(mRuntimeType, mValue.uByte * intFactor);
+        if (ok) *ok = true;
         return ret;
     } break;
     default:
@@ -909,22 +967,6 @@ NdaVariant NdaVariant::division(const NdaVariant &other, bool &dbz, bool *ok) co
         return doubleDivision(other, dbz, ok);
 
     switch (myType()) {
-    case Nda::Number: {
-
-        bool isDouble;
-        auto divisor = other.toDouble(&isDouble);
-        if (!isDouble)
-            return NdaVariant();
-
-        if (divisor == 0) {
-            dbz = true;
-            return NdaVariant();
-        }
-        NdaVariant ret;
-        ret.fromNumber(mRuntimeType, mValue.uDouble / divisor);
-        if (ok) *ok = true;
-        return ret;
-    } break;
     case Nda::Natural: {
         bool isLong;
         auto divisor = other.toInt64(&isLong);
@@ -960,6 +1002,27 @@ NdaVariant NdaVariant::division(const NdaVariant &other, bool &dbz, bool *ok) co
 
         NdaVariant ret;
         ret.fromSNatural(mRuntimeType, mValue.uUInt64 / divisor);
+        if (ok) *ok = true;
+        return ret;
+    } break;
+    case Nda::Byte: {
+
+        bool isLong;
+        auto intDivisor = other.toInt64(&isLong);
+        if (!isLong)
+            return NdaVariant();
+        if (intDivisor < 0 ||
+            intDivisor > 255)
+        {
+            return NdaVariant();
+        }
+        if (intDivisor == 0) {
+            dbz = true;
+            return NdaVariant();
+        }
+
+        NdaVariant ret;
+        ret.fromByte(mRuntimeType, mValue.uByte / intDivisor);
         if (ok) *ok = true;
         return ret;
     } break;

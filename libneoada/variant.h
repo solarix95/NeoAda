@@ -33,6 +33,7 @@ public:
     bool fromSNaturalLiteral(const Nda::RuntimeType *type,const std::string &value);
     void fromSNatural(const Nda::RuntimeType *type, uint64_t value);
     bool fromByteLiteral(const Nda::RuntimeType *type,const std::string &value);
+    void fromByte(const Nda::RuntimeType *type, unsigned char value);
 
     void  fromDoubleNan(const Nda::RuntimeType *type);
     void  fromBool(const Nda::RuntimeType *t, bool value);
