@@ -50,6 +50,8 @@ NdaParser::ASTNodePtr NdaParser::parseStatement()
         return parseSeparator(parseProcedureOrFunction());
     } else if (mLexer.tokenType() == NdaLexer::TokenType::Keyword && mLexer.token() == "with") {
         return parseSeparator(parseWith());
+    } else if (mLexer.tokenType() == NdaLexer::TokenType::Keyword && mLexer.token() == "type") {
+        return parseSeparator(parseType());
     } else if (mLexer.tokenType() == NdaLexer::TokenType::Identifier) {
         return parseSeparator(parseIdentifier());
     }
@@ -126,6 +128,64 @@ NdaParser::ASTNodePtr NdaParser::parseWith()
 
     auto withNode = std::make_shared<ASTNode>(ASTNodeType::WithAddon,mLexer.line(), mLexer.column(), addonName);
     return withNode;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaParser::ASTNodePtr NdaParser::parseType()
+{
+    std::string typeName;
+    std::string baseName;
+
+
+    NdaLexer::TokenType nextNode = NdaLexer::TokenType::Identifier;
+
+    // type File is Number;
+
+    if (!mLexer.nextToken())
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.tokenType() != NdaLexer::TokenType::Identifier)
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+
+    typeName = mLexer.token();
+
+    if (!mLexer.nextToken())
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.token() != "is")
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (!mLexer.nextToken())
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.tokenType() != NdaLexer::TokenType::Identifier)
+        throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+
+
+    baseName = mLexer.token();
+
+    auto typeNode = std::make_shared<ASTNode>(ASTNodeType::TypeDefinition,mLexer.line(), mLexer.column(), typeName);
+    auto baseNode = std::make_shared<ASTNode>(ASTNodeType::Identifier,mLexer.line(), mLexer.column(), baseName);
+    ASTNode::addChild(typeNode,baseNode);
+
+    /*
+    while (mLexer.token(1) != ";") {
+        mLexer.nextToken();
+        if (mLexer.tokenType() != nextNode)
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+        if (nextNode == NdaLexer::TokenType::Identifier) {
+            addonName = addonName + mLexer.token();
+            nextNode = NdaLexer::TokenType::Separator;
+        } else if (mLexer.token() == ".") {
+            addonName = addonName + ".";
+            nextNode = NdaLexer::TokenType::Identifier;
+        } else
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+    }
+    */
+
+
+    return typeNode;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -572,16 +632,17 @@ std::string NdaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::FormalParameters:  return "Parameters";
     case ASTNodeType::FormalParameter :  return "Parameter";
     case ASTNodeType::MethodContext :    return "MethodContext";
-    case ASTNodeType::Declaration:  return "Declaration";
+    case ASTNodeType::Declaration:       return "Declaration";
+    case ASTNodeType::TypeDefinition:    return "TypeDefinition";
     case ASTNodeType::VolatileDeclaration:  return "Volatile";
-    case ASTNodeType::Assignment:   return "Assignment";
-    case ASTNodeType::Expression:   return "Expression";
+    case ASTNodeType::Assignment:     return "Assignment";
+    case ASTNodeType::Expression:     return "Expression";
     case ASTNodeType::ExpressionList: return "ExpressionList";
-    case ASTNodeType::Literal:      return "Literal";
-    case ASTNodeType::ListLiteral:  return "ListLiteral";
-    case ASTNodeType::DictLiteral:  return "DictLiteral";
-    case ASTNodeType::Number:       return  "Number";
-    case ASTNodeType::Identifier:   return "Identifier";
+    case ASTNodeType::Literal:        return "Literal";
+    case ASTNodeType::ListLiteral:    return "ListLiteral";
+    case ASTNodeType::DictLiteral:    return "DictLiteral";
+    case ASTNodeType::Number:         return  "Number";
+    case ASTNodeType::Identifier:     return "Identifier";
     case ASTNodeType::UnaryOperator:  return "UnaryOperator";
     case ASTNodeType::BinaryOperator: return "BinaryOperator";
     case ASTNodeType::FunctionCall:   return "FunctionCall";

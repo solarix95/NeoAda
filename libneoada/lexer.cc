@@ -156,7 +156,7 @@ bool NdaLexer::parseNext()
             shiftToNext(-1); // 1 Character zuviel eingelesen..
 
             static const std::unordered_set<std::string> reservedWords = {
-                "with",
+                "with", "type",
                 "declare", "volatile",
                 "if", "then", "else", "elsif", "end",
                 "while", "loop", "break", "continue", "when",

@@ -109,6 +109,7 @@ private:
     void assignOtherString(const NdaVariant &other);
     void assignOtherList(const NdaVariant &other);
     void assignOtherDict(const NdaVariant &other);
+    NdaVariant doubleAddition(const NdaVariant &other, bool *ok= nullptr) const;
     NdaVariant doubleDivision(const NdaVariant &other, bool &dbz, bool *ok= nullptr) const;
     NdaVariant doubleMultiply(const NdaVariant &other, bool *ok= nullptr) const;
 

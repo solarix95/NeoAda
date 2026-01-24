@@ -805,8 +805,9 @@ NdaVariant NdaVariant::add(const NdaVariant &other, bool *ok) const
         return cInternalReference()->add(other, ok);
 
     if (ok) *ok = false;
-    if (myType()  != other.type())
-        return NdaVariant();
+
+    if ((type() == Nda::Number) || (other.type() == Nda::Number))
+        return doubleAddition(other,  ok);
 
     switch (myType()) {
     case Nda::Number: {
@@ -822,9 +823,33 @@ NdaVariant NdaVariant::add(const NdaVariant &other, bool *ok) const
         return ret;
     } break;
     case Nda::Supernatural: {
+
+        uint64_t offset;
+        if (other.type() == Nda::Supernatural) {
+            offset = other.cuValue()->uUInt64;
+        } else {
+            bool isLong;
+            auto intOffset = other.toInt64(&isLong);
+            if (!isLong || intOffset < 0)
+                return NdaVariant();
+            offset = intOffset;
+        }
+
         NdaVariant ret;
+        ret.fromSNatural(mRuntimeType, mValue.uUInt64 + offset);
         if (ok) *ok = true;
-        ret.fromSNatural(mRuntimeType, mValue.uUInt64 + other.cuValue()->uUInt64);
+        return ret;
+    } break;
+    case Nda::Byte: {
+
+        bool isLong;
+        auto intOffset = other.toInt64(&isLong);
+        if (!isLong || intOffset < 0 || intOffset > 255)
+            return NdaVariant();
+
+        NdaVariant ret;
+        ret.fromByte(mRuntimeType, mValue.uByte + intOffset);
+        if (ok) *ok = true;
         return ret;
     } break;
     default:
@@ -1414,6 +1439,24 @@ void NdaVariant::assignOtherDict(const NdaVariant &other)
         return;
     mValue.uPtr = other.cuValue()->uPtr;
     internalDict()->addRef();
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaVariant::doubleAddition(const NdaVariant &other, bool *ok) const
+{
+    bool isDouble;
+    auto offset = other.toDouble(&isDouble);
+    if (!isDouble)
+        return NdaVariant();
+
+    auto value = toDouble(ok);
+
+    NdaVariant ret;
+    ret.fromNumber(type() == Nda::Number ? runtimeType() : other.runtimeType(), value + offset);
+
+    if (ok) *ok = true;
+    return ret;
+
 }
 
 //-------------------------------------------------------------------------------------------------

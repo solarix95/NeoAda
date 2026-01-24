@@ -73,6 +73,7 @@ private:
     void runAccessOperator(Nda::Runnable *node);   // x[]
 
     void runLoadAddon(Nda::Runnable *node);
+    void runCreateType(Nda::Runnable *node);
     void runDefineInstanceProcedure(Nda::Runnable *node);
     void runDefineSingleProcedure(Nda::Runnable *node);
     void runDefineInstanceFunction(Nda::Runnable *node);

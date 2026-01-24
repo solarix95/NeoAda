@@ -98,6 +98,7 @@ private slots:
     void test_parser_Declaration10_Dict();
 
     void test_parser_With();
+    void test_parser_Type();
 
     void test_parser_Factor();
     void test_parser_Primary1();
@@ -184,6 +185,8 @@ private slots:
     void test_interpreter_Return7_Number();
     void test_interpreter_Return8_Byte();
 
+    void test_interpreter_TypeIs();
+
     void test_interpreter_Volatile_CTor();
 
     void test_interpreter_static_method();
@@ -230,6 +233,12 @@ private slots:
     void test_api_evaluate_Static_Method2();
 
     void test_api_evaluate_Instance_Method1();
+
+    // Addition Operator
+    void test_api_evaluate_add_Number();
+    void test_api_evaluate_add_Natural();
+    void test_api_evaluate_add_Supernatural();
+    void test_api_evaluate_add_Byte();
 
     // Division Operator
     void test_api_evaluate_div_Number();
@@ -1272,6 +1281,26 @@ void TstParser::test_parser_With()
     std::string expectedAST = R"(
 Node(Program, "")
   Node(WithAddon, "Ada.Lovelace")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Type()
+{
+    std::string script = R"(
+        type File is Natural;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(TypeDefinition, "File")
+    Node(Identifier, "Natural")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -3050,6 +3079,30 @@ void TstParser::test_interpreter_Return8_Byte()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_TypeIs()
+{
+    std::string script = R"(
+        type File is Natural;
+        declare x : File;
+
+        x := 42;
+        return x;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_Volatile_CTor()
 {
     std::string script = R"(
@@ -3789,6 +3842,98 @@ void TstParser::test_api_evaluate_Instance_Method1()
 
     NdaState state;
     QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_add_Number()
+{
+    NdaState state;
+
+    // Number + Number
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_d;", state).toInt64() == 42);
+
+    // Number + Natural
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_n;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_n;", state).toInt64() == 42);
+
+    // Number + Supernatural
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_u;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_u;", state).toInt64() == 42);
+
+    // Number + Byte
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_b;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d + 20_b;", state).toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_add_Natural()
+{
+    NdaState state;
+
+    // Natural + Natural
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_n;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_n;", state).toInt64() == 42);
+
+    // Natural + Number
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_d;", state).toInt64() == 42);
+
+    // Natural + Supernatural
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_u;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_u;", state).toInt64() == 42);
+
+    // Natural + Byte
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_b;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 22_n + 20_b;", state).toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_add_Supernatural()
+{
+    NdaState state;
+
+    // Supernatural + Natural
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_n;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_n;", state).toInt64() == 42);
+
+    // Supernatural + Number
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_d;", state).toInt64() == 42);
+
+    // Supernatural + Supernatural
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_u;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_u;", state).toInt64() == 42);
+
+    // Supernatural + Byte
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_b;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 22_u + 20_b;", state).toInt64() == 42);
+
+    // unsigned + negative signed
+    QVERIFY(NeoAda::evaluate("return 22_u + -2_n;", state).type() == Nda::Undefined);
+    QVERIFY(NeoAda::evaluate("return 22_u + -2_b;", state).type() == Nda::Undefined);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_add_Byte()
+{
+    NdaState state;
+
+    // Byte*Natural
+    QVERIFY(NeoAda::evaluate("return 21_b*2_n;", state).type() == Nda::Byte);
+    QVERIFY(NeoAda::evaluate("return 21_b*2_n;", state).toInt64() == 42);
+
+    // Byte*Number
+    QVERIFY(NeoAda::evaluate("return 21_b*2_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 21_b*2_d;", state).toInt64() == 42);
+
+    // Byte*Supernatural
+    QVERIFY(NeoAda::evaluate("return 21_b*2_u;", state).type() == Nda::Byte);
+    QVERIFY(NeoAda::evaluate("return 21_b*2_u;", state).toInt64() == 42);
+
+    // Byte*Byte
+    QVERIFY(NeoAda::evaluate("return 21_b*2_b;", state).type() == Nda::Byte);
+    QVERIFY(NeoAda::evaluate("return 21_b*2_b;", state).toInt64() == 42);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -19,6 +19,7 @@ public:
         FormalParameterMode, // procedure/function declaration: call(x : [in/out] Natural)
         Function,
         Declaration,
+        TypeDefinition,
         MethodContext,
         VolatileDeclaration,
         Assignment,
@@ -78,6 +79,7 @@ private:
     NdaParser::ASTNodePtr parseStatement();
     NdaParser::ASTNodePtr parseDeclaration();
     NdaParser::ASTNodePtr parseWith();
+    NdaParser::ASTNodePtr parseType();
     NdaParser::ASTNodePtr parseIdentifier();  // "call()" or "var :="
     NdaParser::ASTNodePtr parseProcedureOrFunction();
     NdaParser::ASTNodePtr parseWhileLoop();

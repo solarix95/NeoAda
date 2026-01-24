@@ -73,6 +73,9 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
     case NdaParser::ASTNodeType::WithAddon:
         ret->call = &NdaInterpreter::runLoadAddon;
         break;
+    case NdaParser::ASTNodeType::TypeDefinition:
+        ret->call = &NdaInterpreter::runCreateType;
+        break;
     case NdaParser::ASTNodeType::Procedure:
         assert(node->children.size() >= 2);
         if (node->children[0]->type == NdaParser::ASTNodeType::MethodContext) {
@@ -1105,6 +1108,17 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
 void NdaInterpreter::runLoadAddon( Nda::Runnable *node)
 {
     mState->requestAddon(node->value.lowerValue);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runCreateType(Nda::Runnable *node)
+{
+    assert(node->childrenCount == 1);
+
+    if (!mState->registerType(node->value.lowerValue, node->children[0]->value.lowerValue)) {
+        mState->ret().reset();
+        throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->children[0]->value.lowerValue);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
