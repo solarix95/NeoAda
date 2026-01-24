@@ -11,6 +11,7 @@
 
 #include "addons/AdaList.h"
 #include "addons/AdaString.h"
+#include "addons/AdaIoFile.h"
 
 //-------------------------------------------------------------------------------------------------
 NdaRuntime::NdaRuntime()
@@ -143,6 +144,14 @@ void NdaRuntime::loadAddonAdaList()
     if (!mState)
         reset();
     Nda::add_AdaList_symbols(mState);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::loadAddonAdaIoFile()
+{
+    if (!mState)
+        reset();
+    Nda::add_AdaIoFile_symbols(mState);
 }
 
 //-------------------------------------------------------------------------------------------------
