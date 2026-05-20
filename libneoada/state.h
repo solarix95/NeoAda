@@ -2,6 +2,7 @@
 #define LIB_NEOADA_STATE_H
 
 #include <string>
+#include <unordered_set>
 #include "private/symboltable.h"
 #include "private/functiontable.h"
 #include "parser.h"
@@ -40,6 +41,7 @@ public:
     bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block);
     bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block);
     bool               hasFunction(const std::string &type, const std::string &name, const NdaVariants &parameters);
+    Nda::FunctionEntry *functionPtr(const std::string &type, const std::string &name, const NdaVariants &parameters);
     Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NdaVariants &parameters);
 
     // methods
@@ -53,6 +55,7 @@ public:
     NdaVariant          value(const std::string &symbolName) const;
     NdaVariant         &valueRef(const std::string &symbolName);
     NdaVariant         *valuePtr(const std::string &symbolName);
+    Nda::Symbol        *symbolPtr(int index, int scope, bool isGlobal);
     NdaVariant         *valuePtr(int index, int scope, bool isGlobal);
 
     // variant to value and vice versa
@@ -101,6 +104,7 @@ private:
     CtorCallback       mVolatileCtor;
 
     WithCallback       mWithCallback;
+    std::unordered_set<std::string> mLoadedAddons;
 
     // cache
     const Nda::RuntimeType *mBooleanType;

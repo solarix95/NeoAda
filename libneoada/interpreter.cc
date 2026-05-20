@@ -250,10 +250,11 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
 //-------------------------------------------------------------------------------------------------
 Nada::Error NdaInterpreter::invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args)
 {
-    if (!mState->hasFunction(typeName,fncName,args))
+    auto *fncPtr = mState->functionPtr(typeName,fncName,args);
+    if (!fncPtr)
         return Nada::Error::UnknownFunctionCall;
 
-    auto &fnc = mState->function(typeName,fncName,args);
+    auto &fnc = *fncPtr;
 
     if (fnc.callBlock) {
         mState->pushStack(NadaSymbolTable::LocalScope);
@@ -459,6 +460,7 @@ void NdaInterpreter::runAssignment(Nda::Runnable *node)
 void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
 {
     NdaVariants values;
+    values.reserve(node->childrenCount);
     for (int i=0; i<node->childrenCount; i++) {
         run(node->children[i]);
         values.push_back(mState->ret());
@@ -474,6 +476,7 @@ void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
 void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
 {
     NdaVariants values;
+    values.reserve(node->childrenCount > 0 ? node->childrenCount - 1 : 0);
     for (int i=0; i<node->childrenCount; i++) {
         if (node->children[i]->type == Nda::NcMethodContext)
             continue;
@@ -482,12 +485,13 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
     }
 
     std::string typeName = node->children[0]->value.lowerValue;
-    if (!mState->hasFunction(typeName, node->value.lowerValue,values)) {
+    auto *fncPtr = mState->functionPtr(typeName, node->value.lowerValue,values);
+    if (!fncPtr) {
         mState->ret().reset();
         throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, typeName + ":" + node->value.lowerValue);
     }
 
-    auto &fnc = mState->function(typeName, node->value.lowerValue,values);
+    auto &fnc = *fncPtr;
 
     if (fnc.callBlock) {
         mState->pushStack(NadaSymbolTable::LocalScope);
@@ -531,6 +535,7 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
 void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
 {
     NdaVariants values;
+    values.reserve(node->childrenCount > 0 ? node->childrenCount - 1 : 0);
     for (int i=0; i<node->childrenCount; i++) {
         if (node->children[i]->type == Nda::NcMethodContext)
             continue;
@@ -538,20 +543,22 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
         values.push_back(mState->ret());
     }
 
-    std::string typeName = node->children[0]->value.lowerValue;
-    Nda::Symbol *symbol;
+    auto *context = node->children[0];
+    if (context->symbolIndex < 0) {
+        if (!mState->find(context->value.lowerValue, context->symbolIndex, context->symbolScope, context->symbolIsGlobal))
+            throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, context->value.lowerValue);
+    }
 
-    if (!mState->find(node->children[0]->value.lowerValue,&symbol))
-            throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->children[0]->value.lowerValue);
-    typeName = symbol->type->name.lowerValue;
+    Nda::Symbol *symbol = mState->symbolPtr(context->symbolIndex, context->symbolScope, context->symbolIsGlobal);
+    std::string typeName = symbol->type->name.lowerValue;
 
-
-    if (!mState->hasFunction(typeName, node->value.lowerValue,values)) {
+    auto *fncPtr = mState->functionPtr(typeName, node->value.lowerValue,values);
+    if (!fncPtr) {
         mState->ret().reset();
         throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, typeName + ":" + node->value.lowerValue);
     }
 
-    auto &fnc = mState->function(typeName, node->value.lowerValue,values);
+    auto &fnc = *fncPtr;
 
     if (fnc.callBlock) {
         mState->pushStack(NadaSymbolTable::LocalScope);
@@ -713,6 +720,9 @@ void NdaInterpreter::runForLoopRange(Nda::Runnable *node)
 
         if (mExecState == BreakState) {
             mExecState = RunState;
+            break;
+        }
+        if (mExecState == ReturnState) {
             break;
         }
         if (mExecState == ContinueState) {

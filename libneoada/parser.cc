@@ -791,6 +791,7 @@ NdaParser::ASTNodePtr NdaParser::parseFactor()
 }
 
 //-------------------------------------------------------------------------------------------------
+/*
 NdaParser::ASTNodePtr NdaParser::parsePrimary()
 {
     std::string token;
@@ -851,6 +852,97 @@ NdaParser::ASTNodePtr NdaParser::parsePrimary()
     }
     return node;
 }
+*/
+
+
+NdaParser::ASTNodePtr NdaParser::parsePrimary()
+{
+    std::string token;
+    NdaLexer::TokenType tokenType;
+
+    if (!mLexer.token(token, tokenType))
+        throw NdaException(Nada::Error::UnexpectedEof, mLexer.line(), mLexer.column(), mLexer.token());
+
+    bool hasUnaryOperator = (token == "+" || token == "-" || token == "#");
+    std::string unaryOperator = token;
+
+    if (hasUnaryOperator) {
+        if (!mLexer.nextToken())
+            throw NdaException(Nada::Error::UnexpectedEof, mLexer.line(), mLexer.column(), mLexer.token());
+    }
+
+    auto node = parseAtom();
+
+    while (true) {
+        if (handleIdentifierCall(node)) {
+        }
+        else if (handleIdentifierAccess(node)) {
+        }
+        else {
+            break;
+        }
+    }
+
+    if (hasUnaryOperator) {
+        auto term = node;
+        node = std::make_shared<ASTNode>(ASTNodeType::UnaryOperator, mLexer.line(), mLexer.column(), unaryOperator);
+        ASTNode::addChild(node, term);
+    }
+
+    return node;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaParser::ASTNodePtr NdaParser::parseAtom()
+{
+    std::string token;
+    NdaLexer::TokenType tokenType;
+
+    if (!mLexer.token(token, tokenType))
+        throw NdaException(Nada::Error::UnexpectedEof, mLexer.line(), mLexer.column(), mLexer.token());
+
+    ASTNodePtr node;
+
+    if (tokenType == NdaLexer::TokenType::Number) {
+        node = std::make_shared<ASTNode>(ASTNodeType::Number, mLexer.line(), mLexer.column(), token);
+    }
+    else if (tokenType == NdaLexer::TokenType::BooleanLiteral) {
+        node = std::make_shared<ASTNode>(ASTNodeType::BooleanLiteral, mLexer.line(), mLexer.column(), token);
+    }
+    else if (tokenType == NdaLexer::TokenType::String) {
+        node = std::make_shared<ASTNode>(ASTNodeType::Literal, mLexer.line(), mLexer.column(), token);
+    }
+    else if (tokenType == NdaLexer::TokenType::Identifier) {
+        node = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), token);
+    }
+    else if (token == "[") {
+        node = parseListLiteral();
+    }
+    else if (token == "{") {
+        node = parseDictLiteral();
+    }
+    else if (token == "(") {
+        if (!mLexer.nextToken())
+            throw NdaException(Nada::Error::UnexpectedEof, mLexer.line(), mLexer.column(), mLexer.token());
+
+        auto expression = parseExpression();
+
+        if (!mLexer.nextToken())
+            throw NdaException(Nada::Error::UnexpectedEof, mLexer.line(), mLexer.column(), mLexer.token());
+
+        if (mLexer.token() != ")")
+            throw NdaException(Nada::Error::UnexpectedClosure, mLexer.line(), mLexer.column(), mLexer.token());
+
+        node = std::make_shared<ASTNode>(ASTNodeType::Expression, mLexer.line(), mLexer.column());
+        ASTNode::addChild(node, expression);
+    }
+    else {
+        throw NdaException(Nada::Error::InvalidToken, mLexer.line(), mLexer.column(), token);
+    }
+
+    return node;
+}
+
 
 //-------------------------------------------------------------------------------------------------
 NdaParser::ASTNodePtr NdaParser::parseFunctionCall(std::shared_ptr<ASTNode> &funcNode)
@@ -930,6 +1022,9 @@ NdaParser::ASTNodePtr NdaParser::parseIterableOrRange()
 //-------------------------------------------------------------------------------------------------
 bool NdaParser::handleIdentifierCall(ASTNodePtr &identNode)
 {
+    if (identNode->type != ASTNodeType::Identifier)
+        return false;
+
     if (mLexer.token(1) == "(") {
         identNode->type = ASTNodeType::FunctionCall;
         parseFunctionCall(identNode);

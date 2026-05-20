@@ -158,7 +158,13 @@ bool NdaState::bind(const std::string &type, const std::string &name, const Nda:
 //-------------------------------------------------------------------------------------------------
 bool NdaState::hasFunction(const std::string &type, const std::string &name, const NdaVariants &parameters)
 {
-    return mFunctions.contains(type.empty() ? name : BUILD_METHOD(type,name),parameters);
+    return functionPtr(type, name, parameters) != nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------
+Nda::FunctionEntry *NdaState::functionPtr(const std::string &type, const std::string &name, const NdaVariants &parameters)
+{
+    return mFunctions.symbolPtr(type.empty() ? name : BUILD_METHOD(type,name),parameters);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -294,7 +300,7 @@ NdaVariant *NdaState::valuePtr(const std::string &symbolName)
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant *NdaState::valuePtr(int index, int scope, bool isGlobal)
+Nda::Symbol *NdaState::symbolPtr(int index, int scope, bool isGlobal)
 {
     Nda::Symbol *symbol;
 
@@ -303,7 +309,13 @@ NdaVariant *NdaState::valuePtr(int index, int scope, bool isGlobal)
     else
         (*mCallStack.back())[scope]->lookUp(index,&symbol);
 
-    return symbol->value;
+    return symbol;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant *NdaState::valuePtr(int index, int scope, bool isGlobal)
+{
+    return symbolPtr(index, scope, isGlobal)->value;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -399,6 +411,7 @@ void NdaState::destroy()
     mRetValue.reset(); // detach references
 
     mFunctions.clear(); // release shared-pointers: ASTNodes
+    mLoadedAddons.clear();
 
     while (!mCallStack.empty()) {
         auto *tables = mCallStack.back();
@@ -437,6 +450,12 @@ void NdaState::requestAddon(std::string name)
 {
     if (!mWithCallback)
         return;
+
+    name = Nda::toLower(name);
+    if (mLoadedAddons.count(name) > 0)
+        return;
+
+    mLoadedAddons.insert(name);
     mWithCallback(name);
 }
 

@@ -1,6 +1,6 @@
 # NeoAda
 
-NeoAda is a lightweight scripting language inspired by the Ada programmiung language, designed for simplicity, readability, and integration with compiled languages like C++.
+NeoAda is a lightweight scripting language inspired by the Ada programming language, designed for simplicity, readability, and integration with compiled languages like C++.
 
 ## **Features**
 
@@ -107,6 +107,12 @@ int main() {
     return 0;
 }
 ```
+
+## **Core Packages**
+
+- **Ada.String** Offe..
+- **Ada.List** Suppo
+- **Ada.Dict** Suppo
 
 ## **Planned Features**
 - Advanced data structures (e.g., dictionaries, dynamic arrays).

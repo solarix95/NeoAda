@@ -103,6 +103,8 @@ private:
     NdaParser::ASTNodePtr parseTerm();               // a * b
     NdaParser::ASTNodePtr parseFactor();             // a**b
     NdaParser::ASTNodePtr parsePrimary();            // a
+    NdaParser::ASTNodePtr parseAtom();               // a
+
     NdaParser::ASTNodePtr parseFunctionCall(NdaParser::ASTNodePtr &funcNode);        // a()
     NdaParser::ASTNodePtr parseMethodCall(NdaParser::ASTNodePtr &funcNode);          // type:a()
     NdaParser::ASTNodePtr parseIterableOrRange();    // for x in [IterableOrRange]

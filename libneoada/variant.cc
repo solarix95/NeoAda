@@ -769,26 +769,55 @@ NdaVariant NdaVariant::subtract(const NdaVariant &other, bool *ok) const
         return cInternalReference()->subtract(other, ok);
 
     if (ok) *ok = false;
-    if (myType()  != other.type())
-        return NdaVariant();
+
+    if ((type() == Nda::Number) || (other.type() == Nda::Number))
+        return doubleSubtraction(other,  ok);
 
     switch (myType()) {
-    case Nda::Number: {
-        NdaVariant ret;
-        if (ok) *ok = true;
-        ret.fromNumber(mRuntimeType,mValue.uDouble - other.cuValue()->uDouble);
-        return ret;
-    } break;
     case Nda::Natural: {
+        bool isLong;
+        auto offset = other.toInt64(&isLong);
+        if (!isLong)
+            return NdaVariant();
+        if ((offset > 0 && mValue.uInt64 < std::numeric_limits<int64_t>::min() + offset) ||
+            (offset < 0 && mValue.uInt64 > std::numeric_limits<int64_t>::max() + offset))
+            return NdaVariant();
+
         NdaVariant ret;
+        ret.fromNatural(mRuntimeType, mValue.uInt64 - offset);
         if (ok) *ok = true;
-        ret.fromNatural(mRuntimeType,mValue.uInt64 - other.cuValue()->uInt64);
         return ret;
     } break;
     case Nda::Supernatural: {
+
+        uint64_t offset;
+        if (other.type() == Nda::Supernatural) {
+            offset = other.cuValue()->uUInt64;
+        } else {
+            bool isLong;
+            auto intOffset = other.toInt64(&isLong);
+            if (!isLong || intOffset < 0)
+                return NdaVariant();
+            offset = intOffset;
+        }
+        if (offset > mValue.uUInt64)
+            return NdaVariant();
+
         NdaVariant ret;
+        ret.fromSNatural(mRuntimeType, mValue.uUInt64 - offset);
         if (ok) *ok = true;
-        ret.fromSNatural(mRuntimeType,mValue.uUInt64 - other.cuValue()->uUInt64);
+        return ret;
+    } break;
+    case Nda::Byte: {
+
+        bool isLong;
+        auto intOffset = other.toInt64(&isLong);
+        if (!isLong || intOffset < 0 || intOffset > mValue.uByte)
+            return NdaVariant();
+
+        NdaVariant ret;
+        ret.fromByte(mRuntimeType, mValue.uByte - intOffset);
+        if (ok) *ok = true;
         return ret;
     } break;
     default:
@@ -857,7 +886,6 @@ NdaVariant NdaVariant::add(const NdaVariant &other, bool *ok) const
     }
 
     return NdaVariant();
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1453,6 +1481,24 @@ NdaVariant NdaVariant::doubleAddition(const NdaVariant &other, bool *ok) const
 
     NdaVariant ret;
     ret.fromNumber(type() == Nda::Number ? runtimeType() : other.runtimeType(), value + offset);
+
+    if (ok) *ok = true;
+    return ret;
+
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaVariant::doubleSubtraction(const NdaVariant &other, bool *ok) const
+{
+    bool isDouble;
+    auto offset = other.toDouble(&isDouble);
+    if (!isDouble)
+        return NdaVariant();
+
+    auto value = toDouble(ok);
+
+    NdaVariant ret;
+    ret.fromNumber(type() == Nda::Number ? runtimeType() : other.runtimeType(), value - offset);
 
     if (ok) *ok = true;
     return ret;

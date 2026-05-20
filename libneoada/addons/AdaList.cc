@@ -10,6 +10,21 @@ void add_AdaList_symbols(NdaState *state)
 {
     assert(state);
 
+    // ------------------ List:Version() ---------------------------------------------------------
+    /*
+    state->bind("list","version",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() == Nda::List)
+            ret.fromNatural(state->typeByName("natural"),self.lengthOperator());
+        else
+            return false;
+        return true;
+    });
+    */
+
     // ------------------ List.Length() ---------------------------------------------------------
     state->bindFnc("list","length",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
 

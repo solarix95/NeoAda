@@ -47,7 +47,7 @@ struct FunctionEntry {
 
 struct OverloadedFunction {
     std::string functionName;
-    std::vector<FunctionEntry> overloads;
+    std::unordered_map<int, std::vector<FunctionEntry>> overloadsByArgCount;
 };
 
 class FunctionTable
@@ -67,9 +67,13 @@ public:
 
     // Runtime
     bool               contains(const std::string &name, const NdaVariants &parameters);
+    Nda::FunctionEntry *symbolPtr(const std::string &name, const NdaVariants &parameters);
     Nda::FunctionEntry &symbol(const std::string &name, const NdaVariants &parameters);
 
 private:
+    bool matches(const Nda::FunctionEntry &entry, const NdaVariants &parameters) const;
+    bool parameterMatches(const std::string &typeName, const NdaVariant &value) const;
+
     std::unordered_map<std::string, Nda::OverloadedFunction> mFunctions;
 };
 

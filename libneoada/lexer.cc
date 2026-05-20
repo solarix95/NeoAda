@@ -217,7 +217,7 @@ bool NdaLexer::parseNext()
             }
 
             if (isValid) {
-                mTokens.push_back(Token(stringLiteral,TokenType::String, mColumn, mRow));
+                mTokens.push_back(Token(stringLiteral,TokenType::String, mRow, mColumn));
                 return true;
             }
             continue;
