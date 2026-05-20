@@ -10,6 +10,7 @@
 #include "interpreter.h"
 
 #include "addons/AdaList.h"
+#include "addons/AdaBytes.h"
 #include "addons/AdaString.h"
 #include "addons/AdaIoFile.h"
 
@@ -38,8 +39,12 @@ void NdaRuntime::reset()
     mState->onWith([this](const std::string &addonName) {
         if (addonName == "ada.list")
             loadAddonAdaList();
+        if (addonName == "ada.bytes")
+            loadAddonAdaBytes();
         if (addonName == "ada.string")
             loadAddonAdaString();
+        if (addonName == "ada.io.file" || addonName == "ada.io")
+            loadAddonAdaIoFile();
     });
 }
 
@@ -144,6 +149,14 @@ void NdaRuntime::loadAddonAdaList()
     if (!mState)
         reset();
     Nda::add_AdaList_symbols(mState);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::loadAddonAdaBytes()
+{
+    if (!mState)
+        reset();
+    Nda::add_AdaBytes_symbols(mState);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ namespace Nda {
 class  SharedData;
 class  SharedString;
 class  SharedList;
+class  SharedBytes;
 class  SharedDict;
 }
 
@@ -77,6 +78,13 @@ public:
     void              reverseList();
     void              clearList();
 
+    // Bytes interface
+    inline int        bytesSize() const { return lengthOperator(); }
+    bool              appendToBytes(const NdaVariant &value);
+    NdaVariant&       writeBytesAccess(int index);
+    const NdaVariant& readBytesAccess(int index) const;
+    void              clearBytes();
+
     // Dict interface
     inline int        dictSize() const { return lengthOperator(); }
     void              appendToDict(const NdaVariant &key, const NdaVariant &value);
@@ -108,6 +116,7 @@ private:
     void assignAny(const NdaVariant &other);       // NeoAdas Any := ...
     void assignOtherString(const NdaVariant &other);
     void assignOtherList(const NdaVariant &other);
+    void assignOtherBytes(const NdaVariant &other);
     void assignOtherDict(const NdaVariant &other);
     NdaVariant doubleAddition(const NdaVariant &other, bool *ok= nullptr) const;
     NdaVariant doubleSubtraction(const NdaVariant &other, bool *ok= nullptr) const;
@@ -123,6 +132,10 @@ private:
     Nda::SharedList         *internalList();
     const Nda::SharedList   *cInternalList() const;
     void                     detachList();
+
+    Nda::SharedBytes        *internalBytes();
+    const Nda::SharedBytes  *cInternalBytes() const;
+    void                     detachBytes();
 
     Nda::SharedDict         *internalDict();
     const Nda::SharedDict   *cInternalDict() const;

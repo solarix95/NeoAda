@@ -2,6 +2,7 @@
 #include "private/sharedstring.h"
 #include "private/numericparser.h"
 #include "private/sharedlist.h"
+#include "private/sharedbytes.h"
 #include "private/shareddict.h"
 
 #include <cassert>
@@ -69,6 +70,7 @@ void NdaVariant::initType(const Nda::RuntimeType *type)
 
     case Nda::String:       mValue.uPtr    =  new Nda::SharedString(); break;
     case Nda::List:         mValue.uPtr    =  new Nda::SharedList();   break;
+    case Nda::Bytes:        mValue.uPtr    =  new Nda::SharedBytes();  break;
     case Nda::Dict:         mValue.uPtr    =  new Nda::SharedDict();   break;
 
     default:
@@ -334,6 +336,7 @@ bool NdaVariant::toBool(bool *ok) const
         return (bool)mValue.uByte;
         break;
     case Nda::String:    return false; break;
+    case Nda::Bytes:     return false; break;
     }
     return false;
 }
@@ -409,6 +412,7 @@ int64_t NdaVariant::toInt64(bool *ok) const
         break;
 
     case Nda::String:    return false; break;
+    case Nda::Bytes:     return false; break;
 
     }
     return false;
@@ -500,6 +504,15 @@ bool NdaVariant::assign(const NdaVariant &other)
                 return true;
             reset();
             assignOtherList(other);
+            return true;
+        }
+    } break;
+    case Nda::Bytes: {
+        if (other.type() == Nda::Bytes) {
+            if (other.cInternalBytes() == cInternalBytes())
+                return true;
+            reset();
+            assignOtherBytes(other);
             return true;
         }
     } break;
@@ -1163,6 +1176,9 @@ int NdaVariant::lengthOperator() const
     case Nda::List:
         length = cInternalList() ? cInternalList()->cArray().size() : 0;
         break;
+    case Nda::Bytes:
+        length = cInternalBytes() ? cInternalBytes()->cArray().size() : 0;
+        break;
     case Nda::Dict:
         length = cInternalDict() ? cInternalDict()->cDict().size() : 0;
         break;
@@ -1308,6 +1324,66 @@ void NdaVariant::clearList()
     internalList()->array().clear();
 }
 
+
+//-------------------------------------------------------------------------------------------------
+bool NdaVariant::appendToBytes(const NdaVariant &value)
+{
+    if (myType() == Nda::Reference)
+        return internalReference()->appendToBytes(value);
+
+    assert(type() == Nda::Bytes);
+    if (value.type() != Nda::Byte)
+        return false;
+
+    assert(mValue.uPtr);
+    detachBytes();
+    internalBytes()->array().push_back(value);
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant &NdaVariant::writeBytesAccess(int index)
+{
+    if (myType() == Nda::Reference)
+        return internalReference()->writeBytesAccess(index);
+
+    assert(type() == Nda::Bytes);
+    assert(index >= 0);
+    assert(index < lengthOperator());
+
+    detachBytes();
+    return internalBytes()->array()[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+const NdaVariant &NdaVariant::readBytesAccess(int index) const
+{
+    if (myType() == Nda::Reference)
+        return cInternalReference()->readBytesAccess(index);
+
+    assert(type() == Nda::Bytes);
+    assert(index >= 0);
+    assert(index < lengthOperator());
+
+    return cInternalBytes()->cArray()[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaVariant::clearBytes()
+{
+    if (myType() == Nda::Reference)
+        return internalReference()->clearBytes();
+
+    assert(type() == Nda::Bytes);
+
+    if (lengthOperator() <= 0)
+        return;
+
+    assert(mValue.uPtr);
+    detachBytes();
+    internalBytes()->array().clear();
+}
+
 //-------------------------------------------------------------------------------------------------
 void NdaVariant::appendToDict(const NdaVariant &key, const NdaVariant &value)
 {
@@ -1386,6 +1462,9 @@ void NdaVariant::assignOther(const NdaVariant &other)
     case Nda::List:
         assignOtherList(other);
         return;
+    case Nda::Bytes:
+        assignOtherBytes(other);
+        return;
     case Nda::Dict:
         assignOtherDict(other);
         return;
@@ -1415,6 +1494,10 @@ void NdaVariant::assignAny(const NdaVariant &other)
     case Nda::List:
         reset();
         assignOtherList(other);
+        return;
+    case Nda::Bytes:
+        reset();
+        assignOtherBytes(other);
         return;
     case Nda::Dict:
         reset();
@@ -1452,6 +1535,22 @@ void NdaVariant::assignOtherList(const NdaVariant &other)
         return;
     mValue.uPtr = other.cuValue()->uPtr;
     internalList()->addRef();
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void NdaVariant::assignOtherBytes(const NdaVariant &other)
+{
+    assert(myType()    == Nda::Undefined);
+    assert(mValue.uPtr == nullptr);
+
+    mRuntimeType = other.runtimeType();
+    assert(type() == Nda::Bytes);
+
+    if (!other.mValue.uPtr)
+        return;
+    mValue.uPtr = other.cuValue()->uPtr;
+    internalBytes()->addRef();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1615,6 +1714,19 @@ std::string NdaVariant::toString() const
         }
 
         return "[]";
+    case Nda::Bytes:
+        if (mValue.uPtr) {
+            std::string ret;
+            for (const auto &v : cInternalBytes()->cArray()) {
+                if (!ret.empty())
+                    ret = ret + ",";
+                ret += v.toString();
+            }
+            ret = "Bytes[" + ret + "]";
+            return ret;
+        }
+
+        return "Bytes[]";
     case Nda::Dict:
         if (mValue.uPtr) {
             std::string ret;
@@ -1680,6 +1792,9 @@ int NdaVariant::refCount() const
 
     if (myType() == Nda::List)
         return cInternalList()->refCount();
+
+    if (myType() == Nda::Bytes)
+        return cInternalBytes()->refCount();
 
     if (myType() == Nda::Dict)
         return cInternalDict()->refCount();
@@ -1772,6 +1887,7 @@ void NdaVariant::reset()
         break;
     case Nda::String:
     case Nda::List:
+    case Nda::Bytes:
     case Nda::Dict:
         if (mValue.uPtr) {
             internalSharedObject()->releaseRef();
@@ -1849,6 +1965,43 @@ void NdaVariant::detachList()
     mValue.uPtr = newList;
 }
 
+
+//-------------------------------------------------------------------------------------------------
+Nda::SharedBytes *NdaVariant::internalBytes()
+{
+    if (myType() == Nda::Reference)
+        return internalReference()->internalBytes();
+
+    assert(myType() == Nda::Bytes);
+    if (!mValue.uPtr)
+        mValue.uPtr = new Nda::SharedBytes();
+    return ((Nda::SharedBytes*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
+const Nda::SharedBytes *NdaVariant::cInternalBytes() const
+{
+    if (myType() == Nda::Reference)
+        return cInternalReference()->cInternalBytes();
+
+    assert(myType() == Nda::Bytes);
+    return ((Nda::SharedBytes*)mValue.uPtr);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaVariant::detachBytes()
+{
+    assert(myType() == Nda::Bytes);
+
+    if (internalBytes()->refCount() <= 1)
+        return;
+
+    auto *newBytes = new Nda::SharedBytes();
+    newBytes->array() = internalBytes()->array();
+    internalBytes()->releaseRef();
+    mValue.uPtr = newBytes;
+}
+
 //-------------------------------------------------------------------------------------------------
 Nda::SharedDict *NdaVariant::internalDict()
 {
@@ -1891,6 +2044,7 @@ Nda::SharedData *NdaVariant::internalSharedObject()
     switch (myType()) {
     case Nda::String:
     case Nda::List:
+    case Nda::Bytes:
     case Nda::Dict:
         return (Nda::SharedData*)mValue.uPtr;
         break;

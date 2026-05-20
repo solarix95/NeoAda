@@ -12,6 +12,7 @@ NdaState::NdaState()
     , mNaturalType(nullptr)
     , mStringType(nullptr)
     , mListType(nullptr)
+    , mBytesType(nullptr)
     , mReferenceType(nullptr)
 {
     reset();
@@ -42,7 +43,9 @@ void NdaState::reset()
     mBooleanType = registerType("Boolean",Nda::Boolean, true); assert(mBooleanType);
     mStringType  = registerType("String",Nda::String, true);   assert(mStringType);
     mListType    = registerType("List",Nda::List, true);       assert(mListType);
+    mBytesType   = registerType("Bytes",Nda::Bytes, true);     assert(mBytesType);
     mDictType    = registerType("Dict",Nda::Dict, true);       assert(mDictType);
+
 }
 
 //-------------------------------------------------------------------------------------------------

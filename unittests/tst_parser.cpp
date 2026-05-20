@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 #include <libneoada/exception.h>
 #include <libneoada/lexer.h>
@@ -181,11 +182,13 @@ private slots:
     void test_interpreter_Return3();
     void test_interpreter_Return4();
     void test_interpreter_Return5_Natural();
+    void test_interpreter_Return_ForLoop();
     void test_interpreter_Return6_Supernatural();
     void test_interpreter_Return7_Number();
     void test_interpreter_Return8_Byte();
 
-    void test_interpreter_TypeIs();
+    void test_interpreter_CustomType_TypeIs();
+    void test_interpreter_CustomType_Procedure();
 
     void test_interpreter_Volatile_CTor();
 
@@ -208,6 +211,18 @@ private slots:
     void test_api_evaluate_List_Read2();
     void test_api_evaluate_List_Write();
     void test_api_evaluate_List_Swap();
+
+    void test_api_evaluate_Bytes_Init();
+    void test_api_evaluate_Bytes_RejectMethodWithoutAddon();
+    void test_api_evaluate_Bytes_AppendReadWrite();
+    void test_api_evaluate_Bytes_Clear();
+    void test_api_evaluate_Bytes_AppendBytesContainsIndexOf();
+    void test_api_evaluate_Bytes_InsertRemove();
+    void test_api_evaluate_Bytes_MidSlicedSlice();
+    void test_api_evaluate_Bytes_ChoppedChop();
+    void test_api_evaluate_Bytes_RejectNonByteAppend();
+    void test_api_evaluate_Bytes_RejectNonByteWrite();
+    void test_api_evaluate_Bytes_RejectDictAccessSyntax();
 
     void test_api_evaluate_Dict_Init();
     void test_api_evaluate_Dict_Append();
@@ -240,6 +255,12 @@ private slots:
     void test_api_evaluate_add_Supernatural();
     void test_api_evaluate_add_Byte();
 
+    // Subtraction Operator
+    void test_api_evaluate_sub_Number();
+    void test_api_evaluate_sub_Natural();
+    void test_api_evaluate_sub_Supernatural();
+    void test_api_evaluate_sub_Byte();
+
     // Division Operator
     void test_api_evaluate_div_Number();
     void test_api_evaluate_div_Natural();
@@ -259,6 +280,7 @@ private slots:
     void test_api_evaluate_mod_Byte();
 
     // runtime LIST addons
+    void test_api_runtime_AdaList_MultiInclude();
     void test_api_runtime_AdaList_Length();
     void test_api_runtime_AdaList_Append();
     void test_api_runtime_AdaList_Insert();
@@ -288,6 +310,12 @@ private slots:
     void test_api_runtime_AdaString_Slice();
     void test_api_runtime_AdaString_Sliced();
 
+    // runtime File addons
+    void test_api_runtime_AdaIoFile_FileBytes_CreateReadAll();
+    void test_api_runtime_AdaIoFile_TextFile_CreateReadAll();
+    void test_api_runtime_AdaIoFile_TextFile_ExistsOpenRead();
+    void test_api_runtime_AdaIoFile_TextFile_DictMembers();
+
     // invoke API
     void test_api_runtime_invoke_Fnc1();
     void test_api_runtime_invoke_Fnc2();
@@ -310,11 +338,6 @@ private slots:
     void test_error_interpreter_boolAssignment();
     void test_error_runtime_symbolLookup();
     void test_error_runtime_divisionByZero();
-
-
-
-
-
 };
 
 TstParser::TstParser() {}
@@ -1386,7 +1409,7 @@ void TstParser::test_parser_Primary3_List_Access()
     std::string expectedAST = R"(
 Node(Program, "")
   Node(Assignment, ":=")
-    Node(Unknown, "")
+    Node(Unknown, "[")
       Node(Identifier, "x")
       Node(Number, "1")
     Node(Number, "7")
@@ -3023,6 +3046,22 @@ void TstParser::test_interpreter_Return4()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Return_ForLoop()
+{
+    std::string script = R"(
+    for i in 1..10 loop
+        return i;
+    end loop;
+    return 99;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_Return5_Natural()
 {
     NdaLexer       lexer;
@@ -3079,7 +3118,7 @@ void TstParser::test_interpreter_Return8_Byte()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_interpreter_TypeIs()
+void TstParser::test_interpreter_CustomType_TypeIs()
 {
     std::string script = R"(
         type File is Natural;
@@ -3087,6 +3126,33 @@ void TstParser::test_interpreter_TypeIs()
 
         x := 42;
         return x;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_CustomType_Procedure()
+{
+    std::string script = R"(
+        type File is Natural;
+
+        function File:myVersion return Natural is
+        begin
+            return 42;
+        end;
+
+        return File:myVersion();
     )";
 
     NdaLexer       lexer;
@@ -3442,6 +3508,226 @@ void TstParser::test_api_evaluate_List_Swap()
     QVERIFY(ret.readAccess(0).toString() == "3");
     QVERIFY(ret.readAccess(1).toString() == "2");
     QVERIFY(ret.readAccess(2).toString() == "1");
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_Init()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        return data.length();
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.type() == Nda::Natural);
+    QVERIFY(ret.toInt64() == 0);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_RejectMethodWithoutAddon()
+{
+    std::string script = R"(
+        declare data : Bytes;
+        return data.length();
+    )";
+
+    NdaRuntime r;
+    NdaException ex;
+    r.runScript(script, &ex);
+
+    QVERIFY(ex.code() == Nada::Error::UnknownSymbol);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_AppendReadWrite()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(65_b);
+        data[0] := 66_b;
+        return data[0];
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.type() == Nda::Byte);
+    QVERIFY(ret.toInt64() == 66);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_Clear()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(65_b);
+        data.append(66_b);
+        declare before : Natural := data.length();
+        data.clear();
+        return before * 10 + data.length();
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 20);
+}
+
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_AppendBytesContainsIndexOf()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        declare other : Bytes;
+        data.append(1_b);
+        data.append(2_b);
+        other.append(3_b);
+        other.append(4_b);
+        data.append(other);
+        if data.contains(3_b) then
+            return data.indexOf(4_b) * 10 + data.length();
+        end if;
+        return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 34);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_InsertRemove()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(1_b);
+        data.append(3_b);
+        data.insert(1, 2_b);
+        data.insert(99, 4_b);
+        data.remove(1, 2);
+        return data[0] * 10 + data[1];
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 14);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_MidSlicedSlice()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(10_b);
+        data.append(20_b);
+        data.append(30_b);
+        data.append(40_b);
+        data.append(50_b);
+        declare m : Bytes := data.mid(1, 3);
+        declare s : Bytes := data.sliced(2, 2);
+        data.slice(1, 2);
+        return m.length() * 1000 + m[0] * 10 + s.length() + data.length();
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 3204);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_ChoppedChop()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(1_b);
+        data.append(2_b);
+        data.append(3_b);
+        data.append(4_b);
+        declare c : Bytes := data.chopped(2);
+        data.chop(1);
+        return c.length() * 10 + data.length();
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 23);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_RejectNonByteAppend()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(65_n);
+    )";
+
+    NdaRuntime r;
+    NdaException ex;
+    r.runScript(script, &ex);
+
+    QVERIFY(ex.code() == Nada::Error::UnknownSymbol);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_RejectNonByteWrite()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(65_b);
+        data[0] := 66_n;
+    )";
+
+    NdaRuntime r;
+    NdaException ex;
+    r.runScript(script, &ex);
+
+    QVERIFY(ex.code() == Nada::Error::AssignmentError);
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Bytes_RejectDictAccessSyntax()
+{
+    std::string script = R"(
+        with Ada.Bytes;
+
+        declare data : Bytes;
+        data.append(65_b);
+        return data{0};
+    )";
+
+    NdaRuntime r;
+    NdaException ex;
+    r.runScript(script, &ex);
+
+    QVERIFY(ex.code() == Nada::Error::InvalidContainerType);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3937,6 +4223,91 @@ void TstParser::test_api_evaluate_add_Byte()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_sub_Number()
+{
+    NdaState state;
+
+    // Number - Number
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_d;", state).toInt64() == 2);
+
+    // Number - Natural
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_n;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_n;", state).toInt64() == 2);
+
+    // Number - Supernatural
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_u;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_u;", state).toInt64() == 2);
+
+    // Number - Byte
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_b;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_d - 20_b;", state).toInt64() == 2);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_sub_Natural()
+{
+    NdaState state;
+
+    // Natural - Natural
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_n;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_n;", state).toInt64() == 2);
+
+    // Natural - Number
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_d;", state).toInt64() == 2);
+
+    // Natural - Supernatural
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_u;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_u;", state).toInt64() == 2);
+
+    // Natural - Byte
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_b;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 22_n - 20_b;", state).toInt64() == 2);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_sub_Supernatural()
+{
+    NdaState state;
+
+    // Supernatural - Natural
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_n;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_n;", state).toInt64() == 2);
+
+    // Supernatural - Number
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_d;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_d;", state).toInt64() == 2);
+
+    // Supernatural - Supernatural
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_u;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_u;", state).toInt64() == 2);
+
+    // Supernatural - Byte
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_b;", state).type() == Nda::Supernatural);
+    QVERIFY(NeoAda::evaluate("return 22_u - 20_b;", state).toInt64() == 2);
+
+    // unsigned - negative signed / underflow
+    QVERIFY(NeoAda::evaluate("return 22_u - -2_n;", state).type() == Nda::Undefined);
+    QVERIFY(NeoAda::evaluate("return 22_u - -2_b;", state).type() == Nda::Undefined);
+    QVERIFY(NeoAda::evaluate("return 2_u - 5_n;", state).type() == Nda::Undefined);
+    QVERIFY(NeoAda::evaluate("return 2_u - 5_u;", state).type() == Nda::Undefined);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_sub_Byte()
+{
+    NdaState state;
+
+    QVERIFY(NeoAda::evaluate("return 22_b - 20_n;", state).type() == Nda::Byte);
+    QVERIFY(NeoAda::evaluate("return 22_b - 20_n;", state).toInt64() == 2);
+    QVERIFY(NeoAda::evaluate("return 22_b - 20_b;", state).type() == Nda::Byte);
+    QVERIFY(NeoAda::evaluate("return 22_b - 20_b;", state).toInt64() == 2);
+    QVERIFY(NeoAda::evaluate("return 2_b - 5_n;", state).type() == Nda::Undefined);
+    QVERIFY(NeoAda::evaluate("return 2_b - 5_b;", state).type() == Nda::Undefined);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_div_Number()
 {
     NdaState state;
@@ -4211,6 +4582,25 @@ void TstParser::test_api_evaluate_mod_Byte()
     // Byte % Byte
     QVERIFY(NeoAda::evaluate("return 21_b mod 2_b;", state).type() == Nda::Byte);
     QVERIFY(NeoAda::evaluate("return 21_b mod 2_b;", state).toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_MultiInclude()
+{
+    std::string script = R"(
+
+    with Ada.List;
+    with Ada.List;
+
+    declare xs : List := [1,2,3];
+    return xs.length();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 3);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4737,6 +5127,90 @@ void TstParser::test_api_runtime_AdaString_Sliced()
     auto ret = r.runScript(script);
 
     QVERIFY(ret.toString() == "Neo");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaIoFile_FileBytes_CreateReadAll()
+{
+    std::string script = R"(
+    with Ada.Io.File;
+    with Ada.Bytes;
+
+    declare bytes : Bytes;
+    bytes.append(0_b);
+    bytes.append(65_b);
+    bytes.append(255_b);
+
+    declare f : File := File:create("/tmp/neoada_io_file_bytes.bin");
+    f.write(bytes);
+    declare read : Bytes := f.readAll();
+    return read.length() * 1000 + read[0] * 100 + read[1] + read[2];
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 3320);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaIoFile_TextFile_CreateReadAll()
+{
+    std::string script = R"(
+    with Ada.Io.File;
+
+    declare f : TextFile := TextFile:create("/tmp/neoada_io_textfile_create.txt");
+    f.writeLine("Hello");
+    f.write("NeoAda");
+    return f.readAll();
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "Hello\nNeoAda");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaIoFile_TextFile_ExistsOpenRead()
+{
+    {
+        std::ofstream f("/tmp/neoada_io_textfile_read.txt");
+        f << "Line1\nLine2\n";
+    }
+
+    std::string script = R"(
+    with Ada.Io.File;
+
+    declare ok : Boolean := TextFile:exists("/tmp/neoada_io_textfile_read.txt");
+    declare f : TextFile := TextFile:openRead("/tmp/neoada_io_textfile_read.txt");
+    if ok and f.isOpen() then
+        return f.readLine();
+    end if;
+    return "";
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "Line1");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaIoFile_TextFile_DictMembers()
+{
+    std::string script = R"(
+    with Ada.Io.File;
+
+    declare f : TextFile := TextFile:create("/tmp/neoada_io_textfile_members.txt");
+    f{"encoding"} := "latin1";
+    return f{"__type"} & ":" & f{"mode"} & ":" & f{"encoding"};
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toString() == "TextFile:create:latin1");
 }
 
 //-------------------------------------------------------------------------------------------------

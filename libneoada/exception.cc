@@ -52,6 +52,12 @@ std::string NdaException::messageByCode() const
     case Nada::Error::InvalidNumericValue:    return "Invalid numeric value";
     case Nada::Error::UnknownSymbol:          return "Unknown symbol";
     case Nada::Error::UnknownFunctionCall:    return "Unknown function call";
+    case Nada::Error::DeclarationError:       return "Declaration error";
+    case Nada::Error::InvalidAssignment:      return "Invalid assignment";
+    case Nada::Error::InvalidCondition:       return "Invalid condition";
+    case Nada::Error::InvalidJump:            return "Invalid jump";
+    case Nada::Error::InvalidContainerType:   return "Invalid container type";
+    case Nada::Error::InvalidAccessValue:     return "Invalid access value";
 
     }
     return "";

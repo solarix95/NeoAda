@@ -6,7 +6,7 @@
 #include "utils.h"
 
 namespace Nda {
-    enum Type { Undefined, Reference, Any, Number, Natural, Supernatural, Boolean, Byte, String, List, Dict };
+    enum Type { Undefined, Reference, Any, Number, Natural, Supernatural, Boolean, Byte, String, List, Bytes, Dict };
 
     Type typeByString(const std::string &name);
 

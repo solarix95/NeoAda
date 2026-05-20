@@ -130,6 +130,10 @@ bool FunctionTable::parameterMatches(const std::string &typeName, const NdaVaria
     if (lowerType == "any")
         return true;
 
+    auto *runtimeType = value.runtimeType();
+    if (runtimeType && runtimeType->name.lowerValue == lowerType)
+        return true;
+
     if (lowerType == "number") {
         bool ok;
         value.toDouble(&ok);
@@ -143,6 +147,7 @@ bool FunctionTable::parameterMatches(const std::string &typeName, const NdaVaria
     case Nda::Byte:         return lowerType == "byte";
     case Nda::String:       return lowerType == "string";
     case Nda::List:         return lowerType == "list";
+    case Nda::Bytes:        return lowerType == "bytes";
     case Nda::Dict:         return lowerType == "dict";
     default:                return false;
     }

@@ -31,6 +31,7 @@ public:
 
     virtual void loadAddonAdaString();
     virtual void loadAddonAdaList();
+    virtual void loadAddonAdaBytes();
     virtual void loadAddonAdaIoFile();
 
 private:

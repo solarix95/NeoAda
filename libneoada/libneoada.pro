@@ -13,6 +13,7 @@ HEADERS += \
     $$NEOADA_PATH/private/shareddata.h \
     $$NEOADA_PATH/private/sharedstring.h \
     $$NEOADA_PATH/private/sharedlist.h \
+    $$NEOADA_PATH/private/sharedbytes.h \
     $$NEOADA_PATH/private/shareddict.h \
     $$NEOADA_PATH/private/numericparser.h \
     $$NEOADA_PATH/lexer.h \
@@ -24,6 +25,7 @@ HEADERS += \
     $$NEOADA_PATH/exception.h \
     $$NEOADA_PATH/runtime.h \
     $$NEOADA_PATH/addons/AdaList.h \
+    $$NEOADA_PATH/addons/AdaBytes.h \
     $$NEOADA_PATH/addons/AdaString.h \
     $$NEOADA_PATH/addons/AdaIoFile.h \
     $$NEOADA_PATH/private/runnable.h \
@@ -37,6 +39,7 @@ SOURCES += \
     $$NEOADA_PATH/private/shareddata.cc \
     $$NEOADA_PATH/private/sharedstring.cc \
     $$NEOADA_PATH/private/sharedlist.cc \
+    $$NEOADA_PATH/private/sharedbytes.cc \
     $$NEOADA_PATH/private/shareddict.cc \
     $$NEOADA_PATH/private/numericparser.cc \
     $$NEOADA_PATH/lexer.cc \
@@ -48,6 +51,7 @@ SOURCES += \
     $$NEOADA_PATH/exception.cc \
     $$NEOADA_PATH/runtime.cc \
     $$NEOADA_PATH/addons/AdaList.cc \
+    $$NEOADA_PATH/addons/AdaBytes.cc \
     $$NEOADA_PATH/addons/AdaString.cc \
     $$NEOADA_PATH/addons/AdaIoFile.cc \
     $$NEOADA_PATH/private/runnable.cc \

@@ -1082,16 +1082,24 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
     if (mState->ret().myType() != Nda::Reference)
         throw NdaException(Nada::Error::InvalidContainerType,node->line,node->column, node->value.displayValue);
 
-    // access modifier only for lists and dicts!
-    if ((mState->ret().type() != Nda::List) && (mState->ret().type() != Nda::Dict))
-        throw NdaException(Nada::Error::InvalidContainerType,node->line,node->column, node->value.displayValue);
+    bool isListAccess = node->value.lowerValue == "[";
+    bool isDictAccess = node->value.lowerValue == "{";
+
+    if (isListAccess) {
+        if ((mState->ret().type() != Nda::List) && (mState->ret().type() != Nda::Bytes))
+            throw NdaException(Nada::Error::InvalidContainerType,node->line,node->column, node->value.displayValue);
+    } else {
+        assert(isDictAccess);
+        if (mState->ret().type() != Nda::Dict)
+            throw NdaException(Nada::Error::InvalidContainerType,node->line,node->column, node->value.displayValue);
+    }
 
     auto targetObj = mState->ret();
     assert(targetObj.myType() == Nda::Reference);
 
     run(node->children[1]);
 
-    if (targetObj.type() == Nda::List) {
+    if ((targetObj.type() == Nda::List) || (targetObj.type() == Nda::Bytes)) {
         bool done = false;
         int64_t index = mState->ret().toInt64(&done);
         if (!done)
@@ -1100,11 +1108,17 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
         if (index < 0)
             throw NdaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
 
-        if (index >= targetObj.listSize())
+        int64_t size = (targetObj.type() == Nda::List) ? targetObj.listSize() : targetObj.bytesSize();
+        if (index >= size)
             throw NdaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
 
-        auto &targetValue = targetObj.writeListAccess((int)index);
-        mState->ret().fromReference(mState->referenceType(), &targetValue);
+        if (targetObj.type() == Nda::List) {
+            auto &targetValue = targetObj.writeListAccess((int)index);
+            mState->ret().fromReference(mState->referenceType(), &targetValue);
+        } else {
+            auto &targetValue = targetObj.writeBytesAccess((int)index);
+            mState->ret().fromReference(mState->referenceType(), &targetValue);
+        }
     } else {
         assert(targetObj.type() == Nda::Dict);
         auto &targetValue = targetObj.writeDictAccess(mState->ret());

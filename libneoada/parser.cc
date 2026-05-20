@@ -1052,7 +1052,7 @@ bool NdaParser::handleIdentifierAccess(ASTNodePtr &identNode)
     if (!isListAccess && !isDictAccess)
         return false;
 
-    auto accessNode = std::make_shared<ASTNode>(ASTNodeType::AccessOperator, mLexer.line(), mLexer.column());
+    auto accessNode = std::make_shared<ASTNode>(ASTNodeType::AccessOperator, mLexer.line(), mLexer.column(), isListAccess ? "[" : "{");
     ASTNode::addChild(accessNode,identNode);
 
     if (!mLexer.nextToken())    // jump to "["

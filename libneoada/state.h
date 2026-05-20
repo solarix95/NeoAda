@@ -27,6 +27,7 @@ public:
     inline const Nda::RuntimeType *naturalType() const   { return mNaturalType; }
     inline const Nda::RuntimeType *stringType() const    { return mStringType; }
     inline const Nda::RuntimeType *listType() const      { return mListType; }
+    inline const Nda::RuntimeType *bytesType() const     { return mBytesType; }
     inline const Nda::RuntimeType *dictType() const      { return mDictType; }
     inline const Nda::RuntimeType *referenceType() const { return mReferenceType; }
 
@@ -112,6 +113,7 @@ private:
     const Nda::RuntimeType *mNaturalType;
     const Nda::RuntimeType *mStringType;
     const Nda::RuntimeType *mListType;
+    const Nda::RuntimeType *mBytesType;
     const Nda::RuntimeType *mDictType;
     const Nda::RuntimeType *mReferenceType;
 };

@@ -30,6 +30,9 @@ Nda::Type Nda::typeByString(const std::string &name)
     if (lowerName == "list")
         return Nda::List;
 
+    if (lowerName == "bytes")
+        return Nda::Bytes;
+
     if (lowerName == "dict")
         return Nda::Dict;
 
