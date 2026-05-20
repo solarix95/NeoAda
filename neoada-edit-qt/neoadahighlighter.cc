@@ -49,7 +49,7 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
 
     // ---------- Keywords ----------
     const QStringList keywords = {
-        "declare", "type", "is", "of", "list",
+        "declare", "type", "is", "of", "list", "with",
         "if", "then", "elsif", "else", "end",
         "for", "in", "while", "loop",
         "procedure", "function", "return", "begin",
@@ -59,8 +59,9 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
 
     // ---------- Types (built-ins) ----------
     const QStringList types = {
-        "Boolean", "Natural", "Positive", "Number",
-        "Character", "String", "Byte", "any"
+        "Boolean", "Natural", "Supernatural", "Positive", "Number",
+        "Character", "String", "Byte", "Bytes", "List", "Dict",
+        "File", "TextFile", "Any", "any"
     };
     m_rules.push_back({ wordsRx(types), typeFmt });
 
@@ -78,6 +79,12 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
     // Examples: 42, 3.14, .5, 1e-3, 2.0E+5
     m_rules.push_back({
         QRegularExpression(QStringLiteral(R"((?<![\w.])(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?(?![\w.]))")),
+        litFmt
+    });
+
+    // NeoAda typed numeric literals: 42_b, 42_n, 42_u, 3.14_d
+    m_rules.push_back({
+        QRegularExpression(QStringLiteral(R"((?<![\w.])\d+(_[bBnNuUdD])(?![\w.]))")),
         litFmt
     });
 
