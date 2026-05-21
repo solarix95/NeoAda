@@ -1,6 +1,7 @@
 #include "neoadaapi.h"
 #include <QtTest>
 #include <QDebug>
+#include <QCoreApplication>
 
 #include <iostream>
 #include <sstream>
@@ -58,6 +59,8 @@ private slots:
     void test_core_NumericLiterals();
     void test_core_NumericValues();
     void test_core_NumericValues_Invalid();
+    void test_core_VariantToString_Boolean();
+    void test_core_VariantToString_Byte();
     void test_core_SharedString();
     void test_core_Assignment();
     void test_core_References();
@@ -292,29 +295,6 @@ private slots:
     void test_api_runtime_AdaList_Clear();
     void test_api_runtime_AdaList_Clear_Append();
 
-    // runtime String addons
-    void test_api_runtime_AdaString_Length();
-    void test_api_runtime_AdaString_Append();
-    void test_api_runtime_AdaString_Insert();
-    void test_api_runtime_AdaString_ToUppper();
-    void test_api_runtime_AdaString_ToLower();
-    void test_api_runtime_AdaString_Uppper();
-    void test_api_runtime_AdaString_Lower();
-    void test_api_runtime_AdaString_Contains();
-    void test_api_runtime_AdaString_IndexOf();
-    void test_api_runtime_AdaString_Trim();
-    void test_api_runtime_AdaString_Trimmed();
-    void test_api_runtime_AdaString_Chop1();
-    void test_api_runtime_AdaString_Chop2();
-    void test_api_runtime_AdaString_Chopped();
-    void test_api_runtime_AdaString_Slice();
-    void test_api_runtime_AdaString_Sliced();
-
-    // runtime File addons
-    void test_api_runtime_AdaIoFile_FileBytes_CreateReadAll();
-    void test_api_runtime_AdaIoFile_TextFile_CreateReadAll();
-    void test_api_runtime_AdaIoFile_TextFile_ExistsOpenRead();
-    void test_api_runtime_AdaIoFile_TextFile_DictMembers();
 
     // invoke API
     void test_api_runtime_invoke_Fnc1();
@@ -470,6 +450,30 @@ void TstParser::test_core_NumericValues_Invalid()
     // uint64_t (too long)
     QCOMPARE(v.fromSNaturalLiteral(state.typeByName("supernatural"),"18446744073709551616"),false);
     QCOMPARE(v.type(), Nda::Undefined);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_VariantToString_Boolean()
+{
+    NdaState state;
+
+    NdaVariant t;
+    t.fromBool(state.booleanType(), true);
+    QCOMPARE(t.toString(), std::string("true"));
+
+    NdaVariant f;
+    f.fromBool(state.booleanType(), false);
+    QCOMPARE(f.toString(), std::string("false"));
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_core_VariantToString_Byte()
+{
+    NdaState state;
+
+    NdaVariant v;
+    v.fromByte(state.typeByName("byte"), 42);
+    QCOMPARE(v.toString(), std::string("42"));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4808,412 +4812,6 @@ void TstParser::test_api_runtime_AdaList_Clear_Append()
 }
 
 //-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Length()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "123456";
-
-    return x.length();
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toInt64() == 6);
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Append()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "123456";
-
-    x.append("789");
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "123456789");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Insert()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "123789";
-
-    x.insert(3,"456");
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "123456789");
-
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_ToUppper()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    return x.toUpper();
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "NEOADA");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_ToLower()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    return x.toLower();
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "neoada");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Uppper()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    x.upper();
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "NEOADA");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Lower()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    x.lower();
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "neoada");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Contains()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    return x.contains("Ada");
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toBool() == true);
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_IndexOf()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    return x.indexOf("Ada");
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toInt64() == 3);
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Trim()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "  NeoAda  ";
-
-    x.trim();
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "NeoAda");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Trimmed()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "  NeoAda  ";
-
-    return x.trimmed();
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "NeoAda");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Chop1()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda  ";
-
-    x.chop(2);
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "NeoAda");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Chop2()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda  ";
-
-    x.chop(27);
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Chopped()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda  ";
-
-    return x.chopped(2);
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "NeoAda");
-}
-
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Slice()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    x.slice(0,3);
-
-    return x;
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "Neo");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaString_Sliced()
-{
-    std::string script = R"(
-
-    with Ada.String;
-
-    declare x : String := "NeoAda";
-
-    return x.sliced(0,3);
-    )";
-
-    NdaRuntime r;
-
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "Neo");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaIoFile_FileBytes_CreateReadAll()
-{
-    std::string script = R"(
-    with Ada.Io.File;
-    with Ada.Bytes;
-
-    declare bytes : Bytes;
-    bytes.append(0_b);
-    bytes.append(65_b);
-    bytes.append(255_b);
-
-    declare f : File := File:create("/tmp/neoada_io_file_bytes.bin");
-    f.write(bytes);
-    declare read : Bytes := f.readAll();
-    return read.length() * 1000 + read[0] * 100 + read[1] + read[2];
-    )";
-
-    NdaRuntime r;
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toInt64() == 3320);
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaIoFile_TextFile_CreateReadAll()
-{
-    std::string script = R"(
-    with Ada.Io.File;
-
-    declare f : TextFile := TextFile:create("/tmp/neoada_io_textfile_create.txt");
-    f.writeLine("Hello");
-    f.write("NeoAda");
-    return f.readAll();
-    )";
-
-    NdaRuntime r;
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "Hello\nNeoAda");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaIoFile_TextFile_ExistsOpenRead()
-{
-    {
-        std::ofstream f("/tmp/neoada_io_textfile_read.txt");
-        f << "Line1\nLine2\n";
-    }
-
-    std::string script = R"(
-    with Ada.Io.File;
-
-    declare ok : Boolean := TextFile:exists("/tmp/neoada_io_textfile_read.txt");
-    declare f : TextFile := TextFile:openRead("/tmp/neoada_io_textfile_read.txt");
-    if ok and f.isOpen() then
-        return f.readLine();
-    end if;
-    return "";
-    )";
-
-    NdaRuntime r;
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "Line1");
-}
-
-//-------------------------------------------------------------------------------------------------
-void TstParser::test_api_runtime_AdaIoFile_TextFile_DictMembers()
-{
-    std::string script = R"(
-    with Ada.Io.File;
-
-    declare f : TextFile := TextFile:create("/tmp/neoada_io_textfile_members.txt");
-    f{"encoding"} := "latin1";
-    return f{"__type"} & ":" & f{"mode"} & ":" & f{"encoding"};
-    )";
-
-    NdaRuntime r;
-    auto ret = r.runScript(script);
-
-    QVERIFY(ret.toString() == "TextFile:create:latin1");
-}
-
-//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_runtime_invoke_Fnc1()
 {
     std::string script = R"(
@@ -5725,6 +5323,45 @@ void TstParser::test_error_runtime_divisionByZero()
 }
 
 
-QTEST_APPLESS_MAIN(TstParser)
+extern int runAdaStringTests(int argc, char **argv);
+extern int runAdaMathTests(int argc, char **argv);
+extern int runAdaTextEncodingTests(int argc, char **argv);
+extern int runAdaIoFileTests(int argc, char **argv);
+
+static bool hasRequestedTest(const QMetaObject *metaObject, int argc, char **argv)
+{
+    bool hasFilter = false;
+
+    for (int i = 1; i < argc; ++i) {
+        QString name = QString::fromLocal8Bit(argv[i]);
+        if (!name.startsWith(QStringLiteral("test_")))
+            continue;
+
+        hasFilter = true;
+        name = name.section(':', 0, 0);
+        const QByteArray signature = name.toLocal8Bit() + "()";
+        if (metaObject->indexOfSlot(signature.constData()) >= 0)
+            return true;
+    }
+
+    return !hasFilter;
+}
+
+int main(int argc, char **argv)
+{
+    QCoreApplication app(argc, argv);
+    int status = 0;
+
+    TstParser parserTests;
+    if (hasRequestedTest(parserTests.metaObject(), argc, argv))
+        status |= QTest::qExec(&parserTests, argc, argv);
+
+    status |= runAdaStringTests(argc, argv);
+    status |= runAdaMathTests(argc, argv);
+    status |= runAdaTextEncodingTests(argc, argv);
+    status |= runAdaIoFileTests(argc, argv);
+
+    return status;
+}
 
 #include "tst_parser.moc"

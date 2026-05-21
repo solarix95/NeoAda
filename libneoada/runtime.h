@@ -32,6 +32,7 @@ public:
     virtual void loadAddonAdaString();
     virtual void loadAddonAdaList();
     virtual void loadAddonAdaBytes();
+    virtual void loadAddonAdaMath();
     virtual void loadAddonAdaIoFile();
     virtual void loadAddonAdaTextEncoding();
 

@@ -10,4 +10,8 @@ TEMPLATE = app
 
 NEOADA_PATH = ../libneoada
 include(../libneoada/libneoada.pro)
-SOURCES +=  tst_parser.cpp
+SOURCES +=  tst_parser.cpp \
+            tst_AdaString.cpp \
+            tst_AdaMath.cpp \
+            tst_AdaTextEncoding.cpp \
+            tst_AdaIoFile.cpp
