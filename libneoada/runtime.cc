@@ -12,6 +12,7 @@
 #include "addons/AdaList.h"
 #include "addons/AdaBytes.h"
 #include "addons/AdaString.h"
+#include "addons/AdaTextEncoding.h"
 #include "addons/AdaIoFile.h"
 
 //-------------------------------------------------------------------------------------------------
@@ -43,6 +44,8 @@ void NdaRuntime::reset()
             loadAddonAdaBytes();
         if (addonName == "ada.string")
             loadAddonAdaString();
+        if (addonName == "ada.text.encoding")
+            loadAddonAdaTextEncoding();
         if (addonName == "ada.io.file" || addonName == "ada.io")
             loadAddonAdaIoFile();
     });
@@ -165,6 +168,14 @@ void NdaRuntime::loadAddonAdaIoFile()
     if (!mState)
         reset();
     Nda::add_AdaIoFile_symbols(mState);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::loadAddonAdaTextEncoding()
+{
+    if (!mState)
+        reset();
+    Nda::add_AdaTextEncoding_symbols(mState);
 }
 
 //-------------------------------------------------------------------------------------------------

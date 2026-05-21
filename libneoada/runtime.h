@@ -33,6 +33,7 @@ public:
     virtual void loadAddonAdaList();
     virtual void loadAddonAdaBytes();
     virtual void loadAddonAdaIoFile();
+    virtual void loadAddonAdaTextEncoding();
 
 private:
     void destroy();

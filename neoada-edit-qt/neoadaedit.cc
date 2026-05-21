@@ -338,6 +338,17 @@ print("length=" & xs.length());
 return xs;
 )")});
 
+    mExamples.push_back({tr("Dictionaries"), tr("Fortgeschritten"), QString::fromUtf8(R"(declare person : Dict := {"name":"Ada", "age":12};
+
+person{"language"} := "NeoAda";
+person{"stats"} := {"projects":3, "level":"advanced"};
+
+print(person{"name"} & " lernt " & person{"language"});
+print("Projekte: " & person{"stats"}{"projects"});
+
+return person{"age"};
+)")});
+
     mExamples.push_back({tr("Textdatei schreiben"), tr("Praxis"), QString::fromUtf8(R"(with Ada.Io.File;
 
 declare f : TextFile := TextFile:create("/tmp/neoada_hello.txt");
@@ -376,21 +387,14 @@ return c.next();
 //-------------------------------------------------------------------------------------------------
 void NeoAdaEdit::initLearningTools()
 {
+    mNewButton = new QPushButton(tr("New"), this);
+    mNewButton->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
+    connect(mNewButton, &QPushButton::clicked, this, &NeoAdaEdit::onNew);
+    ui->horizontalLayout->insertWidget(0, mNewButton);
+
     auto *bar = new QFrame(this);
     auto *layout = new QHBoxLayout(bar);
     layout->setContentsMargins(0, 0, 0, 0);
-
-    mNewButton = new QPushButton(tr("New"), bar);
-    mNewButton->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
-    connect(mNewButton, &QPushButton::clicked, this, &NeoAdaEdit::onNew);
-
-    mExampleBox = new QComboBox(bar);
-    for (const auto &ex : mExamples)
-        mExampleBox->addItem(QString("%1 - %2").arg(ex.level, ex.title));
-
-    mLoadExampleButton = new QPushButton(tr("Load Example"), bar);
-    mLoadExampleButton->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
-    connect(mLoadExampleButton, &QPushButton::clicked, this, &NeoAdaEdit::onLoadExample);
 
     mBufferedOutput = new QCheckBox(tr("Buffered output"), bar);
     mBufferedOutput->setChecked(true);
@@ -399,16 +403,31 @@ void NeoAdaEdit::initLearningTools()
     mStatus = new QLabel(tr("F5 runs the script"), bar);
     mStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    layout->addWidget(mNewButton);
-    layout->addWidget(new QLabel(tr("Examples:"), bar));
-    layout->addWidget(mExampleBox, 1);
-    layout->addWidget(mLoadExampleButton);
     layout->addWidget(mBufferedOutput);
     layout->addWidget(mStatus, 1);
 
     ui->verticalLayout->insertWidget(1, bar);
 
-    mGuide = new QTextBrowser(this);
+    auto *guidePanel = new QWidget(this);
+    auto *guideLayout = new QVBoxLayout(guidePanel);
+    guideLayout->setContentsMargins(0, 0, 0, 0);
+
+    auto *exampleBar = new QFrame(guidePanel);
+    auto *exampleLayout = new QHBoxLayout(exampleBar);
+    exampleLayout->setContentsMargins(0, 0, 0, 0);
+
+    mExampleBox = new QComboBox(exampleBar);
+    for (const auto &ex : mExamples)
+        mExampleBox->addItem(QString("%1 - %2").arg(ex.level, ex.title));
+
+    mLoadExampleButton = new QPushButton(tr("Load Example"), exampleBar);
+    mLoadExampleButton->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
+    connect(mLoadExampleButton, &QPushButton::clicked, this, &NeoAdaEdit::onLoadExample);
+
+    exampleLayout->addWidget(mExampleBox, 1);
+    exampleLayout->addWidget(mLoadExampleButton);
+
+    mGuide = new QTextBrowser(guidePanel);
     mGuide->setOpenExternalLinks(false);
     mGuide->setHtml(tr(R"(
 <h3>NeoAda Quick Guide</h3>
@@ -432,12 +451,15 @@ void NeoAdaEdit::initLearningTools()
 )"));
     mGuide->setMinimumWidth(240);
 
+    guideLayout->addWidget(exampleBar);
+    guideLayout->addWidget(mGuide, 1);
+
     auto *content = ui->splitter;
     ui->verticalLayout_2->removeWidget(content);
 
     mMainSplitter = new QSplitter(Qt::Horizontal, this);
     mMainSplitter->addWidget(content);
-    mMainSplitter->addWidget(mGuide);
+    mMainSplitter->addWidget(guidePanel);
     mMainSplitter->setStretchFactor(0, 1);
     mMainSplitter->setStretchFactor(1, 0);
     mMainSplitter->setSizes({760, 280});

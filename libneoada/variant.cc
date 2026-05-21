@@ -1501,9 +1501,9 @@ void NdaVariant::assignAny(const NdaVariant &other)
         return;
     case Nda::Dict:
         reset();
-        assert(0);
-    return;
-}
+        assignOtherDict(other);
+        return;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1696,7 +1696,10 @@ std::string NdaVariant::toString() const
         oss << mValue.uUInt64;
         break;
     case Nda::Boolean:
+        return mValue.uByte ? "true" : "false";
     case Nda::Byte:
+        oss << (int)mValue.uByte;
+        break;
     case Nda::String:
         if (mValue.uPtr)
             return cInternalString()->cValue();
@@ -1745,6 +1748,8 @@ std::string NdaVariant::toString() const
 
     return oss.str();
 }
+
+
 
 //-------------------------------------------------------------------------------------------------
 Nda::Type NdaVariant::type() const

@@ -1,4 +1,5 @@
 #include "AdaString.h"
+#include "AdaTextEncoding.h"
 #include "../state.h"
 #include <algorithm>
 #include <cassert>
@@ -270,6 +271,29 @@ void add_AdaString_symbols(NdaState *state)
         ret.fromString(self.runtimeType(),s);
 
         return true;
+    });
+
+    // ------------------ String.FromBytes() ---------------------------------------------------------
+    state->bindFnc("string","fromBytes",{{"data", "bytes", Nda::InMode},{"encoding", "string", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        std::string text;
+        if (!decodeTextBytes(args.at("data"), args.at("encoding").toString(), text))
+            return false;
+
+        ret.fromString(state->stringType(), text);
+        return true;
+    });
+
+    // ------------------ String.ToBytes() ---------------------------------------------------------
+    state->bindFnc("string","toBytes",{{"encoding", "string", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::String)
+            return false;
+
+        return encodeTextBytes(state, self.toString(), args.at("encoding").toString(), ret);
     });
 }
 
