@@ -31,7 +31,8 @@ private:
         RunState,
         ReturnState,
         BreakState,
-        ContinueState
+        ContinueState,
+        ExceptionState
     };
 
     void run(Nda::Runnable *node);
@@ -45,6 +46,8 @@ private:
     void runStaticMethodCall(Nda::Runnable *node);
     void runInstanceMethodCall(Nda::Runnable *node);
     void runReturn(Nda::Runnable *node);
+    void runRaise(Nda::Runnable *node);
+    void runExceptionHandlers(Nda::Runnable *node);
     void runBreak(Nda::Runnable *node);
     void runContinue(Nda::Runnable *node);
     void runIfStatement(Nda::Runnable *node);
@@ -86,6 +89,7 @@ private:
     void evalDictLiteral(Nda::Runnable *node);
 
     ExecState       mExecState;
+    std::string     mActiveException;
     NdaState       *mState;
     Nda::Runnable  *mRunnable;
 };

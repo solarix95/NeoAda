@@ -138,6 +138,15 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
     case NdaParser::ASTNodeType::Return:
         ret->call = &NdaInterpreter::runReturn;
         break;
+    case NdaParser::ASTNodeType::Raise:
+        ret->call = &NdaInterpreter::runRaise;
+        break;
+    case NdaParser::ASTNodeType::Exception:
+        ret->call = &NdaInterpreter::runExceptionHandlers;
+        break;
+    case NdaParser::ASTNodeType::ExceptionHandler:
+        ret->type = Nda::CallNOP;
+        break;
     case NdaParser::ASTNodeType::Break:
         ret->call = &NdaInterpreter::runBreak;
         break;
@@ -347,9 +356,13 @@ void NdaInterpreter::run(Nda::Runnable *node)
 //-------------------------------------------------------------------------------------------------
 void NdaInterpreter::runProgramm(Nda::Runnable *node)
 {
+    mState->clearUnhandledException();
+
     for (int i=0; i<node->childrenCount; i++) {
         run(node->children[i]);
         if (mExecState == ReturnState)
+            break;
+        if (mExecState == ExceptionState)
             break;
     }
 }
@@ -367,6 +380,8 @@ void NdaInterpreter::runLoopBlock(Nda::Runnable *node)
             break;
         if (mExecState == ContinueState)
             break;
+        if (mExecState == ExceptionState)
+            break;
 
     }
 
@@ -380,13 +395,24 @@ void NdaInterpreter::runSingleBlock(Nda::Runnable *node)
     mState->pushScope(NadaSymbolTable::ConditionalScope);
 
     for (int i=0; i<node->childrenCount; i++) {
-        run(node->children[i]);
+        auto *child = node->children[i];
+        if (child->call == &NdaInterpreter::runExceptionHandlers) {
+            if (mExecState == ExceptionState)
+                run(child);
+            break;
+        }
+        if (mExecState == ExceptionState)
+            continue;
+
+        run(child);
         if (mExecState == ReturnState)
             break;
         if (mExecState == BreakState)
             break;
         if (mExecState == ContinueState)
             break;
+        if (mExecState == ExceptionState)
+            continue;
 
     }
 
@@ -410,9 +436,15 @@ void NdaInterpreter::runDeclaration(Nda::Runnable *node)
 
         mState->ret().reset();
         run(node->children[1]);
+        if (mExecState == ExceptionState)
+            return;
 
-        if (!value.assign(mState->ret()))
-            throw NdaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
+        if (!value.assign(mState->ret())) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
     }
 }
 
@@ -432,9 +464,15 @@ void NdaInterpreter::runVolatileDeclaration( Nda::Runnable *node)
 
         mState->ret().reset();
         run(node->children[1]);
+        if (mExecState == ExceptionState)
+            return;
 
-        if (!value.assign(mState->ret()))
-            throw NdaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
+        if (!value.assign(mState->ret())) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
     }
 }
 
@@ -444,6 +482,8 @@ void NdaInterpreter::runAssignment(Nda::Runnable *node)
     assert(node->childrenCount == 2);
 
     run(node->children[0]);
+    if (mExecState == ExceptionState)
+        return;
 
     if (mState->ret().myType() != Nda::Reference)
         throw NdaException(Nada::Error::InvalidAssignment,node->line,node->column, node->value.displayValue);
@@ -451,9 +491,15 @@ void NdaInterpreter::runAssignment(Nda::Runnable *node)
     auto targetValue = mState->ret();
 
     run(node->children[1]);
+    if (mExecState == ExceptionState)
+        return;
 
-    if (!targetValue.assign(mState->ret()))
-        throw NdaException(Nada::Error::AssignmentError,node->line,node->column, node->value.displayValue);
+    if (!targetValue.assign(mState->ret())) {
+        mState->setUnhandledException("programerror");
+        mState->ret().reset();
+        mExecState = ExceptionState;
+        return;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -463,6 +509,8 @@ void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
     values.reserve(node->childrenCount);
     for (int i=0; i<node->childrenCount; i++) {
         run(node->children[i]);
+        if (mExecState == ExceptionState)
+            return;
         values.push_back(mState->ret());
     }
     const std::string &name = node->value.lowerValue;
@@ -612,9 +660,51 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
 //-------------------------------------------------------------------------------------------------
 void NdaInterpreter::runReturn(Nda::Runnable *node)
 {
-    if (node->childrenCount == 1)
+    if (node->childrenCount == 1) {
         run(node->children[0]); // load return-value into "mState->ret()"
+        if (mExecState == ExceptionState)
+            return;
+    }
     mExecState = ReturnState;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runRaise(Nda::Runnable *node)
+{
+    if (node->childrenCount == 0) {
+        if (mActiveException.empty())
+            mState->setUnhandledException("programerror");
+        else
+            mState->setUnhandledException(mActiveException);
+    } else {
+        assert(node->childrenCount == 1);
+        mState->setUnhandledException(node->children[0]->value.lowerValue);
+    }
+    mState->ret().reset();
+    mExecState = ExceptionState;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runExceptionHandlers(Nda::Runnable *node)
+{
+    if (mExecState != ExceptionState)
+        return;
+
+    const std::string exceptionName = mState->unhandledException();
+    for (int i=0; i<node->childrenCount; i++) {
+        auto *handler = node->children[i];
+        if (handler->value.lowerValue != exceptionName && handler->value.lowerValue != "others")
+            continue;
+
+        mState->clearUnhandledException();
+        mExecState = RunState;
+        assert(handler->childrenCount == 1);
+        const std::string previousActiveException = mActiveException;
+        mActiveException = exceptionName;
+        run(handler->children[0]);
+        mActiveException = previousActiveException;
+        return;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -684,6 +774,9 @@ void NdaInterpreter::runWhileLoop(Nda::Runnable *node)
         if (mExecState == ReturnState) {
             break;
         }
+        if (mExecState == ExceptionState) {
+            break;
+        }
         if (mExecState == ContinueState) {
             mExecState = RunState;
         }
@@ -725,6 +818,9 @@ void NdaInterpreter::runForLoopRange(Nda::Runnable *node)
         if (mExecState == ReturnState) {
             break;
         }
+        if (mExecState == ExceptionState) {
+            break;
+        }
         if (mExecState == ContinueState) {
             mExecState = RunState;
         }
@@ -747,9 +843,13 @@ void NdaInterpreter::runBinaryEqual(Nda::Runnable *node)
     assert(node->childrenCount == 2);
 
     run(node->children[0]);
+    if (mExecState == ExceptionState)
+        return;
     auto left  = mState->ret();
 
     run(node->children[1]);
+    if (mExecState == ExceptionState)
+        return;
     auto right = mState->ret();
 
     bool done;
@@ -971,16 +1071,24 @@ void NdaInterpreter::runBinaryDivide(Nda::Runnable *node)
     assert(node->childrenCount == 2);
 
     run(node->children[0]);
+    if (mExecState == ExceptionState)
+        return;
     auto left  = mState->ret();
 
     run(node->children[1]);
+    if (mExecState == ExceptionState)
+        return;
     auto right = mState->ret();
 
     bool done;
     bool dbz;
     left = left.division(right, dbz, &done);
-    if (dbz)
-        throw NdaException(Nada::Error::DivisionByZero,node->line,node->column, node->value.displayValue);
+    if (dbz) {
+        mState->setUnhandledException("constrainterror");
+        mState->ret().reset();
+        mExecState = ExceptionState;
+        return;
+    }
     if (!done)
         throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
 
@@ -1078,6 +1186,8 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
         throw NdaException(Nada::Error::InvalidContainerType,node->line,node->column, node->value.displayValue);
     */
     run(node->children[0]);
+    if (mExecState == ExceptionState)
+        return;
 
     if (mState->ret().myType() != Nda::Reference)
         throw NdaException(Nada::Error::InvalidContainerType,node->line,node->column, node->value.displayValue);
@@ -1098,19 +1208,33 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
     assert(targetObj.myType() == Nda::Reference);
 
     run(node->children[1]);
+    if (mExecState == ExceptionState)
+        return;
 
     if ((targetObj.type() == Nda::List) || (targetObj.type() == Nda::Bytes)) {
         bool done = false;
         int64_t index = mState->ret().toInt64(&done);
-        if (!done)
-            throw NdaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
+        if (!done) {
+            mState->setUnhandledException("constrainterror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
 
-        if (index < 0)
-            throw NdaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
+        if (index < 0) {
+            mState->setUnhandledException("constrainterror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
 
         int64_t size = (targetObj.type() == Nda::List) ? targetObj.listSize() : targetObj.bytesSize();
-        if (index >= size)
-            throw NdaException(Nada::Error::InvalidAccessValue,node->line,node->column, node->value.displayValue);
+        if (index >= size) {
+            mState->setUnhandledException("constrainterror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
 
         if (targetObj.type() == Nda::List) {
             auto &targetValue = targetObj.writeListAccess((int)index);

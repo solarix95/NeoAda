@@ -53,7 +53,7 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
         "if", "then", "elsif", "else", "end",
         "for", "in", "while", "loop",
         "procedure", "function", "return", "begin",
-        "break", "continue", "when"
+        "break", "continue", "when", "exception", "raise", "others"
     };
     m_rules.push_back({ wordsRx(keywords), kwFmt });
 
@@ -61,7 +61,8 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
     const QStringList types = {
         "Boolean", "Natural", "Supernatural", "Positive", "Number",
         "Character", "String", "Byte", "Bytes", "List", "Dict",
-        "File", "TextFile", "Any", "any"
+        "File", "TextFile", "Any", "any",
+        "ConstraintError", "ProgramError"
     };
     m_rules.push_back({ wordsRx(types), typeFmt });
 

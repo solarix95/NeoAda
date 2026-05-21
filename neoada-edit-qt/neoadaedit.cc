@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QCloseEvent>
+#include <QColor>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDir>
@@ -17,12 +18,15 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QPlainTextEdit>
 #include <QSaveFile>
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyle>
 #include <QTextBrowser>
+#include <QTextCharFormat>
+#include <QTextCursor>
 #include <QTextEdit>
 #include <QTextStream>
 #include <QVBoxLayout>
@@ -34,6 +38,32 @@
 static const char* kOrgName  = "Solarix95";
 static const char* kAppName  = "NeoAda";
 static const char* kGroup    = "NeoAdaEdit";
+
+static void appendOutputLine(QPlainTextEdit *output, const QString &line, const QColor &color = QColor())
+{
+    QTextCursor cursor(output->document());
+    cursor.movePosition(QTextCursor::End);
+    if (!output->document()->isEmpty())
+        cursor.insertBlock();
+
+    QTextCharFormat format;
+    if (color.isValid())
+        format.setForeground(color);
+    cursor.insertText(line, format);
+
+    output->setTextCursor(cursor);
+    output->ensureCursorVisible();
+}
+
+static QString displayExceptionName(QString name)
+{
+    const QString lower = name.toLower();
+    if (lower == QStringLiteral("constrainterror"))
+        return QStringLiteral("ConstraintError");
+    if (lower == QStringLiteral("programerror"))
+        return QStringLiteral("ProgramError");
+    return name;
+}
 
 static QString defaultScript()
 {
@@ -349,6 +379,27 @@ print("Projekte: " & person{"stats"}{"projects"});
 return person{"age"};
 )")});
 
+    mExamples.push_back({tr("Exceptions"), tr("Fortgeschritten"), QString::fromUtf8(R"(function riskyDivide(a : Natural; b : Natural) return Natural is
+begin
+    return a / b;
+exception
+    when ConstraintError =>
+        print("Division nicht moeglich");
+        raise;
+end;
+
+function safeDivide(a : Natural; b : Natural) return Natural is
+begin
+    return riskyDivide(a, b);
+exception
+    when ConstraintError =>
+        print("Fallback auf 0");
+        return 0;
+end;
+
+return safeDivide(42, 0);
+)")});
+
     mExamples.push_back({tr("Textdatei schreiben"), tr("Praxis"), QString::fromUtf8(R"(with Ada.Io.File;
 
 declare f : TextFile := TextFile:create("/tmp/neoada_hello.txt");
@@ -445,6 +496,11 @@ void NeoAdaEdit::initLearningTools()
 <li><code>with Ada.String;</code> for text helpers.</li>
 <li><code>with Ada.Bytes;</code> for binary byte arrays.</li>
 <li><code>with Ada.Io.File;</code> for <code>File</code> and <code>TextFile</code>.</li>
+</ul>
+<p><b>Exceptions:</b></p>
+<ul>
+<li><code>exception when ConstraintError =&gt; print("Index oder Zahl ungueltig");</code></li>
+<li><code>when others =&gt; print("Fehler"); raise;</code> re-raises the active exception.</li>
 </ul>
 <p><b>Files:</b> <code>TextFile</code> reads/writes <code>String</code>; <code>File</code> reads/writes <code>Bytes</code>.</p>
 <p><b>Tip:</b> Use examples as small experiments. Change one line, run again, compare output.</p>
@@ -620,10 +676,16 @@ void NeoAdaEdit::onPlay()
             ui->txtOutput->appendPlainText(line);
     }
 
+    const QString unhandledException = QString::fromStdString(mAda.state()->unhandledException());
     if (mAda.hasError()) {
-        ui->txtOutput->appendPlainText(QString("\nError: %1").arg(QString::fromStdString(mAda.lastError())));
+        appendOutputLine(ui->txtOutput, QString("Error: %1").arg(QString::fromStdString(mAda.lastError())), QColor("#b00020"));
         if (mStatus)
             mStatus->setText(tr("Error after %1 ms").arg(elapsed));
+    } else if (!unhandledException.isEmpty()) {
+        appendOutputLine(ui->txtOutput, tr("Unhandled exception: %1").arg(displayExceptionName(unhandledException)), QColor("#b00020"));
+        appendOutputLine(ui->txtOutput, tr("Finished in %1 ms").arg(elapsed));
+        if (mStatus)
+            mStatus->setText(tr("Unhandled exception after %1 ms").arg(elapsed));
     } else {
         if (ret.type() != Nda::Undefined)
             ui->txtOutput->appendPlainText("\nreturn: " + QString::fromStdString(ret.toString()));

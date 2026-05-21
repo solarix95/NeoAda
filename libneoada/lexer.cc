@@ -161,7 +161,7 @@ bool NdaLexer::parseNext()
                 "if", "then", "else", "elsif", "end",
                 "while", "loop", "break", "continue", "when",
                 "for", "in", "out", "reverse",
-                "procedure", "function", "return", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
+                "procedure", "function", "return", "raise", "exception", "others", "is", "begin", "not", "and", "or", "mod", "rem", "xor"
             };
 
             static const std::unordered_set<std::string> booleanLiteral = {
@@ -288,7 +288,7 @@ bool NdaLexer::parseNext()
         }
 
         // Mehrstellige Operatoren zuerst prüfen
-        static const std::unordered_set<std::string> twoCharOperators = { ":=", "**", "<>", "<=", ">=", ".." };
+        static const std::unordered_set<std::string> twoCharOperators = { ":=", "=>", "**", "<>", "<=", ">=", ".." };
 
         if (nextChar() != '\0') {
             std::string twoCharOp = mScript.substr(mPos, 2);

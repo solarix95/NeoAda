@@ -40,6 +40,8 @@ NdaParser::ASTNodePtr NdaParser::parseStatement()
         return parseSeparator(parseIfStatement());
     } else if (mLexer.tokenType() == NdaLexer::TokenType::Keyword && mLexer.token() == "return") {
         return parseSeparator(parseReturn());
+    } else if (mLexer.tokenType() == NdaLexer::TokenType::Keyword && mLexer.token() == "raise") {
+        return parseSeparator(parseRaise());
     } else if (mLexer.tokenType() == NdaLexer::TokenType::Keyword && mLexer.token() == "break") {
         return parseSeparator(parseBreak());
     } else if (mLexer.tokenType() == NdaLexer::TokenType::Keyword && mLexer.token() == "continue") {
@@ -284,13 +286,9 @@ NdaParser::ASTNodePtr NdaParser::parseProcedureOrFunction()
         throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
     mLexer.nextToken();
 
-    auto blockNode = std::make_shared<ASTNode>(ASTNodeType::Block, mLexer.line(), mLexer.column());
-    while (mLexer.token() != "end") {
-        auto nextStatement = parseStatement();
-        if (nextStatement)
-            ASTNode::addChild(blockNode,nextStatement);
-        mLexer.nextToken();
-    }
+    auto blockNode = parseBlockEnd("exception");
+    if (mLexer.token() == "exception")
+        ASTNode::addChild(blockNode,parseExceptionHandlers());
 
     ASTNode::addChild(procedureNode,blockNode);
 
@@ -487,6 +485,66 @@ NdaParser::ASTNodePtr NdaParser::parseReturn()
 }
 
 //-------------------------------------------------------------------------------------------------
+NdaParser::ASTNodePtr NdaParser::parseRaise()
+{
+    auto raiseNode = std::make_shared<ASTNode>(ASTNodeType::Raise, mLexer.line(), mLexer.column());
+
+    if (mLexer.token(1) == ";")
+        return raiseNode;
+
+    if (!mLexer.nextToken())
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    if (mLexer.tokenType() != NdaLexer::TokenType::Identifier)
+        throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+    auto identifierNode = std::make_shared<ASTNode>(ASTNodeType::Identifier, mLexer.line(), mLexer.column(), mLexer.token());
+    ASTNode::addChild(raiseNode,identifierNode);
+
+    return raiseNode;
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaParser::ASTNodePtr NdaParser::parseExceptionHandlers()
+{
+    auto exceptionNode = std::make_shared<ASTNode>(ASTNodeType::Exception, mLexer.line(), mLexer.column());
+
+    if (mLexer.token() != "exception")
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"exception");
+
+    if (!mLexer.nextToken())
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    while (mLexer.token() == "when") {
+        if (!mLexer.nextToken())
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        if (mLexer.tokenType() != NdaLexer::TokenType::Identifier && mLexer.token() != "others")
+            throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+        auto handlerNode = std::make_shared<ASTNode>(ASTNodeType::ExceptionHandler, mLexer.line(), mLexer.column(), mLexer.token());
+
+        if (!mLexer.nextToken())
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        if (mLexer.token() != "=>")
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+
+        if (!mLexer.nextToken())
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        auto blockNode = parseBlockEnd("when");
+        ASTNode::addChild(handlerNode,blockNode);
+        ASTNode::addChild(exceptionNode,handlerNode);
+    }
+
+    if (mLexer.token() != "end")
+        throw NdaException(Nada::Error::KeywordExpected,mLexer.line(), mLexer.column(),"end");
+
+    return exceptionNode;
+}
+
+//-------------------------------------------------------------------------------------------------
 NdaParser::ASTNodePtr NdaParser::parseBreak()
 //             break [when expression]
 {
@@ -660,6 +718,9 @@ std::string NdaParser::nodeTypeToString(ASTNodeType type)
     case ASTNodeType::Continue:     return "Continue";
     case ASTNodeType::Return:       return "Return";
     case ASTNodeType::ReturnType:   return "ReturnType";
+    case ASTNodeType::Raise:        return "Raise";
+    case ASTNodeType::Exception:    return "Exception";
+    case ASTNodeType::ExceptionHandler: return "ExceptionHandler";
     default: return "Unknown";
     }
 }

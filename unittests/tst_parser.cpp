@@ -103,6 +103,8 @@ private slots:
 
     void test_parser_With();
     void test_parser_Type();
+    void test_parser_Exception();
+    void test_parser_ExceptionReraise();
 
     void test_parser_Factor();
     void test_parser_Primary1();
@@ -189,6 +191,14 @@ private slots:
     void test_interpreter_Return6_Supernatural();
     void test_interpreter_Return7_Number();
     void test_interpreter_Return8_Byte();
+
+    void test_interpreter_ExceptionHandled();
+    void test_interpreter_ExceptionUnhandled();
+    void test_interpreter_ExceptionCatchAll();
+    void test_interpreter_ExceptionConstraintError();
+    void test_interpreter_ExceptionProgramError();
+    void test_interpreter_ExceptionReraiseSpecific();
+    void test_interpreter_ExceptionReraiseAnonymous();
 
     void test_interpreter_CustomType_TypeIs();
     void test_interpreter_CustomType_Procedure();
@@ -840,25 +850,26 @@ void TstParser::test_lexer_OperatorsAndSymbols()
     NdaLexer lexer;
     std::vector<std::string> results;
 
-    lexer.setScript(":= ** <= >= + - * / > < ( ) ;");
+    lexer.setScript(":= => ** <= >= + - * / > < ( ) ;");
     while (lexer.nextToken())
         results.push_back(lexer.token());
 
-    QVERIFY(results.size() == 13);
+    QVERIFY(results.size() == 14);
     QVERIFY(results[0] == ":=");
-    QVERIFY(results[1] == "**"); // Ada95 Power
-    QVERIFY(results[2] == "<=");
-    QVERIFY(results[3] == ">=");
+    QVERIFY(results[1] == "=>");
+    QVERIFY(results[2] == "**"); // Ada95 Power
+    QVERIFY(results[3] == "<=");
+    QVERIFY(results[4] == ">=");
 
-    QVERIFY(results[4] == "+");
-    QVERIFY(results[5] == "-");
-    QVERIFY(results[6] == "*");
-    QVERIFY(results[7] == "/");
-    QVERIFY(results[8] == ">");
-    QVERIFY(results[9] == "<");
-    QVERIFY(results[10] == "(");
-    QVERIFY(results[11] == ")");
-    QVERIFY(results[12] == ";");
+    QVERIFY(results[5] == "+");
+    QVERIFY(results[6] == "-");
+    QVERIFY(results[7] == "*");
+    QVERIFY(results[8] == "/");
+    QVERIFY(results[9] == ">");
+    QVERIFY(results[10] == "<");
+    QVERIFY(results[11] == "(");
+    QVERIFY(results[12] == ")");
+    QVERIFY(results[13] == ";");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1328,6 +1339,76 @@ void TstParser::test_parser_Type()
 Node(Program, "")
   Node(TypeDefinition, "File")
     Node(Identifier, "Natural")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Exception()
+{
+    std::string script = R"(
+        procedure Main() is
+        begin
+            raise my_exception;
+        exception
+            when my_exception => print("error");
+            when others => print("other");
+        end;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Procedure, "Main")
+    Node(Parameters, "")
+    Node(Block, "")
+      Node(Raise, "")
+        Node(Identifier, "my_exception")
+      Node(Exception, "")
+        Node(ExceptionHandler, "my_exception")
+          Node(Block, "")
+            Node(FunctionCall, "print")
+              Node(Literal, "error")
+        Node(ExceptionHandler, "others")
+          Node(Block, "")
+            Node(FunctionCall, "print")
+              Node(Literal, "other")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_ExceptionReraise()
+{
+    std::string script = R"(
+        procedure Main() is
+        begin
+            raise ConstraintError;
+        exception
+            when others => raise;
+        end;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Procedure, "Main")
+    Node(Parameters, "")
+    Node(Block, "")
+      Node(Raise, "")
+        Node(Identifier, "ConstraintError")
+      Node(Exception, "")
+        Node(ExceptionHandler, "others")
+          Node(Block, "")
+            Node(Raise, "")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -3122,6 +3203,227 @@ void TstParser::test_interpreter_Return8_Byte()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionHandled()
+{
+    std::string script = R"(
+        function Test() return Natural is
+        begin
+            raise my_exception;
+            return 0;
+        exception
+            when my_exception => return 42;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "42");
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionUnhandled()
+{
+    std::string script = R"(
+        function Test() return Natural is
+        begin
+            raise my_exception;
+            return 0;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    interpreter.execute(ast);
+
+    QVERIFY(state.unhandledException() == "my_exception");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionCatchAll()
+{
+    std::string script = R"(
+        function Test() return Natural is
+        begin
+            raise my_exception;
+            return 0;
+        exception
+            when others => return 42;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "42");
+    QVERIFY(state.unhandledException().empty());
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionConstraintError()
+{
+    std::string script = R"(
+        function Test() return Natural is
+        begin
+            return 42 / 0;
+        exception
+            when ConstraintError => return 23;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "23");
+    QVERIFY(state.unhandledException().empty());
+
+    std::string boundsScript = R"(
+        function Test() return Natural is
+        begin
+            declare xs : List := [1, 2, 3];
+            return xs[3];
+        exception
+            when ConstraintError => return 42;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       boundsLexer;
+    NdaParser      boundsParser(boundsLexer);
+    NdaState       boundsState;
+    NdaInterpreter boundsInterpreter(&boundsState);
+
+    auto boundsAst = boundsParser.parse(boundsScript);
+    auto boundsRet = boundsInterpreter.execute(boundsAst);
+
+    QVERIFY(boundsRet.toString() == "42");
+    QVERIFY(boundsState.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionProgramError()
+{
+    std::string script = R"(
+        function Test() return Natural is
+        begin
+            declare x : Natural := "NeoAda";
+            return 0;
+        exception
+            when ProgramError => return 17;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "17");
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionReraiseSpecific()
+{
+    std::string script = R"(
+        function Inner() return Natural is
+        begin
+            return 42 / 0;
+        exception
+            when ConstraintError => raise ConstraintError;
+        end;
+
+        function Outer() return Natural is
+        begin
+            return Inner();
+        exception
+            when ConstraintError => return 31;
+        end;
+
+        return Outer();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "31");
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionReraiseAnonymous()
+{
+    std::string script = R"(
+        function Inner() return Natural is
+        begin
+            return 42 / 0;
+        exception
+            when others => raise;
+        end;
+
+        function Outer() return Natural is
+        begin
+            return Inner();
+        exception
+            when ConstraintError => return 37;
+        end;
+
+        return Outer();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "37");
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_CustomType_TypeIs()
 {
     std::string script = R"(
@@ -3712,7 +4014,8 @@ void TstParser::test_api_evaluate_Bytes_RejectNonByteWrite()
     NdaException ex;
     r.runScript(script, &ex);
 
-    QVERIFY(ex.code() == Nada::Error::AssignmentError);
+    QVERIFY(ex.code() == Nada::Error::NoError);
+    QVERIFY(r.state()->unhandledException() == "programerror");
 }
 
 
@@ -5173,7 +5476,8 @@ void TstParser::test_error_interpreter_stringAssignment()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "programerror");
     }
 
     {
@@ -5187,7 +5491,8 @@ void TstParser::test_error_interpreter_stringAssignment()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "programerror");
     }
 
     {
@@ -5200,7 +5505,8 @@ void TstParser::test_error_interpreter_stringAssignment()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "programerror");
     }
 
     {
@@ -5213,7 +5519,8 @@ void TstParser::test_error_interpreter_stringAssignment()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "programerror");
     }
 }
 
@@ -5229,7 +5536,8 @@ void TstParser::test_error_interpreter_boolAssignment()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "programerror");
     }
 
     {
@@ -5242,7 +5550,8 @@ void TstParser::test_error_interpreter_boolAssignment()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::AssignmentError);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "programerror");
     }
 }
 
@@ -5277,7 +5586,8 @@ void TstParser::test_error_runtime_divisionByZero()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "constrainterror");
     }
 
     {
@@ -5291,7 +5601,8 @@ void TstParser::test_error_runtime_divisionByZero()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "constrainterror");
     }
 
     {
@@ -5305,7 +5616,8 @@ void TstParser::test_error_runtime_divisionByZero()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "constrainterror");
     }
 
     {
@@ -5318,7 +5630,8 @@ void TstParser::test_error_runtime_divisionByZero()
         NeoAda::Exception ex;
         NdaState state;
         NeoAda::evaluate(script, state, &ex);
-        QVERIFY(ex.code() == Nada::Error::DivisionByZero);
+        QVERIFY(ex.code() == Nada::Error::NoError);
+        QVERIFY(state.unhandledException() == "constrainterror");
     }
 }
 

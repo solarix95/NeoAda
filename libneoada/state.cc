@@ -29,6 +29,8 @@ void NdaState::reset()
 {
     destroy();
 
+    mUnhandledException.clear();
+
     mGlobals.push_back(new NadaSymbolTable(NadaSymbolTable::GlobalScope));
 
     // register all standard NeoAda Datatypes

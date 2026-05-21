@@ -8,6 +8,8 @@
 #include "parser.h"
 #include "value.h"
 
+class NdaInterpreter;
+
 class NdaState
 {
 public:
@@ -90,11 +92,19 @@ public:
 
     inline NdaVariant  &ret()  { return mRetValue; }
 
+    inline std::string  unhandledException() const { return mUnhandledException; }
+    inline bool         hasUnhandledException() const { return !mUnhandledException.empty(); }
+
 private:
+    friend class NdaInterpreter;
+
+    inline void         setUnhandledException(const std::string &name) { mUnhandledException = name; }
+    inline void         clearUnhandledException() { mUnhandledException.clear(); }
+
     void destroy();
 
     NdaVariant         mRetValue;
-
+    std::string        mUnhandledException;
 
     NadaSymbolTables   mGlobals;
     NadaStackFrames    mCallStack;

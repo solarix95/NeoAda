@@ -46,6 +46,9 @@ public:
         Loop,
         Return,
         ReturnType,
+        Raise,
+        Exception,
+        ExceptionHandler,
         Break,
         Continue,
         Range,
@@ -86,6 +89,8 @@ private:
     NdaParser::ASTNodePtr parseForLoop();
     NdaParser::ASTNodePtr parseIfStatement();
     NdaParser::ASTNodePtr parseReturn();
+    NdaParser::ASTNodePtr parseRaise();
+    NdaParser::ASTNodePtr parseExceptionHandlers();
     NdaParser::ASTNodePtr parseBreak();
     NdaParser::ASTNodePtr parseContinue();
 
