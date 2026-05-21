@@ -195,8 +195,18 @@ NdaParser::ASTNodePtr NdaParser::parseIdentifier()
 {
     auto identifierNode = std::make_shared<ASTNode>(ASTNodeType::Identifier,mLexer.line(), mLexer.column(), mLexer.token());
 
-    if (handleIdentifierCall(identifierNode))
+    if (handleIdentifierCall(identifierNode)) {
+        while (true) {
+            if (handleIdentifierCall(identifierNode)) {
+            }
+            else if (handleIdentifierAccess(identifierNode)) {
+            }
+            else {
+                break;
+            }
+        }
         return identifierNode;
+    }
 
     handleIdentifierAccess(identifierNode);
 
@@ -1037,8 +1047,6 @@ NdaParser::ASTNodePtr NdaParser::parseFunctionCall(std::shared_ptr<ASTNode> &fun
 NdaParser::ASTNodePtr NdaParser::parseMethodCall(std::shared_ptr<ASTNode> &funcNode)
 {
     mLexer.nextToken(); // jump to ":" or "."
-    bool isStatic = funcNode->type == ASTNodeType::StaticMethodCall;
-
     if (!mLexer.nextToken())    // Überspringe ':' oder '.'
         throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
 
@@ -1083,21 +1091,34 @@ NdaParser::ASTNodePtr NdaParser::parseIterableOrRange()
 //-------------------------------------------------------------------------------------------------
 bool NdaParser::handleIdentifierCall(ASTNodePtr &identNode)
 {
-    if (identNode->type != ASTNodeType::Identifier)
-        return false;
-
-    if (mLexer.token(1) == "(") {
+    if (identNode->type == ASTNodeType::Identifier && mLexer.token(1) == "(") {
         identNode->type = ASTNodeType::FunctionCall;
         parseFunctionCall(identNode);
         return true;
     } else if (mLexer.token(1) == ":") {
+        if (identNode->type != ASTNodeType::Identifier)
+            return false;
+
         identNode->type = ASTNodeType::StaticMethodCall;
         parseMethodCall(identNode);
         return true;
     }
     else if (mLexer.token(1) == ".") {
-        identNode->type = ASTNodeType::InstanceMethodCall;
-        parseMethodCall(identNode);
+        auto receiverNode = identNode;
+        mLexer.nextToken(); // jump to "."
+
+        if (!mLexer.nextToken())    // skip "."
+            throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+        if (mLexer.tokenType() != NdaLexer::TokenType::Identifier)
+            throw NdaException(Nada::Error::IdentifierExpected,mLexer.line(), mLexer.column(),mLexer.token());
+
+        if (mLexer.token(1) != "(")
+            throw NdaException(Nada::Error::InvalidToken,mLexer.line(), mLexer.column(),mLexer.token());
+
+        identNode = std::make_shared<ASTNode>(ASTNodeType::InstanceMethodCall, mLexer.line(), mLexer.column(), mLexer.token());
+        ASTNode::addChild(identNode, receiverNode);
+        parseFunctionCall(identNode);
         return true;
     }
 

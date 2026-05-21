@@ -35,6 +35,7 @@ public:
     virtual void loadAddonAdaMath();
     virtual void loadAddonAdaIoFile();
     virtual void loadAddonAdaTextEncoding();
+    virtual void loadAddonAdaDateTime();
 
 private:
     void destroy();

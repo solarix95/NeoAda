@@ -582,24 +582,28 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
 //-------------------------------------------------------------------------------------------------
 void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
 {
+    if (node->childrenCount < 1)
+        throw NdaException(Nada::Error::InvalidToken,node->line,node->column);
+
+    run(node->children[0]);
+    if (mExecState == ExceptionState)
+        return;
+
+    NdaVariant thisValue = mState->ret();
+    const Nda::RuntimeType *runtimeType = thisValue.runtimeType();
+    if (!runtimeType)
+        throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->value.lowerValue);
+
     NdaVariants values;
     values.reserve(node->childrenCount > 0 ? node->childrenCount - 1 : 0);
-    for (int i=0; i<node->childrenCount; i++) {
-        if (node->children[i]->type == Nda::NcMethodContext)
-            continue;
+    for (int i=1; i<node->childrenCount; i++) {
         run(node->children[i]);
+        if (mExecState == ExceptionState)
+            return;
         values.push_back(mState->ret());
     }
 
-    auto *context = node->children[0];
-    if (context->symbolIndex < 0) {
-        if (!mState->find(context->value.lowerValue, context->symbolIndex, context->symbolScope, context->symbolIsGlobal))
-            throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, context->value.lowerValue);
-    }
-
-    Nda::Symbol *symbol = mState->symbolPtr(context->symbolIndex, context->symbolScope, context->symbolIsGlobal);
-    std::string typeName = symbol->type->name.lowerValue;
-
+    std::string typeName = runtimeType->name.lowerValue;
     auto *fncPtr = mState->functionPtr(typeName, node->value.lowerValue,values);
     if (!fncPtr) {
         mState->ret().reset();
@@ -629,10 +633,10 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
             }
         }
 
-        mState->define("this", symbol->type);
+        mState->define("this", runtimeType);
         // TODO: if !define -> runtime error!
         NdaVariant &valueRef = mState->valueRef("this");
-        valueRef.fromReference(mState->typeByName("reference"),symbol->value);
+        valueRef.assign(thisValue);
 
         run(fnc.callBlock);
 
@@ -644,10 +648,8 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
     } else {
         auto parameters = fnc.fncValues(values);
 
-        // Creating "this":
-        NdaVariant thisRef;
-        thisRef.fromReference(mState->typeByName("reference"),symbol->value);
-        parameters["this"] = thisRef;
+        // Creating "this": keep real variables as references, but also allow temporary receivers.
+        parameters["this"] = thisValue;
 
         if (fnc.nativeFncCallback)
             fnc.nativeFncCallback(parameters, mState->ret());

@@ -410,6 +410,20 @@ f.close();
 print("/tmp/neoada_hello.txt erstellt");
 )")});
 
+    mExamples.push_back({tr("DateTime"), tr("Praxis"), QString::fromUtf8(R"(with Ada.DateTime;
+
+declare start : DateTime := DateTime:fromString("2026-05-21 09:30:00", "yyyy-MM-dd HH:mm:ss");
+declare deadline : DateTime := start.addDays(3).addSecs(2 * 60 * 60);
+
+print("Start:    " & start.toString("dd.MM.yyyy HH:mm"));
+print("Deadline: " & deadline.toString("dd.MM.yyyy HH:mm"));
+
+declare today : Date := Date:now();
+print("Heute:   " & today.toString("dd.MM.yyyy"));
+
+return deadline.toString("yyyy-MM-dd HH:mm:ss");
+)")});
+
     mExamples.push_back({tr("Bytes und PNG"), tr("Advanced"), QString::fromUtf8(R"(with Ada.Bytes;
 with Ada.Io.File;
 

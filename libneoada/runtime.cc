@@ -15,6 +15,7 @@
 #include "addons/AdaMath.h"
 #include "addons/AdaTextEncoding.h"
 #include "addons/AdaIoFile.h"
+#include "addons/AdaDateTime.h"
 
 //-------------------------------------------------------------------------------------------------
 NdaRuntime::NdaRuntime()
@@ -51,6 +52,8 @@ void NdaRuntime::reset()
             loadAddonAdaTextEncoding();
         if (addonName == "ada.io.file" || addonName == "ada.io")
             loadAddonAdaIoFile();
+        if (addonName == "ada.datetime" || addonName == "ada.date.time" || addonName == "ada.date")
+            loadAddonAdaDateTime();
     });
 }
 
@@ -187,6 +190,14 @@ void NdaRuntime::loadAddonAdaTextEncoding()
     if (!mState)
         reset();
     Nda::add_AdaTextEncoding_symbols(mState);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::loadAddonAdaDateTime()
+{
+    if (!mState)
+        reset();
+    Nda::add_AdaDateTime_symbols(mState);
 }
 
 //-------------------------------------------------------------------------------------------------

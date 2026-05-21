@@ -144,6 +144,7 @@ private slots:
     void test_parser_FunctionCall1();
     void test_parser_MethodCall1();
     void test_parser_MethodCall2();
+    void test_parser_MethodCall3_Chained();
 
     void test_parser_WhileLoop();
     void test_parser_WhileLoopBreak1();
@@ -2138,7 +2139,35 @@ void TstParser::test_parser_MethodCall2()
     std::string expectedAST = R"(
 Node(Program, "")
   Node(InstanceMethodCall, "print")
-    Node(MethodContext, "x")
+    Node(Identifier, "x")
+)";
+
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_MethodCall3_Chained()
+{
+    std::string script = R"(
+        start.addDays(3).addSecs(2 * 60 * 60);
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(InstanceMethodCall, "addSecs")
+    Node(InstanceMethodCall, "addDays")
+      Node(Identifier, "start")
+      Node(Number, "3")
+    Node(BinaryOperator, "*")
+      Node(BinaryOperator, "*")
+        Node(Number, "2")
+        Node(Number, "60")
+      Node(Number, "60")
 )";
 
     std::string currentAST =  ast->serialize();
@@ -5640,6 +5669,7 @@ extern int runAdaStringTests(int argc, char **argv);
 extern int runAdaMathTests(int argc, char **argv);
 extern int runAdaTextEncodingTests(int argc, char **argv);
 extern int runAdaIoFileTests(int argc, char **argv);
+extern int runAdaDateTimeTests(int argc, char **argv);
 
 static bool hasRequestedTest(const QMetaObject *metaObject, int argc, char **argv)
 {
@@ -5673,6 +5703,7 @@ int main(int argc, char **argv)
     status |= runAdaMathTests(argc, argv);
     status |= runAdaTextEncodingTests(argc, argv);
     status |= runAdaIoFileTests(argc, argv);
+    status |= runAdaDateTimeTests(argc, argv);
 
     return status;
 }
