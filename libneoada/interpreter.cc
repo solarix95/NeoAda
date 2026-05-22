@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <cmath>
 #include <iostream>
 
 #include "interpreter.h"
@@ -204,6 +205,8 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
             ret->call = &NdaInterpreter::runBinaryMinus;
         else if (ret->value.lowerValue == "*")
             ret->call = &NdaInterpreter::runBinaryMultiply;
+        else if (ret->value.lowerValue == "**")
+            ret->call = &NdaInterpreter::runBinaryPower;
         else if (ret->value.lowerValue == "/")
             ret->call = &NdaInterpreter::runBinaryDivide;
         else if (ret->value.lowerValue == "and")
@@ -1065,6 +1068,45 @@ void NdaInterpreter::runBinaryMultiply(Nda::Runnable *node)
         throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
 
     mState->ret() = left;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runBinaryPower(Nda::Runnable *node)
+{
+    assert(node->childrenCount == 2);
+
+    run(node->children[0]);
+    if (mExecState == ExceptionState)
+        return;
+    auto left = mState->ret();
+
+    run(node->children[1]);
+    if (mExecState == ExceptionState)
+        return;
+    auto right = mState->ret();
+
+    bool leftIsInt;
+    bool rightIsInt;
+    auto base = left.toInt64(&leftIsInt);
+    auto exponent = right.toInt64(&rightIsInt);
+
+    if (left.type() != Nda::Number && right.type() != Nda::Number && leftIsInt && rightIsInt && exponent >= 0) {
+        int64_t value = 1;
+        for (int64_t i = 0; i < exponent; ++i)
+            value *= base;
+
+        mState->ret().fromNatural(mState->naturalType(), value);
+        return;
+    }
+
+    bool leftIsNumber;
+    bool rightIsNumber;
+    double numberBase = left.toDouble(&leftIsNumber);
+    double numberExponent = right.toDouble(&rightIsNumber);
+    if (!leftIsNumber || !rightIsNumber)
+        throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
+
+    mState->ret().fromNumber(mState->numberType(), std::pow(numberBase, numberExponent));
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -181,6 +181,19 @@ NdaVariant readAllBytes(NdaState *state, std::fstream &stream)
     return ret;
 }
 
+NdaVariant readBlockBytes(NdaState *state, std::fstream &stream, int size)
+{
+    NdaVariant ret;
+    ret.initType(state->bytesType());
+
+    char c;
+    while ((size-- > 0) && stream.get(c))
+        ret.appendToBytes(byteValue(state, static_cast<unsigned char>(c)));
+
+    return ret;
+}
+
+
 std::string readAllText(std::fstream &stream)
 {
     stream.flush();
@@ -285,6 +298,18 @@ void add_AdaIoFile_symbols(NdaState *state)
             return false;
 
         ret = readAllBytes(state, handle->stream);
+        return true;
+    });
+
+    // ------------------ File.ReadAll() ----------------------------------------------------------
+    state->bindFnc("file", "read", {{"blockSize", "natural", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+        auto *handle = handleById(fileIdFromSelf(state, args.at("this")));
+        auto blockSize = args.at("blockSize");
+        if (!handle || blockSize.type() != Nda::Natural)
+            return false;
+
+        ret = readBlockBytes(state, handle->stream, blockSize.toInt64());
         return true;
     });
 

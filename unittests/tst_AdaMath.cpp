@@ -24,14 +24,52 @@ void TstAdaMath::test_api_runtime_AdaMath_Basic()
     declare neg : Number := 0.0 - 1.0;
     declare negFive : Number := 0.0 - 5.0;
 
-    if Math:abs(negFive) = 5 and Math:min(3, 7) = 3 and Math:max(3, 7) = 7 and Math:pow(2, 8) = 256 and Math:hypot(3, 4) = 5 and Math:fmod(7, 4) = 3 and Math:copySign(5, neg) = negFive and Math:sign(neg) = neg and Math:abs(Math:sqrt(81) - 9) < eps and Math:abs(Math:cbrt(27) - 3) < eps then
-        return 1;
+    if Math:abs(negFive) <> 5 then
+      return -1;
     end if;
-    return 0;
+
+    if Math:min(3, 7) <> 3  then
+        return -2;
+    end if;
+
+    if Math:max(3, 7) <> 7   then
+        return -3;
+    end if;
+
+    if Math:pow(2, 8) <> 256    then
+        return -4;
+    end if;
+
+    if Math:hypot(3, 4) <> 5   then
+        return -5;
+    end if;
+
+    if Math:fmod(7, 4) <> 3    then
+        return -6;
+    end if;
+
+    if Math:copySign(5, neg) <> negFive   then
+        return -7;
+    end if;
+
+    if Math:sign(neg) <> neg then
+        return -8;
+    end if;
+
+    if Math:abs(Math:sqrt(81) - 9) >= eps then
+        return -9;
+    end if;
+
+    if Math:abs(Math:cbrt(27) - 3) >= eps then
+        return -10;
+    end if;
+
+    return 1;
     )";
 
     NdaRuntime r;
     auto ret = r.runScript(script);
+
 
     QVERIFY(ret.toInt64() == 1);
 }

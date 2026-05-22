@@ -48,6 +48,7 @@ public:
     void lookUp(int index, Nda::Symbol **symbol) const;
     bool initValue(const std::string& name);
 
+    std::vector<std::string> symbolNames() const;
 private:
     struct MyHash {
         std::size_t operator()(const std::string& key) const {

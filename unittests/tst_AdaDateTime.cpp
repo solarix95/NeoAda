@@ -125,15 +125,33 @@ void TstAdaDateTime::test_api_runtime_AdaDateTime_Now()
     QVERIFY(ret.toInt64() == 1);
 }
 
+static bool hasRequestedTest(const QMetaObject *metaObject, int argc, char **argv)
+{
+    bool hasFilter = false;
+
+    for (int i = 1; i < argc; ++i) {
+        QString name = QString::fromLocal8Bit(argv[i]);
+        if (!name.startsWith(QStringLiteral("test_")))
+            continue;
+
+        hasFilter = true;
+        name = name.section(':', 0, 0);
+        const QByteArray signature = name.toLocal8Bit() + "()";
+        if (metaObject->indexOfSlot(signature.constData()) >= 0)
+            return true;
+    }
+
+    return !hasFilter;
+}
+
 //-------------------------------------------------------------------------------------------------
 int runAdaDateTimeTests(int argc, char **argv)
 {
     TstAdaDateTime tests;
-    int status = QTest::qExec(&tests, argc, argv);
-    if (status != 0)
-        return status;
+    if (!hasRequestedTest(tests.metaObject(), argc, argv))
+        return 0;
 
-    return 0;
+    return QTest::qExec(&tests, argc, argv);
 }
 
 #include "tst_AdaDateTime.moc"

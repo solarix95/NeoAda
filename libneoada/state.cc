@@ -411,6 +411,13 @@ bool NdaState::inLoopScope(const NadaSymbolTables &tables) const
 }
 
 //-------------------------------------------------------------------------------------------------
+std::vector<std::string> NdaState::globalFunctions() const
+{
+    return mFunctions.symbolNames();
+}
+
+
+//-------------------------------------------------------------------------------------------------
 void NdaState::destroy()
 {
     mRetValue.reset(); // detach references

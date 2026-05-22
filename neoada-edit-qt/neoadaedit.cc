@@ -690,6 +690,9 @@ void NeoAdaEdit::onPlay()
             ui->txtOutput->appendPlainText(line);
     }
 
+    for (const auto &sym : mAda.globalFunctions())
+        ui->txtOutput->appendPlainText(QString::fromStdString(sym));
+
     const QString unhandledException = QString::fromStdString(mAda.state()->unhandledException());
     if (mAda.hasError()) {
         appendOutputLine(ui->txtOutput, QString("Error: %1").arg(QString::fromStdString(mAda.lastError())), QColor("#b00020"));

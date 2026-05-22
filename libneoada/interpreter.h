@@ -66,6 +66,7 @@ private:
     void runBinaryPlus(Nda::Runnable *node);       // "+"
     void runBinaryMinus(Nda::Runnable *node);      // "-"
     void runBinaryMultiply(Nda::Runnable *node);   // "*"
+    void runBinaryPower(Nda::Runnable *node);      // "**"
     void runBinaryDivide(Nda::Runnable *node);     // "/"
     void runBinaryAnd(Nda::Runnable *node);        // "and"
     void runBinaryOr(Nda::Runnable *node);         // "or"

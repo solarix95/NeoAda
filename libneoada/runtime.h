@@ -22,6 +22,7 @@ public:
     NdaVariant runScript(const std::string &script, NdaException *e = nullptr);
     NdaVariant runFile(const std::string &fileName, NdaException *e = nullptr);
     NdaState  *state();
+    std::vector<std::string> globalFunctions() const;
 
     NdaValue   invokeFnc(const std::string &fncName);    // function fncName(arg1: any) return any;
     NdaValue   invokeFnc(const std::string &fncName, const NdaValue &arg1);    // function fncName(arg1: any) return any;

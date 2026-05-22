@@ -69,6 +69,7 @@ public:
     bool               contains(const std::string &name, const NdaVariants &parameters);
     Nda::FunctionEntry *symbolPtr(const std::string &name, const NdaVariants &parameters);
     Nda::FunctionEntry &symbol(const std::string &name, const NdaVariants &parameters);
+    std::vector<std::string> symbolNames() const;
 
 private:
     bool matches(const Nda::FunctionEntry &entry, const NdaVariants &parameters) const;

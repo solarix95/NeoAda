@@ -2,6 +2,7 @@
 #define LIB_NEOADA_STATE_H
 
 #include <string>
+#include <vector>
 #include <unordered_set>
 #include "private/symboltable.h"
 #include "private/functiontable.h"
@@ -89,6 +90,8 @@ public:
 
     bool               inLoopScope() const;
     bool               inLoopScope(const NadaSymbolTables &tables) const;
+
+    std::vector<std::string> globalFunctions() const;
 
     inline NdaVariant  &ret()  { return mRetValue; }
 

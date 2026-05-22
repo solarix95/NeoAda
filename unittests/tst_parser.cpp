@@ -213,6 +213,7 @@ private slots:
     void test_api_evaluate_Equal();
     void test_api_evaluate_NotEqual();
     void test_api_evaluate_LessThan();
+    void test_api_evaluate_SignedUnsignedComparisonEdges();
     void test_api_evaluate_LessEqualThan();
 
     void test_api_evaluate_ConcatString();
@@ -286,6 +287,9 @@ private slots:
     void test_api_evaluate_mul_Natural();
     void test_api_evaluate_mul_Supernatural();
     void test_api_evaluate_mul_Byte();
+
+    // Power Operator
+    void test_api_evaluate_pow();
 
     // Modulo Operator
     void test_api_evaluate_mod_Number(); // Modulo on Number is invalide at all..
@@ -3615,12 +3619,28 @@ void TstParser::test_api_evaluate_Equal()
 void TstParser::test_api_evaluate_NotEqual()
 {
     NdaState state;
-    QVERIFY(NeoAda::evaluate("return true <> true;", state).toBool()  == false);
-    QVERIFY(NeoAda::evaluate("return true <> false;", state).toBool() == true);
+
+    // Natural
     QVERIFY(NeoAda::evaluate("return 42   <> 42;", state).toBool()      == false);
-    QVERIFY(NeoAda::evaluate("return 42.5 <> 42.5;", state).toBool()  == false);
     QVERIFY(NeoAda::evaluate("return 42   <> 23;", state).toBool()      == true);
 
+    // Supernatural
+    QVERIFY(NeoAda::evaluate("return 42_u <> 42_u;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 42_u <> 23_u;", state).toBool()      == true);
+
+    // Byte
+    QVERIFY(NeoAda::evaluate("return 42_b <> 42_b;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 42_b <> 23_b;", state).toBool()      == true);
+
+    // Number
+    QVERIFY(NeoAda::evaluate("return 42.5 <> 42.5;", state).toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return 42.4 <> 42.5;", state).toBool()  == true);
+
+    // Boolean
+    QVERIFY(NeoAda::evaluate("return true <> true;", state).toBool()  == false);
+    QVERIFY(NeoAda::evaluate("return true <> false;", state).toBool() == true);
+
+    // String
     QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"NeoAda\";", state).toBool() == false);
     QVERIFY(NeoAda::evaluate("return \"NeoAda\" <> \"neoada\";", state).toBool() == true); // case insensitive as in Ada95
 }
@@ -3635,10 +3655,105 @@ void TstParser::test_api_evaluate_LessThan()
     QVERIFY(NeoAda::evaluate("return 23 < 42;", state).toBool()      == true);
     QVERIFY(NeoAda::evaluate("return 42 < 23;", state).toBool()      == false);
 
+    // Natural/Supernatural
+    QVERIFY(NeoAda::evaluate("return 42 < 42_u;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23 < 42_u;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42 < 23_u;", state).toBool()      == false);
+
+    // Natural/Byte
+    QVERIFY(NeoAda::evaluate("return 42 < 42_b;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23 < 42_b;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42 < 23_b;", state).toBool()      == false);
+
+    // Natural/Number
+    QVERIFY(NeoAda::evaluate("return 42 < 42_d;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23 < 42_d;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42 < 23_d;", state).toBool()      == false);
+
+
+    // Supernatural
+    QVERIFY(NeoAda::evaluate("return 42_u < 42_u;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23_u < 42_u;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_u < 23_u;", state).toBool()      == false);
+
+    // Supernatural/Natural
+    QVERIFY(NeoAda::evaluate("return 42_u < 42_n;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23_u < 42_n;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_u < 23_n;", state).toBool()      == false);
+
+    // Supernatural/Byte
+    QVERIFY(NeoAda::evaluate("return 42_u < 42_b;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23_u < 42_b;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_u < 23_b;", state).toBool()      == false);
+
+    // Byte
+    QVERIFY(NeoAda::evaluate("return 42_b < 42_b;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23_b < 42_b;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_b < 23_b;", state).toBool()      == false);
+
+    // Byte/Natural
+    QVERIFY(NeoAda::evaluate("return 42_b < 42_n;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23_b < 42_n;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_b < 23_n;", state).toBool()      == false);
+
+    // Byte/Supernatural
+    QVERIFY(NeoAda::evaluate("return 42_b < 42_u;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23_b < 42_u;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_b < 23_u;", state).toBool()      == false);
+
+    // Byte/Number
+    QVERIFY(NeoAda::evaluate("return 42_b < 42_d;", state).toBool()      == false);
+    QVERIFY(NeoAda::evaluate("return 23_b < 42_d;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_b < 23_d;", state).toBool()      == false);
+
+
     // Number
     QVERIFY(NeoAda::evaluate("return 42.0 < 42.0;", state).toBool()      == false);
     QVERIFY(NeoAda::evaluate("return 23.0 < 42.0;", state).toBool()      == true);
     QVERIFY(NeoAda::evaluate("return 42.0 < 23.0;", state).toBool()      == false);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_SignedUnsignedComparisonEdges()
+{
+    NdaState state;
+
+    // Negative Natural vs unsigned Supernatural
+    QVERIFY(NeoAda::evaluate("return -5_n < 10_u;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return -5_n <= 10_u;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return -5_n > 10_u;", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return -5_n >= 10_u;", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return -5_n = 10_u;", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return -5_n <> 10_u;", state).toBool() == true);
+
+    QVERIFY(NeoAda::evaluate("return 10_u > -5_n;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 10_u >= -5_n;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 10_u < -5_n;", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return 10_u <= -5_n;", state).toBool() == false);
+
+    // Equal values across signed, unsigned and byte types
+    QVERIFY(NeoAda::evaluate("return 0_n = 0_u;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 0_u = 0_n;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 255_b = 255_u;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 255_u = 255_b;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 255_b <> 255_u;", state).toBool() == false);
+
+    // Boundary around byte range
+    QVERIFY(NeoAda::evaluate("return 255_b < 256_u;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 256_u > 255_b;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return -1_n < 0_b;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 0_b > -1_n;", state).toBool() == true);
+
+    // Number mixed with integer-like types
+    QVERIFY(NeoAda::evaluate("return -5.0 = -5_n;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return -5_n = -5.0;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return -5.5 < -5_n;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 10_u > 9.5;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 9.5 < 10_u;", state).toBool() == true);
+
+    // Larger unsigned values should compare numerically, not via signed wraparound.
+    QVERIFY(NeoAda::evaluate("return 4294967296_u > -1_n;", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return -1_n < 4294967296_u;", state).toBool() == true);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3650,6 +3765,16 @@ void TstParser::test_api_evaluate_LessEqualThan()
     QVERIFY(NeoAda::evaluate("return 42 <= 42;", state).toBool()      == true);
     QVERIFY(NeoAda::evaluate("return 23 <= 42;", state).toBool()      == true);
     QVERIFY(NeoAda::evaluate("return 42 <= 23;", state).toBool()      == false);
+
+    // Supernatural
+    QVERIFY(NeoAda::evaluate("return 42_u <= 42_u;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 23_u <= 42_u;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_u <= 23_u;", state).toBool()      == false);
+
+    // Byte
+    QVERIFY(NeoAda::evaluate("return 42_b <= 42_b;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 23_b <= 42_b;", state).toBool()      == true);
+    QVERIFY(NeoAda::evaluate("return 42_b <= 23_b;", state).toBool()      == false);
 
     // Number
     QVERIFY(NeoAda::evaluate("return 42.0 <= 42.0;", state).toBool()      == true);
@@ -4828,6 +4953,19 @@ void TstParser::test_api_evaluate_mul_Byte()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_pow()
+{
+    NdaState state;
+
+    QVERIFY(NeoAda::evaluate("return 256**0;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 256**0;", state).toInt64() == 1);
+    QVERIFY(NeoAda::evaluate("return 256**3;", state).type() == Nda::Natural);
+    QVERIFY(NeoAda::evaluate("return 256**3;", state).toInt64() == 16777216);
+    QVERIFY(NeoAda::evaluate("return 2_d**-1_n;", state).type() == Nda::Number);
+    QVERIFY(NeoAda::evaluate("return 2_d**-1_n;", state).toDouble() == 0.5);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_mod_Number()
 {
     NdaState state;
@@ -5705,6 +5843,8 @@ int main(int argc, char **argv)
     status |= runAdaIoFileTests(argc, argv);
     status |= runAdaDateTimeTests(argc, argv);
 
+    std::cout << "********* Finished testing *********" << std::endl;
+    std::cout << "Status: " << status << " " << (status == 0 ? "(OK)":"(ERROR)") << std::endl;
     return status;
 }
 

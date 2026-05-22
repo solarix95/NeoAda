@@ -22,6 +22,17 @@
 bool       operator==(const NdaVariant &v1, const NdaVariant &v2);
 
 //-------------------------------------------------------------------------------------------------
+bool nadaParseDoubleLiteral(const std::string &s, double &out)
+{
+    std::istringstream in(s);
+    in.imbue(std::locale::classic());
+
+    in >> out;
+    return in && in.eof();
+}
+
+
+//-------------------------------------------------------------------------------------------------
 NdaVariant::NdaVariant(const Nda::RuntimeType *type)
     : mRuntimeType(type)
 {
@@ -106,7 +117,11 @@ bool NdaVariant::fromNumberLiteral(const Nda::RuntimeType *t, const std::string 
     if (!NadaNumericParser::isFloatingPointLiteral(cleanLiteral))
         return false;
 
-    mValue.uDouble = std::stod(cleanLiteral);
+    double parsed = 0.0;
+    if (!nadaParseDoubleLiteral(cleanLiteral, parsed))
+        return false;
+
+    mValue.uDouble = parsed;
     return true;
 }
 
@@ -452,13 +467,13 @@ bool NdaVariant::assign(const NdaVariant &other)
         }
     } break;
     case Nda::Natural: {
-        if (other.type() == Nda::Natural) {
+        if (other.type() == Nda::Natural || other.type() == Nda::Byte) {
             mValue.uInt64 = other.cuValue()->uInt64;
             return true;
         }
     } break;
     case Nda::Supernatural: {
-        if (other.type() == Nda::Supernatural) {
+        if (other.type() == Nda::Supernatural || other.type() == Nda::Byte) {
             mValue.uUInt64 = other.cuValue()->uUInt64;
             return true;
         }
@@ -665,8 +680,25 @@ bool NdaVariant::lessThen(const NdaVariant &other, bool *ok) const
 //-------------------------------------------------------------------------------------------------
 double NdaVariant::spaceship(const NdaVariant &other, bool *ok) const
 {
-
     if (ok) *ok = false;
+
+    // double camparison
+    if (type() != other.type() && (type() == Nda::Number || other.type() == Nda::Number)) {
+        bool vok = true;
+        double v1 = toDouble(&vok);
+        if (!vok)
+            return NDA_NAN;
+        double v2 = other.toDouble(&vok);
+        if (!vok)
+            return NDA_NAN;
+
+        // double spaceship ok..
+        if (ok) *ok = true;
+        if (std::isnan(v1) || std::isnan(v2)) {
+            return NDA_NAN;
+        }
+        return OP_SPACESHIP(v1,v2);
+    }
 
     switch (myType()) {
     case Nda::Undefined: return NDA_NAN;
@@ -700,21 +732,56 @@ double NdaVariant::spaceship(const NdaVariant &other, bool *ok) const
         return OP_SPACESHIP(mValue.uDouble,other.cuValue()->uDouble);
         break;
     case Nda::Natural:
-        if (other.type() != myType())
-            return NDA_NAN;
+        if (other.type() != myType()) {
+            if (other.type() == Nda::Supernatural) {
+                if (ok) *ok = true;
+                if (mValue.uInt64 < 0)
+                    return -1;
+                return OP_SPACESHIP(static_cast<uint64_t>(mValue.uInt64), other.cuValue()->uUInt64);
+            }
+
+            int v2;
+            bool v2IsInt = other.exact32BitInt(v2);
+            if (v2IsInt) {
+                if (ok) *ok = true;
+                return OP_SPACESHIP(mValue.uInt64,v2);
+            }
+            return NDA_NAN; // giving up...
+        }
         if (ok) *ok = true;
         return OP_SPACESHIP(mValue.uInt64,other.cuValue()->uInt64);
         break;
     case Nda::Supernatural:
-        if (other.type() != myType())
-            return NDA_NAN;
+        if (other.type() != myType()) {
+            int v2;
+            bool v2IsInt = other.exact32BitInt(v2);
+            if (v2IsInt) {
+                if (ok) *ok = true;
+                if (v2 < 0)
+                    return 1;
+                return OP_SPACESHIP(mValue.uUInt64,(unsigned)v2);
+            }
+            return NDA_NAN; // giving up...
+        }
         if (ok) *ok = true;
         return OP_SPACESHIP(mValue.uUInt64,other.cuValue()->uUInt64);
         break;
     case Nda::Boolean:
     case Nda::Byte:
-        if (other.type() != myType())
-            return NDA_NAN;
+        if (other.type() != myType()) {
+            if (other.type() == Nda::Supernatural) {
+                if (ok) *ok = true;
+                return OP_SPACESHIP(static_cast<uint64_t>(mValue.uByte), other.cuValue()->uUInt64);
+            }
+
+            int v2;
+            bool v2IsInt = other.exact32BitInt(v2);
+            if (v2IsInt) {
+                if (ok) *ok = true;
+                return OP_SPACESHIP((int)mValue.uByte,v2);
+            }
+            return NDA_NAN; // giving up...
+        }
         if (ok) *ok = true;
         return OP_SPACESHIP(mValue.uByte,other.cuValue()->uByte);
         break;
@@ -2111,15 +2178,17 @@ bool NdaVariant::exact64BitDbl(double &value) const
         return true;
     } break;
     case Nda::Natural: {
-        if (mValue.uInt64 >= -((int64_t(1) << 53) - 1) && mValue.uInt64 <= ((int64_t(1) << 53) - 1))
+        if (mValue.uInt64 >= -((int64_t(1) << 53) - 1) && mValue.uInt64 <= ((int64_t(1) << 53) - 1)) {
             value = static_cast<double>(mValue.uInt64);
-        return true;
+            return true;
+        }
     } break;
 
     case Nda::Supernatural: {
-        if (mValue.uInt64 >= 0 && mValue.uInt64 <= ((int64_t(1) << 53) - 1))
+        if (mValue.uInt64 >= 0 && mValue.uInt64 <= ((int64_t(1) << 53) - 1)) {
             value = static_cast<double>(mValue.uUInt64);
-        return true;
+            return true;
+        }
     } break;
     case Nda::Boolean:
     case Nda::Byte:

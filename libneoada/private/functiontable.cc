@@ -111,6 +111,15 @@ Nda::FunctionEntry &FunctionTable::symbol(const std::string &name, const NdaVari
 }
 
 //-------------------------------------------------------------------------------------------------
+std::vector<std::string> FunctionTable::symbolNames() const
+{
+    std::vector<std::string>  ret;
+    for (auto& it: mFunctions)
+        ret.push_back(it.first);
+    return ret;
+}
+
+//-------------------------------------------------------------------------------------------------
 bool FunctionTable::matches(const Nda::FunctionEntry &entry, const NdaVariants &parameters) const
 {
     if (entry.parameters.size() != parameters.size())

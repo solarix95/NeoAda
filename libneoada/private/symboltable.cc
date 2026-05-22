@@ -110,3 +110,13 @@ void NadaSymbolTable::lookUp(int index, Nda::Symbol **symbol) const
 {
     *symbol = mTable.at(index);
 }
+
+//-------------------------------------------------------------------------------------------------
+std::vector<std::string> NadaSymbolTable::symbolNames() const
+{
+    std::vector<std::string> ret;
+    for (int i=0; i<mTable.size(); i++)
+        ret.push_back(mTable.at(i)->name.displayValue);
+
+    return ret;
+}

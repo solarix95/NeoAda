@@ -105,6 +105,14 @@ NdaState *NdaRuntime::state()
     return mState;
 }
 
+//-------------------------------------------------------------------------------------------------
+std::vector<std::string> NdaRuntime::globalFunctions() const
+{
+    if (!mState)
+        return std::vector<std::string>();
+    return mState->globalFunctions();
+}
+
 
 //-------------------------------------------------------------------------------------------------
 NdaValue NdaRuntime::invokeFnc(const std::string &fncName)
