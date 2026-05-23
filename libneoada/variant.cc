@@ -866,15 +866,15 @@ NdaVariant NdaVariant::concat(const NdaVariant &other, bool *ok) const
 
     if (ok) *ok = false;
 
-    switch (myType()) {
-    case Nda::String: {
+    if ((type() == Nda::String) || (other.type() == Nda::String)) {
+        const Nda::RuntimeType *stringType = (type() == Nda::String) ? runtimeType() : other.runtimeType();
         NdaVariant ret;
+        ret.fromString(stringType, toString() + other.toString());
         if (ok) *ok = true;
-
-        ret.fromString(runtimeType(), toString() + other.toString());
-
         return ret;
-    } break;
+    }
+
+    switch (myType()) {
     case Nda::List: {
         if (other.type() == Nda::List) {
             NdaVariant ret;

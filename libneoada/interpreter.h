@@ -93,6 +93,10 @@ private:
     std::string     mActiveException;
     NdaState       *mState;
     Nda::Runnable  *mRunnable;
+
+    bool            mHasVolatileAccessTarget;
+    std::string     mVolatileAccessSymbol;
+    NdaVariant      mVolatileAccessIndex;
 };
 
 #endif // INTERPRETER_H

@@ -11,6 +11,7 @@
 NdaInterpreter::NdaInterpreter(NdaState *state)
     : mState(state)
     , mRunnable(nullptr)
+    , mHasVolatileAccessTarget(false)
 {
 }
 
@@ -32,6 +33,7 @@ NdaVariant NdaInterpreter::execute(const NdaParser::ASTNodePtr &node, NdaState *
         delete mRunnable;
 
     mExecState = RunState;
+    mHasVolatileAccessTarget = false;
 
     mRunnable = prepare(node);
     execute(mRunnable,state);
@@ -52,6 +54,7 @@ NdaVariant NdaInterpreter::execute(Nda::Runnable *node, NdaState *state)
         mState = state;
 
     mExecState = RunState;
+    mHasVolatileAccessTarget = false;
     assert(node->call);
 
     (this->*(node->call))(node);
@@ -489,6 +492,7 @@ void NdaInterpreter::runAssignment(Nda::Runnable *node)
 {
     assert(node->childrenCount == 2);
 
+    mHasVolatileAccessTarget = false;
     run(node->children[0]);
     if (mExecState == ExceptionState)
         return;
@@ -498,9 +502,47 @@ void NdaInterpreter::runAssignment(Nda::Runnable *node)
 
     auto targetValue = mState->ret();
 
+    const bool hasVolatileAccessTarget = mHasVolatileAccessTarget;
+    const std::string volatileAccessSymbol = mVolatileAccessSymbol;
+    const NdaVariant volatileAccessIndex = mVolatileAccessIndex;
+    mHasVolatileAccessTarget = false;
+
+    Nda::Symbol *volatileSymbol = nullptr;
+    if (!hasVolatileAccessTarget && node->children[0]->type == Nda::NcIdentifier) {
+        volatileSymbol = mState->symbolPtr(node->children[0]->symbolIndex,
+                                           node->children[0]->symbolScope,
+                                           node->children[0]->symbolIsGlobal);
+        if (volatileSymbol && !volatileSymbol->isVolatile)
+            volatileSymbol = nullptr;
+    }
+
     run(node->children[1]);
     if (mExecState == ExceptionState)
         return;
+
+    if (volatileSymbol || hasVolatileAccessTarget) {
+        NdaVariant newValue(targetValue.runtimeType());
+        if (!newValue.assign(mState->ret())) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
+
+        const bool writeAccepted = hasVolatileAccessTarget
+            ? mState->writeVolatile(volatileAccessSymbol, volatileAccessIndex, newValue)
+            : mState->writeVolatile(volatileSymbol->name.lowerValue, newValue);
+
+        if (!writeAccepted) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
+
+        targetValue.assign(newValue);
+        return;
+    }
 
     if (!targetValue.assign(mState->ret())) {
         mState->setUnhandledException("programerror");
@@ -991,7 +1033,7 @@ void NdaInterpreter::runBinaryConcat(Nda::Runnable *node)
     bool done;
     auto result = left.concat(right, &done);
     if (!done)
-        throw NdaException(Nada::Error::InvalidStatement,node->line,node->column, node->value.displayValue);
+        throw NdaException(Nada::Error::OperatorTypeError,node->line,node->column, node->value.displayValue);
 
     mState->ret() = result;
 }
@@ -1265,6 +1307,11 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
             volatileSymbol = nullptr;
     }
 
+    const bool isAssignmentTarget = node->parent &&
+        node->parent->call == &NdaInterpreter::runAssignment &&
+        node->parent->childrenCount > 0 &&
+        node->parent->children[0] == node;
+
     run(node->children[1]);
     if (mExecState == ExceptionState)
         return;
@@ -1297,13 +1344,23 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
 
         if (targetObj.type() == Nda::List) {
             auto &targetValue = targetObj.writeListAccess((int)index);
-            if (volatileSymbol)
-                mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
+            if (volatileSymbol) {
+                mHasVolatileAccessTarget = true;
+                mVolatileAccessSymbol = volatileSymbol->name.lowerValue;
+                mVolatileAccessIndex = accessIndex;
+                if (!isAssignmentTarget)
+                    mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
+            }
             mState->ret().fromReference(mState->referenceType(), &targetValue);
         } else {
             auto &targetValue = targetObj.writeBytesAccess((int)index);
-            if (volatileSymbol)
-                mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
+            if (volatileSymbol) {
+                mHasVolatileAccessTarget = true;
+                mVolatileAccessSymbol = volatileSymbol->name.lowerValue;
+                mVolatileAccessIndex = accessIndex;
+                if (!isAssignmentTarget)
+                    mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
+            }
             mState->ret().fromReference(mState->referenceType(), &targetValue);
         }
     } else {
@@ -1312,8 +1369,13 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
         auto &targetValue = targetObj.writeDictAccess(accessIndex);
         if (targetValue.type() == Nda::Undefined) // new Value!!
             targetValue.initType(mState->typeByName("any"));
-        if (volatileSymbol)
-            mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
+        if (volatileSymbol) {
+            mHasVolatileAccessTarget = true;
+            mVolatileAccessSymbol = volatileSymbol->name.lowerValue;
+            mVolatileAccessIndex = accessIndex;
+            if (!isAssignmentTarget)
+                mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
+        }
         mState->ret().fromReference(mState->referenceType(), &targetValue);
     }
 }

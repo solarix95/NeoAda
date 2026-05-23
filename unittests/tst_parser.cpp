@@ -208,6 +208,10 @@ private slots:
     void test_interpreter_Volatile_Read();
     void test_interpreter_Volatile_ReadFailed();
     void test_interpreter_Volatile_ReadDict();
+    void test_interpreter_Volatile_Write();
+    void test_interpreter_Volatile_WriteRejected();
+    void test_interpreter_Volatile_WriteDict();
+    void test_interpreter_Volatile_WriteDictRejected();
 
     void test_interpreter_static_method();
 
@@ -2846,8 +2850,14 @@ void TstParser::test_interpreter_WithAddon()
 void TstParser::test_interpreter_ProcedureCall()
 {
     std::string script = R"(
+        function square(x : Natural) return Natural is
+        begin
+            return x * x;
+        end;
+
         print("hello NeoAda");
         print(42);
+        print(3 & "^2 = " & square(3));
     )";
 
     NdaLexer       lexer;
@@ -2865,9 +2875,10 @@ void TstParser::test_interpreter_ProcedureCall()
 
     interpreter.execute(ast);
 
-    QVERIFY(results.size() == 2);
+    QVERIFY(results.size() == 3);
     QVERIFY(results[0] == "hello NeoAda");
     QVERIFY(results[1] == "42");
+    QVERIFY(results[2] == "3^2 = 9");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3622,6 +3633,166 @@ void TstParser::test_interpreter_Volatile_ReadDict()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_Write()
+{
+    std::string script = R"(
+        volatile x : Natural;
+        x := 42;
+        return x;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    int64_t modelValue = 0;
+    int writeCount = 0;
+    state.onVolatileWrite("x", [&](const NdaVariant &value) -> bool {
+        bool ok = false;
+        modelValue = value.toInt64(&ok);
+        if (!ok)
+            return false;
+        ++writeCount;
+        return true;
+    });
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 42);
+    QVERIFY(modelValue == 42);
+    QVERIFY(writeCount == 1);
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_WriteRejected()
+{
+    std::string script = R"(
+        function Test() return Natural is
+        begin
+            volatile x : Natural;
+            x := 42;
+            return x;
+        exception
+            when ProgramError => return 17;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    int64_t attemptedValue = 0;
+    int writeCount = 0;
+    state.onVolatileWrite("x", [&](const NdaVariant &value) -> bool {
+        bool ok = false;
+        attemptedValue = value.toInt64(&ok);
+        if (!ok)
+            return false;
+        ++writeCount;
+        return false;
+    });
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 17);
+    QVERIFY(attemptedValue == 42);
+    QVERIFY(writeCount == 1);
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_WriteDict()
+{
+    std::string script = R"(
+        volatile model : Dict;
+        model{"sensor1"} := 42;
+        return model{"sensor1"};
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::string modelKey;
+    int64_t modelValue = 0;
+    int writeCount = 0;
+    state.onVolatileWrite("model", [&](const NdaVariant &index, const NdaVariant &value) -> bool {
+        bool ok = false;
+        modelKey = index.toString();
+        modelValue = value.toInt64(&ok);
+        if (!ok)
+            return false;
+        ++writeCount;
+        return true;
+    });
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 42);
+    QVERIFY(modelKey == "sensor1");
+    QVERIFY(modelValue == 42);
+    QVERIFY(writeCount == 1);
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_WriteDictRejected()
+{
+    std::string script = R"(
+        function Test() return Natural is
+        begin
+            volatile model : Dict;
+            model{"sensor1"} := 42;
+            return model{"sensor1"};
+        exception
+            when ProgramError => return 17;
+        end;
+
+        return Test();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::string attemptedKey;
+    int64_t attemptedValue = 0;
+    int writeCount = 0;
+    state.onVolatileWrite("model", [&](const NdaVariant &index, const NdaVariant &value) -> bool {
+        bool ok = false;
+        attemptedKey = index.toString();
+        attemptedValue = value.toInt64(&ok);
+        if (!ok)
+            return false;
+        ++writeCount;
+        return false;
+    });
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 17);
+    QVERIFY(attemptedKey == "sensor1");
+    QVERIFY(attemptedValue == 42);
+    QVERIFY(writeCount == 1);
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_static_method()
 {
     std::string script = R"(
@@ -3877,6 +4048,8 @@ void TstParser::test_api_evaluate_ConcatString()
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \" \" & \"Ada\";", state).toString()    == "Neo Ada");
     QVERIFY(NeoAda::evaluate("return \"Neo\" & \"Ada\" = \"NeoAda\";", state).toBool() == true);
     QVERIFY(NeoAda::evaluate("declare neo: String := \"Neo\"; return (neo & \"Ada\") = \"NeoAda\";", state).toBool() == true);
+    QVERIFY(NeoAda::evaluate("return 3 & \"x\";", state).toString() == "3x");
+    QVERIFY(NeoAda::evaluate("return \"x\" & 3;", state).toString() == "x3");
 }
 
 //-------------------------------------------------------------------------------------------------

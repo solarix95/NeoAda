@@ -463,6 +463,18 @@ void NdaState::onVolatileRead(const std::string &symbolname, ReadIndexCallback c
 }
 
 //-------------------------------------------------------------------------------------------------
+void NdaState::onVolatileWrite(const std::string &symbolname, WriteCallback cb)
+{
+    mVolatileWrites[Nda::toLower(symbolname)] = std::move(cb);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::onVolatileWrite(const std::string &symbolname, WriteIndexCallback cb)
+{
+    mVolatileIndexWrites[Nda::toLower(symbolname)] = std::move(cb);
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NdaState::readVolatile(const std::string &symbolname, NdaVariant &value)
 {
     auto it = mVolatileReads.find(Nda::toLower(symbolname));
@@ -478,6 +490,26 @@ bool NdaState::readVolatile(const std::string &symbolname, const NdaVariant &ind
     auto it = mVolatileIndexReads.find(Nda::toLower(symbolname));
     if (it == mVolatileIndexReads.end())
         return false;
+
+    return it->second(index, value);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaState::writeVolatile(const std::string &symbolname, const NdaVariant &value)
+{
+    auto it = mVolatileWrites.find(Nda::toLower(symbolname));
+    if (it == mVolatileWrites.end())
+        return true;
+
+    return it->second(value);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaState::writeVolatile(const std::string &symbolname, const NdaVariant &index, const NdaVariant &value)
+{
+    auto it = mVolatileIndexWrites.find(Nda::toLower(symbolname));
+    if (it == mVolatileIndexWrites.end())
+        return true;
 
     return it->second(index, value);
 }

@@ -72,14 +72,19 @@ public:
     using CtorCallback   = std::function<void     (const std::string &symbolName, NdaVariant &value)>;
     using DtorCallback   = std::function<void     (NdaVariant &value)>;
     using ReadCallback   = std::function<bool     (NdaVariant &value)>;
-    using WriteCallback  = std::function<bool     (NdaVariant &value)>;
+    using WriteCallback  = std::function<bool     (const NdaVariant &newValue)>;
+    using WriteIndexCallback  = std::function<bool     (const NdaVariant &index, const NdaVariant &newValue)>;
     using ReadIndexCallback   = std::function<bool (const NdaVariant &index,NdaVariant &value)>;
 
     void  onVolatileCtor (CtorCallback  cb);
     void  onVolatileRead (const std::string &symbolname, ReadCallback  cb);      // natural/number/bool/...
     void  onVolatileRead (const std::string &symbolname, ReadIndexCallback  cb); // list/dict
+    void  onVolatileWrite(const std::string &symbolname, WriteCallback  cb);
+    void  onVolatileWrite(const std::string &symbolname, WriteIndexCallback  cb);
     bool  readVolatile   (const std::string &symbolname, NdaVariant &value);
+    bool  writeVolatile  (const std::string &symbolname, const NdaVariant &value);
     bool  readVolatile   (const std::string &symbolname, const NdaVariant &index, NdaVariant &value);
+    bool  writeVolatile  (const std::string &symbolname, const NdaVariant &index, const NdaVariant &value);
 
     // "With" Addons
     using WithCallback  = std::function<void(std::string &addonName)>;
@@ -124,6 +129,8 @@ private:
     CtorCallback       mVolatileCtor;
     std::unordered_map<std::string, ReadCallback> mVolatileReads;
     std::unordered_map<std::string, ReadIndexCallback> mVolatileIndexReads;
+    std::unordered_map<std::string, WriteCallback> mVolatileWrites;
+    std::unordered_map<std::string, WriteIndexCallback> mVolatileIndexWrites;
 
     WithCallback       mWithCallback;
     std::unordered_set<std::string> mLoadedAddons;
