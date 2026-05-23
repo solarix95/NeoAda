@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <utility>
 #include "private/type.h"
 
 namespace Nda {
@@ -29,15 +30,24 @@ public:
 
     bool fromNumberLiteral(const Nda::RuntimeType  *type,const std::string &value);
     void fromNumber(const Nda::RuntimeType *type, double value);
+    bool setNumber(double value);
+
     bool fromNaturalLiteral(const Nda::RuntimeType *type,const std::string &value);
     void fromNatural(const Nda::RuntimeType *type, int64_t value);
+    bool setNatural(int64_t value);
+
     bool fromSNaturalLiteral(const Nda::RuntimeType *type,const std::string &value);
     void fromSNatural(const Nda::RuntimeType *type, uint64_t value);
+    bool setSupernatural(uint64_t value);
+
     bool fromByteLiteral(const Nda::RuntimeType *type,const std::string &value);
     void fromByte(const Nda::RuntimeType *type, unsigned char value);
+    bool setByte(unsigned char value);
 
     void  fromDoubleNan(const Nda::RuntimeType *type);
     void  fromBool(const Nda::RuntimeType *t, bool value);
+    bool  setBool(bool value);
+
     void  fromReference(const Nda::RuntimeType *type, NdaVariant *other);
 
     bool    toBool(bool *ok = nullptr) const;
@@ -90,6 +100,7 @@ public:
     void              appendToDict(const NdaVariant &key, const NdaVariant &value);
     bool              contains(const NdaVariant&) const;
     NdaVariant&       writeDictAccess(const NdaVariant &key);
+    std::vector<std::pair<NdaVariant, NdaVariant>> dictItems() const;
     void              takeFromDict(const NdaVariant&);
 
     // generic string interface

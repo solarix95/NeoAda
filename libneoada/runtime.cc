@@ -16,6 +16,8 @@
 #include "addons/AdaTextEncoding.h"
 #include "addons/AdaIoFile.h"
 #include "addons/AdaDateTime.h"
+#include "addons/AdaRegexp.h"
+#include "addons/AdaJson.h"
 
 //-------------------------------------------------------------------------------------------------
 NdaRuntime::NdaRuntime()
@@ -54,6 +56,10 @@ void NdaRuntime::reset()
             loadAddonAdaIoFile();
         if (addonName == "ada.datetime" || addonName == "ada.date.time" || addonName == "ada.date")
             loadAddonAdaDateTime();
+        if (addonName == "ada.regexp" || addonName == "ada.regex")
+            loadAddonAdaRegexp();
+        if (addonName == "ada.json")
+            loadAddonAdaJson();
     });
 }
 
@@ -206,6 +212,23 @@ void NdaRuntime::loadAddonAdaDateTime()
     if (!mState)
         reset();
     Nda::add_AdaDateTime_symbols(mState);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::loadAddonAdaRegexp()
+{
+    if (!mState)
+        reset();
+    Nda::add_AdaRegexp_symbols(mState);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::loadAddonAdaJson()
+{
+    if (!mState)
+        reset();
+    loadAddonAdaIoFile();
+    Nda::add_AdaJson_symbols(mState);
 }
 
 //-------------------------------------------------------------------------------------------------

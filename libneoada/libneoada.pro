@@ -31,6 +31,8 @@ HEADERS += \
     $$NEOADA_PATH/addons/AdaTextEncoding.h \
     $$NEOADA_PATH/addons/AdaIoFile.h \
     $$NEOADA_PATH/addons/AdaDateTime.h \
+    $$NEOADA_PATH/addons/AdaRegexp.h \
+    $$NEOADA_PATH/addons/AdaJson.h \
     $$NEOADA_PATH/private/runnable.h \
     $$NEOADA_PATH/value.h
 
@@ -60,6 +62,8 @@ SOURCES += \
     $$NEOADA_PATH/addons/AdaTextEncoding.cc \
     $$NEOADA_PATH/addons/AdaIoFile.cc \
     $$NEOADA_PATH/addons/AdaDateTime.cc \
+    $$NEOADA_PATH/addons/AdaRegexp.cc \
+    $$NEOADA_PATH/addons/AdaJson.cc \
     $$NEOADA_PATH/private/runnable.cc \
     $$NEOADA_PATH/value.cc
 

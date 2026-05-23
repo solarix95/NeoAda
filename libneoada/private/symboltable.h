@@ -17,9 +17,10 @@ struct Symbol {
     Nda::LowerString        name;
     NdaVariant             *value;
     const Nda::RuntimeType *type;
+    bool                    isVolatile;
 
-    Symbol() : value(nullptr), type(nullptr) {}
-    Symbol(const std::string &n, const Nda::RuntimeType *t) : name(n), value(nullptr), type(t)  {}
+    Symbol() : value(nullptr), type(nullptr), isVolatile(false) {}
+    Symbol(const std::string &n, const Nda::RuntimeType *t, bool v = false) : name(n), value(nullptr), type(t), isVolatile(v)  {}
 };
 
 

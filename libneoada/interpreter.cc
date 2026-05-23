@@ -328,7 +328,12 @@ void NdaInterpreter::run(Nda::Runnable *node)
                 throw NdaException(Nada::Error::UnknownSymbol,node->line,node->column, node->value.displayValue);
             }
         }
-        auto *value = mState->valuePtr(node->symbolIndex, node->symbolScope, node->symbolIsGlobal);
+
+        auto *symbol = mState->symbolPtr(node->symbolIndex, node->symbolScope, node->symbolIsGlobal);
+        auto *value = symbol ? symbol->value : nullptr;
+
+        if (symbol && symbol->isVolatile && value)
+            mState->readVolatile(symbol->name.lowerValue, *value);
 
         // auto *value = mState->valuePtr(node->value.lowerValue);
         if (value)
@@ -1251,13 +1256,23 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
     auto targetObj = mState->ret();
     assert(targetObj.myType() == Nda::Reference);
 
+    Nda::Symbol *volatileSymbol = nullptr;
+    if (node->children[0]->type == Nda::NcIdentifier) {
+        volatileSymbol = mState->symbolPtr(node->children[0]->symbolIndex,
+                                           node->children[0]->symbolScope,
+                                           node->children[0]->symbolIsGlobal);
+        if (volatileSymbol && !volatileSymbol->isVolatile)
+            volatileSymbol = nullptr;
+    }
+
     run(node->children[1]);
     if (mExecState == ExceptionState)
         return;
 
     if ((targetObj.type() == Nda::List) || (targetObj.type() == Nda::Bytes)) {
+        NdaVariant accessIndex = mState->ret();
         bool done = false;
-        int64_t index = mState->ret().toInt64(&done);
+        int64_t index = accessIndex.toInt64(&done);
         if (!done) {
             mState->setUnhandledException("constrainterror");
             mState->ret().reset();
@@ -1282,16 +1297,23 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
 
         if (targetObj.type() == Nda::List) {
             auto &targetValue = targetObj.writeListAccess((int)index);
+            if (volatileSymbol)
+                mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
             mState->ret().fromReference(mState->referenceType(), &targetValue);
         } else {
             auto &targetValue = targetObj.writeBytesAccess((int)index);
+            if (volatileSymbol)
+                mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
             mState->ret().fromReference(mState->referenceType(), &targetValue);
         }
     } else {
         assert(targetObj.type() == Nda::Dict);
-        auto &targetValue = targetObj.writeDictAccess(mState->ret());
+        NdaVariant accessIndex = mState->ret();
+        auto &targetValue = targetObj.writeDictAccess(accessIndex);
         if (targetValue.type() == Nda::Undefined) // new Value!!
             targetValue.initType(mState->typeByName("any"));
+        if (volatileSymbol)
+            mState->readVolatile(volatileSymbol->name.lowerValue, accessIndex, targetValue);
         mState->ret().fromReference(mState->referenceType(), &targetValue);
     }
 }

@@ -15,4 +15,6 @@ SOURCES +=  tst_parser.cpp \
             tst_AdaMath.cpp \
             tst_AdaTextEncoding.cpp \
             tst_AdaIoFile.cpp \
-            tst_AdaDateTime.cpp
+            tst_AdaDateTime.cpp \
+            tst_AdaRegexp.cpp \
+            tst_AdaJson.cpp

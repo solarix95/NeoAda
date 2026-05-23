@@ -205,6 +205,9 @@ private slots:
     void test_interpreter_CustomType_Procedure();
 
     void test_interpreter_Volatile_CTor();
+    void test_interpreter_Volatile_Read();
+    void test_interpreter_Volatile_ReadFailed();
+    void test_interpreter_Volatile_ReadDict();
 
     void test_interpreter_static_method();
 
@@ -3535,6 +3538,90 @@ void TstParser::test_interpreter_Volatile_CTor()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_Read()
+{
+    std::string script = R"(
+        volatile x : Natural;
+        return x;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.onVolatileRead("x", [&](NdaVariant& val) -> bool {
+        val.setNatural(42);
+        return true;
+    });
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "42");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_ReadFailed()
+{
+    std::string script = R"(
+        volatile x : Natural;
+        x := 42;
+        return x;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.onVolatileRead("x", [&](NdaVariant&) -> bool {
+        return false;
+    });
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "42");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Volatile_ReadDict()
+{
+    std::string script = R"(
+        volatile model : Dict;
+
+        model{"sensor1"} := 0;
+
+        return model{"sensor1"};
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+
+    std::vector<std::string> results;
+    state.onVolatileRead("model", [&](const NdaVariant &index, NdaVariant& val) -> bool {
+        if (index.toString() == "sensor1") {
+            val.setNatural(42);
+            return true;
+        }
+        return false;
+    });
+
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "42");
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_static_method()
 {
     std::string script = R"(
@@ -5808,6 +5895,8 @@ extern int runAdaMathTests(int argc, char **argv);
 extern int runAdaTextEncodingTests(int argc, char **argv);
 extern int runAdaIoFileTests(int argc, char **argv);
 extern int runAdaDateTimeTests(int argc, char **argv);
+extern int runAdaRegexpTests(int argc, char **argv);
+extern int runAdaJsonTests(int argc, char **argv);
 
 static bool hasRequestedTest(const QMetaObject *metaObject, int argc, char **argv)
 {
@@ -5842,6 +5931,8 @@ int main(int argc, char **argv)
     status |= runAdaTextEncodingTests(argc, argv);
     status |= runAdaIoFileTests(argc, argv);
     status |= runAdaDateTimeTests(argc, argv);
+    status |= runAdaRegexpTests(argc, argv);
+    status |= runAdaJsonTests(argc, argv);
 
     std::cout << "********* Finished testing *********" << std::endl;
     std::cout << "Status: " << status << " " << (status == 0 ? "(OK)":"(ERROR)") << std::endl;

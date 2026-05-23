@@ -348,6 +348,19 @@ print("Summe 1..10 = " & sum);
 return sum;
 )")});
 
+    mExamples.push_back({tr("Datum/Uhrzeit"), tr("Anfänger"), QString::fromUtf8(R"(with Ada.DateTime;
+
+declare today : Date := Date:now();
+declare now : Time := Time:now();
+declare meeting : DateTime := DateTime:fromString("2026-05-22 14:30:00", "yyyy-MM-dd HH:mm:ss");
+
+print("Heute: " & today.toString("dd.MM.yyyy"));
+print("Jetzt: " & now.toString("HH:mm:ss"));
+print("Termin: " & meeting.toString("dd.MM.yyyy HH:mm"));
+
+return today.toString("yyyy-MM-dd");
+)")});
+
     mExamples.push_back({tr("Eigene Funktion"), tr("Fortgeschritten"), QString::fromUtf8(R"(function square(x : Natural) return Natural is
 begin
     return x * x;
@@ -399,6 +412,61 @@ end;
 
 return safeDivide(42, 0);
 )")});
+
+
+    mExamples.push_back({tr("Math"), tr("Fortgeschritten"), QString::fromUtf8(R"(with Ada.Math;
+
+declare angle : Number := Math:radians(45);
+declare eps : Number := 0.000001;
+declare side : Number := Math:sqrt(2) / 2;
+
+print("pi = " & Math:pi());
+print("sin(45 Grad) = " & Math:sin(angle));
+print("cos(45 Grad) = " & Math:cos(angle));
+
+if Math:abs(Math:sin(angle) - side) < eps and Math:abs(Math:cos(angle) - side) < eps then
+    return "ok";
+end if;
+
+return "unerwartet";
+)")});
+
+    mExamples.push_back({tr("Regexp"), tr("Fortgeschritten"), QString::fromUtf8(R"NEOADA(with Ada.Regexp;
+
+declare text : String := "Name: Ada, Alter: 12";
+declare caps : List := Regexp:captures(text, "Name: ([A-Za-z]+), Alter: ([0-9]+)");
+declare normalized : String := Regexp:replace("Ada   lernt    NeoAda", "[ ]+", " ");
+
+if Regexp:contains(text, "Alter") and #caps = 3 then
+    print("Name: " & caps[1]);
+    print("Alter: " & caps[2]);
+    print(normalized);
+    return caps[1];
+end if;
+
+return "kein Treffer";
+)NEOADA")});
+
+    mExamples.push_back({tr("JSON"), tr("Fortgeschritten"), QString::fromUtf8(R"NEOADA(with Ada.Json;
+with Ada.Io.File;
+
+declare person : Dict := {"name":"Ada", "age":12, "skills":["NeoAda", "Qt"]};
+declare text : String := Json:toString(person);
+print(text);
+
+declare parsed : Dict := Json:fromString(text);
+print(parsed{"name"} & " lernt " & parsed{"skills"}[0]);
+
+declare fileOut : TextFile := TextFile:create("/tmp/neoada_person.json");
+Json:write(fileOut, parsed);
+fileOut.close();
+
+declare input : TextFile := TextFile:openRead("/tmp/neoada_person.json");
+declare fromFile : Dict := Json:read(input);
+input.close();
+
+return fromFile{"age"};
+)NEOADA")});
 
     mExamples.push_back({tr("Textdatei schreiben"), tr("Praxis"), QString::fromUtf8(R"(with Ada.Io.File;
 

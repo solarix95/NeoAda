@@ -136,6 +136,17 @@ void NdaVariant::fromNumber(const Nda::RuntimeType *t, double value)
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NdaVariant::setNumber(double value)
+{
+    if (type() != Nda::Number)
+        return false;
+    if (myType() == Nda::Reference)
+        return internalReference()->setNumber(value);
+    mValue.uDouble = value;
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NdaVariant::fromNaturalLiteral(const Nda::RuntimeType *t, const std::string &value)
 {
     assert(t);
@@ -171,6 +182,17 @@ void NdaVariant::fromNatural(const Nda::RuntimeType *t, int64_t value)
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NdaVariant::setNatural(int64_t value)
+{
+    if (type() != Nda::Natural)
+        return false;
+    if (myType() == Nda::Reference)
+        return internalReference()->setNatural(value);
+    mValue.uInt64 = value;
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
 void NdaVariant::fromSNatural(const Nda::RuntimeType *t, uint64_t value)
 {
     assert(t);
@@ -178,6 +200,17 @@ void NdaVariant::fromSNatural(const Nda::RuntimeType *t, uint64_t value)
     mRuntimeType = t;
     assert(type() == Nda::Supernatural);
     mValue.uUInt64 = value;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaVariant::setSupernatural(uint64_t value)
+{
+    if (type() != Nda::Supernatural)
+        return false;
+    if (myType() == Nda::Reference)
+        return internalReference()->setSupernatural(value);
+    mValue.uUInt64 = value;
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -255,6 +288,17 @@ void NdaVariant::fromByte(const Nda::RuntimeType *t, unsigned char value)
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NdaVariant::setByte(unsigned char value)
+{
+    if (type() != Nda::Byte)
+        return false;
+    if (myType() == Nda::Reference)
+        return internalReference()->setByte(value);
+    mValue.uByte = value;
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
 #if 0
 bool NdaVariant::fromNumber(const std::string &value)
 {
@@ -314,6 +358,17 @@ void NdaVariant::fromBool(const Nda::RuntimeType *t,bool value)
     if (mRuntimeType) reset();
     mRuntimeType = t;
     mValue.uByte = value;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaVariant::setBool(bool value)
+{
+    if (type() != Nda::Boolean)
+        return false;
+    if (myType() == Nda::Reference)
+        return internalReference()->setBool(value);
+    mValue.uByte = value;
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1484,6 +1539,22 @@ NdaVariant &NdaVariant::writeDictAccess(const NdaVariant &key)
     detachDict();
 
     return internalDict()->dict()[key]; // read only: internalDict()->dict().at(key);
+}
+
+//-------------------------------------------------------------------------------------------------
+std::vector<std::pair<NdaVariant, NdaVariant>> NdaVariant::dictItems() const
+{
+    assert(type() == Nda::Dict);
+    if (myType() == Nda::Reference)
+        return cInternalReference()->dictItems();
+
+    std::vector<std::pair<NdaVariant, NdaVariant>> ret;
+    if (!mValue.uPtr)
+        return ret;
+
+    for (const auto &item : cInternalDict()->cDict())
+        ret.push_back(item);
+    return ret;
 }
 
 //-------------------------------------------------------------------------------------------------

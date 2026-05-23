@@ -109,9 +109,9 @@ bool NdaState::define(const std::string &name, const Nda::RuntimeType *type, boo
 
     bool done;
     if (mCallStack.empty())
-        done = mGlobals.back()->add(Nda::Symbol(name, type));
+        done = mGlobals.back()->add(Nda::Symbol(name, type, isVolatile));
     else
-        done = mCallStack.back()->back()->add(Nda::Symbol(name, type));
+        done = mCallStack.back()->back()->add(Nda::Symbol(name, type, isVolatile));
 
     if (done && isVolatile) {
         NdaVariant &value = valueRef(name);
@@ -449,6 +449,37 @@ void NdaState::destroy()
 void NdaState::onVolatileCtor(NdaState::CtorCallback cb)
 {
     mVolatileCtor = std::move(cb);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::onVolatileRead(const std::string &symbolname, ReadCallback cb)
+{
+    mVolatileReads[Nda::toLower(symbolname)] = std::move(cb);
+}
+
+void NdaState::onVolatileRead(const std::string &symbolname, ReadIndexCallback cb)
+{
+    mVolatileIndexReads[Nda::toLower(symbolname)] = std::move(cb);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaState::readVolatile(const std::string &symbolname, NdaVariant &value)
+{
+    auto it = mVolatileReads.find(Nda::toLower(symbolname));
+    if (it == mVolatileReads.end())
+        return false;
+
+    return it->second(value);
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaState::readVolatile(const std::string &symbolname, const NdaVariant &index, NdaVariant &value)
+{
+    auto it = mVolatileIndexReads.find(Nda::toLower(symbolname));
+    if (it == mVolatileIndexReads.end())
+        return false;
+
+    return it->second(index, value);
 }
 
 //-------------------------------------------------------------------------------------------------

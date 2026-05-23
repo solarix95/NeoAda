@@ -49,6 +49,7 @@ bool NadaSymbolTable::add(const Nda::Symbol &symbol)
 
     mTable.back()->name = symbol.name;
     mTable.back()->type = symbol.type;
+    mTable.back()->isVolatile = symbol.isVolatile;
     mTable.back()->value = new NdaVariant();
     mTable.back()->value->initType(symbol.type);
 

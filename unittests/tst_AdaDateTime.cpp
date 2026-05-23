@@ -12,6 +12,7 @@ private slots:
     void test_api_runtime_AdaDateTime_Time();
     void test_api_runtime_AdaDateTime_DateTime();
     void test_api_runtime_AdaDateTime_ChainedMethods();
+    void test_api_runtime_AdaDateTime_SetDateTimeSecsTo();
     void test_api_runtime_AdaDateTime_Now();
 };
 
@@ -92,6 +93,30 @@ void TstAdaDateTime::test_api_runtime_AdaDateTime_ChainedMethods()
     declare deadline : DateTime := start.addDays(3).addSecs(2 * 60 * 60);
 
     if deadline.toString("yyyy-MM-dd HH:mm:ss") = "2026-05-24 11:30:00" and #DateTime:now().toString("yyyy-MM-dd") = 10 then
+        return 1;
+    end if;
+    return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaDateTime::test_api_runtime_AdaDateTime_SetDateTimeSecsTo()
+{
+    std::string script = R"(
+    with Ada.DateTime;
+
+    declare dt : DateTime := DateTime:fromString("2026-05-21 09:30:00", "yyyy-MM-dd HH:mm:ss");
+    declare changed : DateTime := dt.setDate(2026, 5, 22).setTime(10, 31, 5);
+    declare d : Date := Date:fromString("2026-06-01", "yyyy-MM-dd");
+    declare t : Time := Time:fromString("12:00:30", "HH:mm:ss");
+    declare changed2 : DateTime := changed.setDate(d).setTime(t);
+
+    if dt.secsTo(changed) = 90065 and changed2.toString("yyyy-MM-dd HH:mm:ss") = "2026-06-01 12:00:30" and changed.secsTo(dt) = -90065 then
         return 1;
     end if;
     return 0;

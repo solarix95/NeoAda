@@ -225,6 +225,28 @@ void bindCommonFileMethods(NdaState *state, const std::string &typeName)
 
 namespace Nda {
 
+bool adaIoReadAllTextFile(NdaState *state, const NdaVariant &file, std::string &text)
+{
+    assert(state);
+    auto *handle = handleById(fileIdFromSelf(state, file));
+    if (!handle)
+        return false;
+
+    text = readAllText(handle->stream);
+    return true;
+}
+
+bool adaIoWriteTextFile(NdaState *state, const NdaVariant &file, const std::string &text)
+{
+    assert(state);
+    auto *handle = handleById(fileIdFromSelf(state, file));
+    if (!handle)
+        return false;
+
+    handle->stream << text;
+    return handle->stream.good();
+}
+
 void add_AdaIoFile_symbols(NdaState *state)
 {
     assert(state);

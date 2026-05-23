@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 #include "private/symboltable.h"
 #include "private/functiontable.h"
 #include "parser.h"
@@ -72,8 +73,13 @@ public:
     using DtorCallback   = std::function<void     (NdaVariant &value)>;
     using ReadCallback   = std::function<bool     (NdaVariant &value)>;
     using WriteCallback  = std::function<bool     (NdaVariant &value)>;
+    using ReadIndexCallback   = std::function<bool (const NdaVariant &index,NdaVariant &value)>;
 
     void  onVolatileCtor (CtorCallback  cb);
+    void  onVolatileRead (const std::string &symbolname, ReadCallback  cb);      // natural/number/bool/...
+    void  onVolatileRead (const std::string &symbolname, ReadIndexCallback  cb); // list/dict
+    bool  readVolatile   (const std::string &symbolname, NdaVariant &value);
+    bool  readVolatile   (const std::string &symbolname, const NdaVariant &index, NdaVariant &value);
 
     // "With" Addons
     using WithCallback  = std::function<void(std::string &addonName)>;
@@ -116,6 +122,8 @@ private:
     Nda::RuntimeTypes   mTypes;
 
     CtorCallback       mVolatileCtor;
+    std::unordered_map<std::string, ReadCallback> mVolatileReads;
+    std::unordered_map<std::string, ReadIndexCallback> mVolatileIndexReads;
 
     WithCallback       mWithCallback;
     std::unordered_set<std::string> mLoadedAddons;

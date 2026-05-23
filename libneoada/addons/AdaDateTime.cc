@@ -335,6 +335,18 @@ DateTimeParts dateTimeFromObject(NdaState *state, const NdaVariant &object)
     return parseIsoDateTime(memberString(state, object, "value"));
 }
 
+int64_t secondsFromTime(const TimeParts &time)
+{
+    return static_cast<int64_t>(time.hour) * 3600 + static_cast<int64_t>(time.minute) * 60 + time.second;
+}
+
+int64_t secondsFromDateTime(const DateTimeParts &dateTime)
+{
+    if (!validDate(dateTime.date) || !validTime(dateTime.time))
+        return 0;
+    return daysFromCivil(dateTime.date.year, static_cast<unsigned>(dateTime.date.month), static_cast<unsigned>(dateTime.date.day)) * 86400 + secondsFromTime(dateTime.time);
+}
+
 std::string stringArg(const Nda::FncValues &args, const char *name)
 {
     auto it = args.find(name);
@@ -458,6 +470,74 @@ void add_AdaDateTime_symbols(NdaState *state)
         int64_t dayDelta = 0;
         dateTime.time = addSecs(dateTime.time, secs, &dayDelta);
         dateTime.date = addDays(dateTime.date, dayDelta);
+        setDateTimeReturn(state, ret, dateTime);
+        return true;
+    });
+
+    state->bindFnc("datetime", "secsTo", {{"other", "datetime", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+        DateTimeParts self = dateTimeFromObject(state, args.at("this"));
+        DateTimeParts other = dateTimeFromObject(state, args.at("other"));
+        if (!validDate(self.date) || !validTime(self.time) || !validDate(other.date) || !validTime(other.time))
+            return false;
+        ret.fromNatural(state->naturalType(), secondsFromDateTime(other) - secondsFromDateTime(self));
+        return true;
+    });
+
+    state->bindFnc("datetime", "setDate", {{"year", "natural", Nda::InMode}, {"month", "natural", Nda::InMode}, {"day", "natural", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+        bool okYear;
+        bool okMonth;
+        bool okDay;
+        DateParts date{static_cast<int>(intArg(args, "year", okYear)), static_cast<int>(intArg(args, "month", okMonth)), static_cast<int>(intArg(args, "day", okDay))};
+        if (!okYear || !okMonth || !okDay || !validDate(date))
+            return false;
+        DateTimeParts dateTime = dateTimeFromObject(state, args.at("this"));
+        if (!validTime(dateTime.time))
+            return false;
+        dateTime.date = date;
+        setDateTimeReturn(state, ret, dateTime);
+        return true;
+    });
+
+    state->bindFnc("datetime", "setDate", {{"date", "date", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+        DateParts date = dateFromObject(state, args.at("date"));
+        if (!validDate(date))
+            return false;
+        DateTimeParts dateTime = dateTimeFromObject(state, args.at("this"));
+        if (!validTime(dateTime.time))
+            return false;
+        dateTime.date = date;
+        setDateTimeReturn(state, ret, dateTime);
+        return true;
+    });
+
+    state->bindFnc("datetime", "setTime", {{"hour", "natural", Nda::InMode}, {"minute", "natural", Nda::InMode}, {"second", "natural", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+        bool okHour;
+        bool okMinute;
+        bool okSecond;
+        TimeParts time{static_cast<int>(intArg(args, "hour", okHour)), static_cast<int>(intArg(args, "minute", okMinute)), static_cast<int>(intArg(args, "second", okSecond))};
+        if (!okHour || !okMinute || !okSecond || !validTime(time))
+            return false;
+        DateTimeParts dateTime = dateTimeFromObject(state, args.at("this"));
+        if (!validDate(dateTime.date))
+            return false;
+        dateTime.time = time;
+        setDateTimeReturn(state, ret, dateTime);
+        return true;
+    });
+
+    state->bindFnc("datetime", "setTime", {{"time", "time", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+        TimeParts time = timeFromObject(state, args.at("time"));
+        if (!validTime(time))
+            return false;
+        DateTimeParts dateTime = dateTimeFromObject(state, args.at("this"));
+        if (!validDate(dateTime.date))
+            return false;
+        dateTime.time = time;
         setDateTimeReturn(state, ret, dateTime);
         return true;
     });
