@@ -45,7 +45,7 @@ bool FunctionTable::bindPrc(const std::string &name, const Nda::FncParameters &p
 }
 
 //-------------------------------------------------------------------------------------------------
-bool FunctionTable::bind(const std::string &name, const Nda::FncParameters &parameters, const NdaParser::ASTNodePtr &block)
+bool FunctionTable::bind(const std::string &name, const Nda::FncParameters &parameters, const NdaParser::ASTNodePtr &block, const std::string &returnType)
 {
     std::string lowerName = Nda::toLower(name);
 
@@ -53,13 +53,13 @@ bool FunctionTable::bind(const std::string &name, const Nda::FncParameters &para
     variants.functionName = lowerName;
 
     // TODO: check if already there..
-    variants.overloadsByArgCount[(int)parameters.size()].push_back(Nda::FunctionEntry{"",parameters,block, nullptr, nullptr, nullptr});
+    variants.overloadsByArgCount[(int)parameters.size()].push_back(Nda::FunctionEntry{Nda::toLower(returnType),parameters,block, nullptr, nullptr, nullptr});
 
     return true;
 }
 
 //-------------------------------------------------------------------------------------------------
-bool FunctionTable::bind(const std::string &name, const FncParameters &parameters,Runnable *block)
+bool FunctionTable::bind(const std::string &name, const FncParameters &parameters,Runnable *block, const std::string &returnType)
 {
     std::string lowerName = Nda::toLower(name);
 
@@ -67,7 +67,7 @@ bool FunctionTable::bind(const std::string &name, const FncParameters &parameter
     variants.functionName = lowerName;
 
     // TODO: check if already there..
-    variants.overloadsByArgCount[(int)parameters.size()].push_back(Nda::FunctionEntry{"",parameters,nullptr, block, nullptr, nullptr});
+    variants.overloadsByArgCount[(int)parameters.size()].push_back(Nda::FunctionEntry{Nda::toLower(returnType),parameters,nullptr, block, nullptr, nullptr});
 
     return true;
 

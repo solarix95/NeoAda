@@ -112,6 +112,9 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
     case NdaParser::ASTNodeType::Expression: // just "()"
         ret->call = &NdaInterpreter::runSubStatement;
         break;
+    case NdaParser::ASTNodeType::DeclarationGroup:
+        ret->call = &NdaInterpreter::runDeclarationGroup;
+        break;
     case NdaParser::ASTNodeType::VolatileDeclaration:
     case NdaParser::ASTNodeType::Declaration:
         if (node->type == NdaParser::ASTNodeType::VolatileDeclaration)
@@ -121,6 +124,12 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
         break;
     case NdaParser::ASTNodeType::IfStatement:
         ret->call = &NdaInterpreter::runIfStatement;
+        break;
+    case NdaParser::ASTNodeType::CaseStatement:
+        ret->call = &NdaInterpreter::runCaseStatement;
+        break;
+    case NdaParser::ASTNodeType::CaseWhen:
+        ret->type = Nda::CallNOP;
         break;
     case NdaParser::ASTNodeType::Else:
         ret->type = Nda::FallbackCall;
@@ -298,7 +307,8 @@ Nada::Error NdaInterpreter::invokeFnc(const std::string &typeName, const std::st
         if (mExecState == ReturnState)
             mExecState = RunState;
 
-        mState->ret().dereference();
+        if (mExecState != ExceptionState)
+            validateFunctionReturn(fnc);
         mState->popStack();
     } else {
         auto parameters = fnc.fncValues(args);
@@ -309,6 +319,36 @@ Nada::Error NdaInterpreter::invokeFnc(const std::string &typeName, const std::st
     }
 
     return Nada::Error::NoError;
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaInterpreter::validateFunctionReturn(const Nda::FunctionEntry &fnc)
+{
+    if (fnc.returnType.empty()) {
+        mState->ret().dereference();
+        return true;
+    }
+
+    const auto *returnType = mState->typeByName(fnc.returnType);
+    if (!returnType) {
+        mState->setUnhandledException("programerror");
+        mState->ret().reset();
+        mExecState = ExceptionState;
+        return false;
+    }
+
+    mState->ret().dereference();
+    NdaVariant typedReturn;
+    typedReturn.initType(returnType);
+    if (!typedReturn.assign(mState->ret())) {
+        mState->setUnhandledException("programerror");
+        mState->ret().reset();
+        mExecState = ExceptionState;
+        return false;
+    }
+
+    mState->ret() = typedReturn;
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -429,6 +469,16 @@ void NdaInterpreter::runSingleBlock(Nda::Runnable *node)
 
     mState->ret().dereference();
     mState->popScope();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runDeclarationGroup(Nda::Runnable *node)
+{
+    for (int i=0; i<node->childrenCount; i++) {
+        run(node->children[i]);
+        if (mExecState == ExceptionState)
+            break;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -566,8 +616,25 @@ void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
     const std::string &name = node->value.lowerValue;
 
     auto error = invokeFnc("",name,values);
-    if (error != Nada::Error::NoError)
-        throw NdaException(error,node->line, node->column);
+    if (error == Nada::Error::NoError)
+        return;
+
+    const auto *targetType = mState->typeByName(name);
+    if (targetType && targetType->instantiable && values.size() == 1) {
+        NdaVariant casted;
+        casted.initType(targetType);
+        if (!casted.assign(values[0])) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
+
+        mState->ret() = casted;
+        return;
+    }
+
+    throw NdaException(error,node->line, node->column);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -617,7 +684,8 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
         if (mExecState == ReturnState)
             mExecState = RunState;
 
-        mState->ret().dereference();
+        if (mExecState != ExceptionState)
+            validateFunctionReturn(fnc);
         mState->popStack();
     } else {
         auto parameters = fnc.fncValues(values);
@@ -693,7 +761,8 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
         if (mExecState == ReturnState)
             mExecState = RunState;
 
-        mState->ret().dereference();
+        if (mExecState != ExceptionState)
+            validateFunctionReturn(fnc);
         mState->popStack();
     } else {
         auto parameters = fnc.fncValues(values);
@@ -802,6 +871,41 @@ void NdaInterpreter::runIfStatement(Nda::Runnable *node)
         if (!condition && node->children[node->childrenCount-1]->type == Nda::FallbackCall) {
             assert(node->children[node->childrenCount-1]->childrenCount == 1);
             run(node->children[node->childrenCount-1]);
+            return;
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runCaseStatement(Nda::Runnable *node)
+{
+    assert(node->childrenCount >= 1);
+
+    run(node->children[0]);
+    if (mExecState == ExceptionState)
+        return;
+
+    NdaVariant caseValue = mState->ret();
+
+    for (int i=1; i<node->childrenCount; i++) {
+        auto *whenNode = node->children[i];
+        assert(whenNode->childrenCount >= 1);
+
+        bool matches = whenNode->value.lowerValue == "others";
+        Nda::Runnable *blockNode = whenNode->children[whenNode->childrenCount - 1];
+
+        if (!matches) {
+            assert(whenNode->childrenCount == 2);
+            run(whenNode->children[0]);
+            if (mExecState == ExceptionState)
+                return;
+
+            bool ok = false;
+            matches = caseValue.equal(mState->ret(), &ok) && ok;
+        }
+
+        if (matches) {
+            run(blockNode);
             return;
         }
     }
@@ -1476,7 +1580,7 @@ void NdaInterpreter::runDefineInstanceFunction(Nda::Runnable *node)
         fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue,mode});
     }
 
-    mState->bind(typeName,name,fncParameters,block);
+    mState->bind(typeName,name,fncParameters,block,returntype->value.lowerValue);
 
 
 }
@@ -1506,7 +1610,7 @@ void NdaInterpreter::runDefineSingleFunction(Nda::Runnable *node)
         fncParameters.push_back({p->value.lowerValue,p->children[0]->value.lowerValue,mode});
     }
 
-    mState->bind("",name,fncParameters,block);
+    mState->bind("",name,fncParameters,block,returntype->value.lowerValue);
 
 }
 

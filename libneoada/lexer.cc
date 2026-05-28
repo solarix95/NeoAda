@@ -158,7 +158,7 @@ bool NdaLexer::parseNext()
             static const std::unordered_set<std::string> reservedWords = {
                 "with", "type",
                 "declare", "volatile",
-                "if", "then", "else", "elsif", "end",
+                "if", "then", "else", "elsif", "case", "end",
                 "while", "loop", "break", "continue", "when",
                 "for", "in", "out", "reverse",
                 "procedure", "function", "return", "raise", "exception", "others", "is", "begin", "not", "and", "or", "mod", "rem", "xor"

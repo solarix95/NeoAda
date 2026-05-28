@@ -173,12 +173,19 @@ private slots:
 
     void test_interpreter_Declarations1();
     void test_interpreter_Declarations2();
+    void test_interpreter_Declarations3();
+
 
     void test_interpreter_WithAddon();
     void test_interpreter_ProcedureCall();
+    void test_interpreter_FunctionOverload_ArgCount();
+    void test_interpreter_FunctionOverload_ArgType();
+    void test_interpreter_FunctionOverload_AnyFallback();
     void test_interpreter_ifStatement();
     void test_interpreter_ifElseStatement();
     void test_interpreter_ifElseIfStatement();
+    void test_interpreter_CaseStatement();
+    void test_interpreter_CaseStatementOthers();
     void test_interpreter_whileStatement();
     void test_interpreter_whileBreak();
     void test_interpreter_whileBreakWhen();
@@ -192,6 +199,7 @@ private slots:
     void test_interpreter_Return6_Supernatural();
     void test_interpreter_Return7_Number();
     void test_interpreter_Return8_Byte();
+    void test_interpreter_ReturnTypeProgramError();
 
     void test_interpreter_ExceptionHandled();
     void test_interpreter_ExceptionUnhandled();
@@ -200,9 +208,13 @@ private slots:
     void test_interpreter_ExceptionProgramError();
     void test_interpreter_ExceptionReraiseSpecific();
     void test_interpreter_ExceptionReraiseAnonymous();
+    void test_interpreter_ExceptionMainBlock();
+    void test_interpreter_ExceptionNestedBlock();
 
     void test_interpreter_CustomType_TypeIs();
     void test_interpreter_CustomType_Procedure();
+    void test_interpreter_CustomType_Cast();
+    void test_interpreter_CustomType_CastProgramError();
 
     void test_interpreter_Volatile_CTor();
     void test_interpreter_Volatile_Read();
@@ -262,9 +274,14 @@ private slots:
     void test_api_evaluate_Procedure2();
     void test_api_evaluate_Procedure3_Return();
     void test_api_evaluate_Procedure4_Out();
+    void test_api_evaluate_Procedure5_Declaration();
+    void test_api_evaluate_Procedure6_EndName();
     void test_api_evaluate_Function1();
+    void test_api_evaluate_Function1_multideclare();
     void test_api_evaluate_Function2();
     void test_api_evaluate_Function2_Uppercase();
+    void test_api_evaluate_Function3_Declaration();
+    void test_api_evaluate_Function4_Declaration();
 
     void test_api_evaluate_Static_Method1();
     void test_api_evaluate_Static_Method2();
@@ -334,6 +351,9 @@ private slots:
 
     void test_error_parser_if1();
     void test_error_parser_ifElse1();
+    void test_error_parser_procedureEndNameMismatch();
+    void test_error_parser_caseDuplicateChoice();
+    void test_error_parser_caseDuplicateOthers();
 
     // runtime ERROR HANDLING
     void test_error_interpreter_stringAssignment();
@@ -2818,6 +2838,27 @@ void TstParser::test_interpreter_Declarations2()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_Declarations3()
+{
+    //  enum Type { Undefined, Any, Number, Natural, Supernatural, Boolean, Byte, Character, String, Struct };
+
+    std::string script = R"(
+        declare x,y: Natural := 3;
+        return y;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 3);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_WithAddon()
 {
     std::string script = R"(
@@ -2879,6 +2920,90 @@ void TstParser::test_interpreter_ProcedureCall()
     QVERIFY(results[0] == "hello NeoAda");
     QVERIFY(results[1] == "42");
     QVERIFY(results[2] == "3^2 = 9");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_FunctionOverload_ArgCount()
+{
+    std::string script = R"(
+        function Pick(x : Natural) return String is
+        begin
+            return "one";
+        end;
+
+        function Pick(x, y : Natural) return String is
+        begin
+            return "two";
+        end;
+
+        return Pick(1) & ":" & Pick(1, 2);
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "one:two");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_FunctionOverload_ArgType()
+{
+    std::string script = R"(
+        function Kind(x : Natural) return String is
+        begin
+            return "natural";
+        end;
+
+        function Kind(x : String) return String is
+        begin
+            return "string";
+        end;
+
+        return Kind(42) & ":" & Kind("hello");
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "natural:string");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_FunctionOverload_AnyFallback()
+{
+    std::string script = R"(
+        function Kind(x : Natural) return String is
+        begin
+            return "natural";
+        end;
+
+        function Kind(x : Any) return String is
+        begin
+            return "any";
+        end;
+
+        return Kind(42) & ":" & Kind("hello");
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "natural:any");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2972,6 +3097,66 @@ void TstParser::test_interpreter_ifElseIfStatement()
 
     QVERIFY(results.size() == 1);
     QVERIFY(results[0] == "x>7");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_CaseStatement()
+{
+    std::string script = R"(
+        function MonthName(Month : Natural) return String is
+        begin
+            case Month is
+                when 1 =>
+                    return "january";
+                when 2 =>
+                    return "february";
+                when others =>
+                    return "unknown";
+            end case;
+        end MonthName;
+
+        return MonthName(1);
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "january");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_CaseStatementOthers()
+{
+    std::string script = R"(
+        declare month : Natural := 12;
+        declare name : String := "";
+
+        case month is
+            when 1 =>
+                name := "january";
+            when 2 =>
+                name := "february";
+            when others =>
+                name := "unknown";
+        end case;
+
+        return name;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toString() == "unknown");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -3250,6 +3435,29 @@ void TstParser::test_interpreter_Return8_Byte()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ReturnTypeProgramError()
+{
+    std::string script = R"(
+        function Bad() return Natural is
+        begin
+            return "not a natural";
+        end;
+
+        Bad();
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    interpreter.execute(ast);
+
+    QVERIFY(state.unhandledException() == "programerror");
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_ExceptionHandled()
 {
     std::string script = R"(
@@ -3471,6 +3679,60 @@ void TstParser::test_interpreter_ExceptionReraiseAnonymous()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionMainBlock()
+{
+    std::string script = R"(
+        begin
+            raise MyError;
+        exception
+            when MyError =>
+                return 42;
+        end;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 42);
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_ExceptionNestedBlock()
+{
+    std::string script = R"(
+        declare x : Natural := 0;
+
+        for i in 1..1 loop
+            begin
+                raise MyError;
+            exception
+                when MyError =>
+                    x := 7;
+            end;
+        end loop;
+
+        return x;
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 7);
+    QVERIFY(state.unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_CustomType_TypeIs()
 {
     std::string script = R"(
@@ -3519,6 +3781,62 @@ void TstParser::test_interpreter_CustomType_Procedure()
     auto ret = interpreter.execute(ast);
 
     QVERIFY(ret.toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_CustomType_Cast()
+{
+    std::string script = R"(
+        type Integer is Natural;
+
+        function Day_Of2(Day, Month, Year : Integer) return Integer is
+            M : Integer := Month;
+            Y : Integer := Year;
+            C : Integer;
+        begin
+            if M < 3 then
+                Y := Y - 1;
+                M := M + 10;
+            else
+                M := M - 2;
+            end if;
+            C := Y / 100;
+            Y := Y mod 100;
+            return ((26*M - 2)/10 + Day + Y + Y/4 + C/4 - 2*C) mod 7;
+        end Day_Of2;
+
+        return Day_Of2(Integer(25), Integer(1), Integer(1956));
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    auto ret = interpreter.execute(ast);
+
+    QVERIFY(ret.toInt64() == 3);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_CustomType_CastProgramError()
+{
+    std::string script = R"(
+        type Integer is Natural;
+
+        return Integer("hello");
+    )";
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+    NdaState       state;
+    NdaInterpreter interpreter(&state);
+
+    auto ast = parser.parse(script);
+    interpreter.execute(ast);
+
+    QVERIFY(state.unhandledException() == "programerror");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -4731,6 +5049,49 @@ void TstParser::test_api_evaluate_Procedure4_Out()
     QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Procedure5_Declaration()
+{
+    std::string script = R"(
+
+    declare x : String := "Hello";
+
+    procedure Hello(s : out string) is
+        world : string := ", World";
+    begin
+        s := s & world;
+    end;
+
+    Hello("NeoAda"); -- no effect -> warning?
+    Hello(x);
+
+    return x;
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Procedure6_EndName()
+{
+    std::string script = R"(
+
+    procedure Day_Of (Day, Month, Year : in Natural;
+                      Result           : out Natural) is
+    begin
+        Result := Day + Month + Year;
+    end Day_Of;
+
+    declare x : Natural := 0;
+    Day_Of(21, 5, 2026, x);
+
+    return x;
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 2052);
+}
 
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Function1()
@@ -4753,6 +5114,26 @@ void TstParser::test_api_evaluate_Function1()
     QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
 }
 
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Function1_multideclare()
+{
+    std::string script = R"(
+
+    declare x : Natural;
+
+    function Add(a,b : Natural) return Natural is
+    begin
+        return a + b;
+    end;
+
+    x := Add(40, 2);
+
+    return x;
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
+}
 //-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Function2()
 {
@@ -4780,6 +5161,46 @@ void TstParser::test_api_evaluate_Function2_Uppercase()
     FUNCTION CreateHelloWorld() RETURN Any IS
     BEGIN
         RETURN "Hello, World";
+    END;
+
+    DECLARE x : Any := CreateHelloWorld();
+
+    RETURN x;
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Function3_Declaration()
+{
+    std::string script = R"(
+
+    FUNCTION CreateHelloWorld() RETURN Any IS
+        msg : String := "Hello, World";
+    BEGIN
+        RETURN msg;
+    END;
+
+    DECLARE x : Any := CreateHelloWorld();
+
+    RETURN x;
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toString() == "Hello, World");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Function4_Declaration()
+{
+    std::string script = R"(
+
+    FUNCTION CreateHelloWorld() RETURN Any IS
+        msg1,msg2 : String := "Hello, World";
+    BEGIN
+        RETURN msg2;
     END;
 
     DECLARE x : Any := CreateHelloWorld();
@@ -5888,6 +6309,78 @@ void TstParser::test_error_parser_ifElse1()
         ex = e;
     }
     QVERIFY(ex.code()   == Nada::Error::NoError);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_procedureEndNameMismatch()
+{
+    std::string script = R"(
+        procedure Day_Of() is
+        begin
+        end Wrong_Name;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    NdaException ex;
+
+    try {
+        parser.parse(script);
+    } catch (NdaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code() == Nada::Error::InvalidToken);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_caseDuplicateChoice()
+{
+    std::string script = R"(
+        case 1 is
+            when 1 =>
+                return "one";
+            when 1 =>
+                return "again";
+        end case;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    NdaException ex;
+
+    try {
+        parser.parse(script);
+    } catch (NdaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code() == Nada::Error::InvalidToken);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_error_parser_caseDuplicateOthers()
+{
+    std::string script = R"(
+        case 1 is
+            when others =>
+                return "fallback";
+            when 2 =>
+                return "two";
+        end case;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    NdaException ex;
+
+    try {
+        parser.parse(script);
+    } catch (NdaException &e) {
+        ex = e;
+    }
+
+    QVERIFY(ex.code() == Nada::Error::InvalidToken);
 }
 
 //-------------------------------------------------------------------------------------------------

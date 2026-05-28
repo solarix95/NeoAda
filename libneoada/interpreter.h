@@ -36,9 +36,11 @@ private:
     };
 
     void run(Nda::Runnable *node);
+    bool validateFunctionReturn(const Nda::FunctionEntry &fnc);
     void runProgramm(Nda::Runnable *node);
     void runLoopBlock(Nda::Runnable *node);
     void runSingleBlock(Nda::Runnable *node);
+    void runDeclarationGroup(Nda::Runnable *node);
     void runDeclaration(Nda::Runnable *node);
     void runVolatileDeclaration(Nda::Runnable *node);
     void runAssignment(Nda::Runnable *node);
@@ -51,6 +53,7 @@ private:
     void runBreak(Nda::Runnable *node);
     void runContinue(Nda::Runnable *node);
     void runIfStatement(Nda::Runnable *node);
+    void runCaseStatement(Nda::Runnable *node);
     void runWhileLoop(Nda::Runnable *node);
     void runForLoopRange(Nda::Runnable *node);
     void runSubStatement(Nda::Runnable *node);

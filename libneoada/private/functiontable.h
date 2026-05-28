@@ -61,8 +61,8 @@ public:
     bool              bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // c++ function  callback
     bool              bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // c++ procedure callback
 
-    bool              bind(const std::string &name, const Nda::FncParameters &parameters, const NdaParser::ASTNodePtr &block);
-    bool              bind(const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block);
+    bool              bind(const std::string &name, const Nda::FncParameters &parameters, const NdaParser::ASTNodePtr &block, const std::string &returnType = "");
+    bool              bind(const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block, const std::string &returnType = "");
 
 
     // Runtime

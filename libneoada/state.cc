@@ -147,17 +147,17 @@ bool NdaState::bindPrc(const std::string &name, const Nda::FncParameters &parame
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block)
+bool NdaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block, const std::string &returnType)
 {
     assert(!name.empty());
-    return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block);
+    return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block,returnType);
 }
 
 //-------------------------------------------------------------------------------------------------
-bool NdaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block)
+bool NdaState::bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block, const std::string &returnType)
 {
     assert(!name.empty());
-    return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block);
+    return mFunctions.bind(type.empty() ? name : BUILD_METHOD(type,name),parameters,block,returnType);
 }
 
 //-------------------------------------------------------------------------------------------------

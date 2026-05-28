@@ -43,8 +43,8 @@ public:
     // procedure/function
     bool               bindFnc(const std::string &name, const Nda::FncParameters &parameters, Nda::FncCallback cb); // function
     bool               bindPrc(const std::string &name, const Nda::FncParameters &parameters, Nda::PrcCallback cb); // procedure
-    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block);
-    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block);
+    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, const std::shared_ptr<NdaParser::ASTNode> &block, const std::string &returnType = "");
+    bool               bind(const std::string &type, const std::string &name, const Nda::FncParameters &parameters, Nda::Runnable *block, const std::string &returnType = "");
     bool               hasFunction(const std::string &type, const std::string &name, const NdaVariants &parameters);
     Nda::FunctionEntry *functionPtr(const std::string &type, const std::string &name, const NdaVariants &parameters);
     Nda::FunctionEntry &function(const std::string &type, const std::string &name, const NdaVariants &parameters);

@@ -19,6 +19,7 @@ public:
         FormalParameterMode, // procedure/function declaration: call(x : [in/out] Natural)
         Function,
         Declaration,
+        DeclarationGroup,
         TypeDefinition,
         MethodContext,
         VolatileDeclaration,
@@ -39,6 +40,8 @@ public:
         InstanceMethodCall,
         Block,          // Begin/End
         IfStatement,
+        CaseStatement,
+        CaseWhen,
         Else,
         Elsif,
         WhileLoop,
@@ -81,6 +84,7 @@ public:
 private:
     NdaParser::ASTNodePtr parseStatement();
     NdaParser::ASTNodePtr parseDeclaration();
+    NdaParser::ASTNodePtr parseLocalDeclaration();
     NdaParser::ASTNodePtr parseWith();
     NdaParser::ASTNodePtr parseType();
     NdaParser::ASTNodePtr parseIdentifier();  // "call()" or "var :="
@@ -88,6 +92,8 @@ private:
     NdaParser::ASTNodePtr parseWhileLoop();
     NdaParser::ASTNodePtr parseForLoop();
     NdaParser::ASTNodePtr parseIfStatement();
+    NdaParser::ASTNodePtr parseCaseStatement();
+    NdaParser::ASTNodePtr parseBlockStatement();
     NdaParser::ASTNodePtr parseReturn();
     NdaParser::ASTNodePtr parseRaise();
     NdaParser::ASTNodePtr parseExceptionHandlers();
