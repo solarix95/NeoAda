@@ -7,6 +7,8 @@
 #include <QColor>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -18,6 +20,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QPlainTextEdit>
 #include <QSaveFile>
 #include <QSettings>
@@ -32,6 +35,8 @@
 #include <QVBoxLayout>
 
 #include "neoadahighlighter.h"
+#include "scenarios/abstractscenario.h"
+#include "scenarios/marsroverscenario.h"
 #include <state.h>
 #include <runtime.h>
 
@@ -88,12 +93,10 @@ NeoAdaEdit::NeoAdaEdit(QWidget *parent)
     , ui(new Ui::NeoAdaEdit)
     , mHighlighter(nullptr)
     , mAda(*(new NdaRuntime()))
-    , mExampleBox(nullptr)
     , mGuide(nullptr)
     , mMainSplitter(nullptr)
-    , mStatus(nullptr)
+    , mActiveScenario(nullptr)
     , mNewButton(nullptr)
-    , mLoadExampleButton(nullptr)
     , mBufferedOutput(nullptr)
     , mRunning(false)
 {
@@ -106,6 +109,7 @@ NeoAdaEdit::NeoAdaEdit(QWidget *parent)
     connect(ui->btnStop, &QPushButton::clicked, this, &NeoAdaEdit::onStop);
 
     initExamples();
+    initScenarios();
     initEditor();
     initLearningTools();
 
@@ -125,6 +129,8 @@ NeoAdaEdit::NeoAdaEdit(QWidget *parent)
 //-------------------------------------------------------------------------------------------------
 NeoAdaEdit::~NeoAdaEdit()
 {
+    qDeleteAll(mScenarios);
+    mScenarios.clear();
     delete ui;
     delete &mAda;
 }
@@ -192,15 +198,9 @@ void NeoAdaEdit::setRunning(bool running)
 
     if (mNewButton)
         mNewButton->setEnabled(!running);
-    if (mLoadExampleButton)
-        mLoadExampleButton->setEnabled(!running);
-    if (mExampleBox)
-        mExampleBox->setEnabled(!running);
     if (mBufferedOutput)
         mBufferedOutput->setEnabled(!running);
 
-    if (mStatus)
-        mStatus->setText(running ? tr("Running script...") : tr("Ready"));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -282,6 +282,10 @@ void NeoAdaEdit::loadCurrentFile()
 void NeoAdaEdit::initRuntime()
 {
     mAda.reset();
+    resetScenarios();
+    mAda.state()->onWith([this](std::string &addonName) {
+        loadEditorAddon(addonName);
+    });
     mAda.state()->bindPrc("print",{{"message", "Any", Nda::InMode}}, [&](const Nda::FncValues& args) -> bool {
         const QString line = QString::fromStdString(args.at("message").toString());
         const bool buffered = !mBufferedOutput || mBufferedOutput->isChecked();
@@ -314,8 +318,8 @@ void NeoAdaEdit::initEditor()
 #endif
     ui->txtScript->setTabStopDistance(spaceWidth * 4);
 
-    ui->label->setText(tr("NeoAda Script"));
-    ui->txtScript->setPlaceholderText(tr("Schreibe NeoAda-Code oder lade links oben ein Beispiel."));
+    ui->label->hide();
+    ui->txtScript->setPlaceholderText(tr("Schreibe NeoAda-Code oder starte über New ein Beispiel oder Szenario."));
 
     ui->btnOpen->setIcon(style()->standardIcon(QStyle::SP_DialogOpenButton));
     ui->btnSave->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
@@ -323,6 +327,7 @@ void NeoAdaEdit::initEditor()
     ui->btnPlay->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
     ui->btnStop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
     ui->btnPlay->setText(tr("Run"));
+    ui->btnPlay->setToolTip(tr("F5 - Run"));
     ui->btnStop->setText(tr("Clear"));
 
     mHighlighter = new NeoAdaHighlighter(ui->txtScript->document());
@@ -518,47 +523,115 @@ return c.next();
 }
 
 //-------------------------------------------------------------------------------------------------
+void NeoAdaEdit::initScenarios()
+{
+    qDeleteAll(mScenarios);
+    mScenarios.clear();
+    mScenarios.push_back(new MarsRoverScenario());
+}
+
+//-------------------------------------------------------------------------------------------------
+void NeoAdaEdit::resetScenarios()
+{
+    mActiveScenario = nullptr;
+    for (auto *scenario : mScenarios)
+        scenario->reset();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NeoAdaEdit::activateScenario(const QString &packageName)
+{
+    const QString normalized = packageName.toLower();
+    for (auto *scenario : mScenarios) {
+        if (scenario->packageName().toLower() != normalized)
+            continue;
+
+        mActiveScenario = scenario;
+        QWidget *scenarioWindow = scenario->widget();
+        scenarioWindow->setWindowTitle(scenario->title());
+        scenarioWindow->setAttribute(Qt::WA_QuitOnClose, false);
+        if (!scenarioWindow->isVisible())
+            scenarioWindow->show();
+        scenarioWindow->raise();
+        scenarioWindow->activateWindow();
+        scenario->bind(mAda);
+        return;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void NeoAdaEdit::loadEditorAddon(const std::string &addonName)
+{
+    if (addonName == "ada.list")
+        mAda.loadAddonAdaList();
+    else if (addonName == "ada.bytes")
+        mAda.loadAddonAdaBytes();
+    else if (addonName == "ada.string")
+        mAda.loadAddonAdaString();
+    else if (addonName == "ada.math")
+        mAda.loadAddonAdaMath();
+    else if (addonName == "ada.text.encoding")
+        mAda.loadAddonAdaTextEncoding();
+    else if (addonName == "ada.io.file" || addonName == "ada.io")
+        mAda.loadAddonAdaIoFile();
+    else if (addonName == "ada.datetime" || addonName == "ada.date.time" || addonName == "ada.date")
+        mAda.loadAddonAdaDateTime();
+    else if (addonName == "ada.regexp" || addonName == "ada.regex")
+        mAda.loadAddonAdaRegexp();
+    else if (addonName == "ada.json")
+        mAda.loadAddonAdaJson();
+    else if (QString::fromStdString(addonName).startsWith(QStringLiteral("app.neoadaedit.")))
+        activateScenario(QString::fromStdString(addonName));
+}
+
+//-------------------------------------------------------------------------------------------------
 void NeoAdaEdit::initLearningTools()
 {
     mNewButton = new QPushButton(tr("New"), this);
     mNewButton->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
     connect(mNewButton, &QPushButton::clicked, this, &NeoAdaEdit::onNew);
-    ui->horizontalLayout->insertWidget(0, mNewButton);
 
-    auto *bar = new QFrame(this);
-    auto *layout = new QHBoxLayout(bar);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    mBufferedOutput = new QCheckBox(tr("Buffered output"), bar);
+    mBufferedOutput = new QCheckBox(tr("Buffered output"), this);
     mBufferedOutput->setChecked(true);
     mBufferedOutput->setToolTip(tr("Buffered: output is shown after the script ends. Unchecked: print() output is shown while running; user input stays blocked."));
 
-    mStatus = new QLabel(tr("F5 runs the script"), bar);
-    mStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    auto *controls = ui->horizontalLayout;
+    QLayoutItem *item = nullptr;
+    while ((item = controls->takeAt(0)) != nullptr)
+        delete item;
 
-    layout->addWidget(mBufferedOutput);
-    layout->addWidget(mStatus, 1);
+    controls->setContentsMargins(0, 0, 0, 0);
 
-    ui->verticalLayout->insertWidget(1, bar);
+    auto *leftControls = new QWidget(this);
+    auto *leftLayout = new QHBoxLayout(leftControls);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
+    leftLayout->addWidget(mNewButton);
+    leftLayout->addWidget(ui->btnOpen);
+    leftLayout->addWidget(ui->btnSave);
+    leftLayout->addWidget(ui->btnSaveAs);
+    leftLayout->addStretch(1);
+
+    auto *runControls = new QWidget(this);
+    auto *runLayout = new QHBoxLayout(runControls);
+    runLayout->setContentsMargins(0, 0, 0, 0);
+    runLayout->addStretch(1);
+    runLayout->addWidget(ui->btnPlay);
+    runLayout->addWidget(ui->btnStop);
+    runLayout->addStretch(1);
+
+    auto *rightControls = new QWidget(this);
+    auto *rightLayout = new QHBoxLayout(rightControls);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->addStretch(1);
+    rightLayout->addWidget(mBufferedOutput);
+
+    controls->addWidget(leftControls, 1);
+    controls->addWidget(runControls, 1);
+    controls->addWidget(rightControls, 1);
 
     auto *guidePanel = new QWidget(this);
     auto *guideLayout = new QVBoxLayout(guidePanel);
     guideLayout->setContentsMargins(0, 0, 0, 0);
-
-    auto *exampleBar = new QFrame(guidePanel);
-    auto *exampleLayout = new QHBoxLayout(exampleBar);
-    exampleLayout->setContentsMargins(0, 0, 0, 0);
-
-    mExampleBox = new QComboBox(exampleBar);
-    for (const auto &ex : mExamples)
-        mExampleBox->addItem(QString("%1 - %2").arg(ex.level, ex.title));
-
-    mLoadExampleButton = new QPushButton(tr("Load Example"), exampleBar);
-    mLoadExampleButton->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
-    connect(mLoadExampleButton, &QPushButton::clicked, this, &NeoAdaEdit::onLoadExample);
-
-    exampleLayout->addWidget(mExampleBox, 1);
-    exampleLayout->addWidget(mLoadExampleButton);
 
     mGuide = new QTextBrowser(guidePanel);
     mGuide->setOpenExternalLinks(false);
@@ -585,15 +658,20 @@ void NeoAdaEdit::initLearningTools()
 <li><code>when others =&gt; print("Fehler"); raise;</code> re-raises the active exception.</li>
 </ul>
 <p><b>Files:</b> <code>TextFile</code> reads/writes <code>String</code>; <code>File</code> reads/writes <code>Bytes</code>.</p>
-<p><b>Tip:</b> Use examples as small experiments. Change one line, run again, compare output.</p>
+<p><b>Tip:</b> Use <b>New</b> to start with an empty script, an example, or a prepared scenario.</p>
 )"));
     mGuide->setMinimumWidth(240);
 
-    guideLayout->addWidget(exampleBar);
     guideLayout->addWidget(mGuide, 1);
 
     auto *content = ui->splitter;
     ui->verticalLayout_2->removeWidget(content);
+
+    for (auto *scenario : mScenarios) {
+        scenario->widget()->setParent(nullptr);
+        scenario->widget()->setAttribute(Qt::WA_QuitOnClose, false);
+        scenario->widget()->hide();
+    }
 
     mMainSplitter = new QSplitter(Qt::Horizontal, this);
     mMainSplitter->addWidget(content);
@@ -620,10 +698,6 @@ void NeoAdaEdit::updateTitle()
 {
     const QString name = mCurrentFileName.isEmpty() ? tr("Untitled") : QFileInfo(mCurrentFileName).fileName();
     setWindowTitle(QString("%1%2 - NeoAda Edit").arg(name, isDirty() ? " *" : ""));
-    if (mStatus) {
-        const int lines = ui->txtScript->document()->blockCount();
-        mStatus->setText(tr("%1 lines | F5 Run").arg(lines));
-    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -631,10 +705,95 @@ void NeoAdaEdit::onNew()
 {
     if (mRunning)
         return;
+
+    QDialog dialog(this);
+    dialog.setWindowTitle(tr("New"));
+
+    auto *layout = new QVBoxLayout(&dialog);
+
+    QSettings settings(kOrgName, kAppName);
+    const QString lastNewMode = settings.value(QString("%1/newMode").arg(kGroup), QStringLiteral("empty")).toString();
+    const int lastExampleIndex = settings.value(QString("%1/newExampleIndex").arg(kGroup), 0).toInt();
+    const int lastScenarioIndex = settings.value(QString("%1/newScenarioIndex").arg(kGroup), 0).toInt();
+
+    auto *emptyRadio = new QRadioButton(tr("empty script"), &dialog);
+    auto *emptyLabel = new QLabel(tr("Starte ein neues Script."), &dialog);
+    emptyLabel->setIndent(24);
+
+    auto *exampleRadio = new QRadioButton(tr("Example"), &dialog);
+    auto *exampleBox = new QComboBox(&dialog);
+    for (const auto &ex : mExamples)
+        exampleBox->addItem(QString("%1 - %2").arg(ex.level, ex.title));
+    if (exampleBox->count() > 0)
+        exampleBox->setCurrentIndex(qBound(0, lastExampleIndex, exampleBox->count() - 1));
+
+    auto *scenarioRadio = new QRadioButton(tr("Scenario"), &dialog);
+    auto *scenarioBox = new QComboBox(&dialog);
+    for (const auto *scenario : mScenarios) {
+        scenarioBox->addItem(scenario->title());
+        scenarioBox->setItemData(scenarioBox->count() - 1, scenario->description(), Qt::ToolTipRole);
+    }
+    if (scenarioBox->count() > 0)
+        scenarioBox->setCurrentIndex(qBound(0, lastScenarioIndex, scenarioBox->count() - 1));
+
+    if (lastNewMode == QStringLiteral("example"))
+        exampleRadio->setChecked(true);
+    else if (lastNewMode == QStringLiteral("scenario"))
+        scenarioRadio->setChecked(true);
+    else
+        emptyRadio->setChecked(true);
+
+    exampleBox->setEnabled(exampleRadio->isChecked());
+    scenarioBox->setEnabled(scenarioRadio->isChecked());
+
+    connect(exampleRadio, &QRadioButton::toggled, exampleBox, &QComboBox::setEnabled);
+    connect(scenarioRadio, &QRadioButton::toggled, scenarioBox, &QComboBox::setEnabled);
+
+    layout->addWidget(emptyRadio);
+    layout->addWidget(emptyLabel);
+    layout->addWidget(exampleRadio);
+    layout->addWidget(exampleBox);
+    layout->addWidget(scenarioRadio);
+    layout->addWidget(scenarioBox);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QString code = defaultScript();
+    QString loadedTitle;
+    QString selectedMode = QStringLiteral("empty");
+    if (exampleRadio->isChecked()) {
+        const int index = exampleBox->currentIndex();
+        if (index < 0 || index >= mExamples.size())
+            return;
+        code = mExamples[index].code;
+        loadedTitle = tr("Example: %1").arg(mExamples[index].title);
+        selectedMode = QStringLiteral("example");
+    } else if (scenarioRadio->isChecked()) {
+        const int index = scenarioBox->currentIndex();
+        if (index < 0 || index >= mScenarios.size())
+            return;
+        code = mScenarios[index]->initialSource();
+        loadedTitle = tr("Scenario: %1").arg(mScenarios[index]->title());
+        selectedMode = QStringLiteral("scenario");
+    }
+
+    settings.setValue(QString("%1/newMode").arg(kGroup), selectedMode);
+    settings.setValue(QString("%1/newExampleIndex").arg(kGroup), exampleBox->currentIndex());
+    settings.setValue(QString("%1/newScenarioIndex").arg(kGroup), scenarioBox->currentIndex());
+
     if (!confirmDiscardChanges())
         return;
-    setScriptText(defaultScript());
+
+    setScriptText(code);
     ui->txtOutput->clear();
+    if (!loadedTitle.isEmpty())
+        ui->txtOutput->appendPlainText(tr("Loaded %1").arg(loadedTitle));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -737,6 +896,8 @@ void NeoAdaEdit::onPlay()
     if (mRunning)
         return;
 
+    saveState();
+
     mRunOutput.clear();
     initRuntime();
     ui->txtOutput->clear();
@@ -753,6 +914,14 @@ void NeoAdaEdit::onPlay()
     QApplication::restoreOverrideCursor();
     setRunning(false);
 
+    const QString unhandledException = QString::fromStdString(mAda.state()->unhandledException());
+    if (!mAda.hasError() && unhandledException.isEmpty()) {
+        for (auto *scenario : mScenarios) {
+            if (scenario->widget()->isVisible())
+                scenario->afterRun(mAda);
+        }
+    }
+
     if (!mBufferedOutput || mBufferedOutput->isChecked()) {
         for (const auto &line : mRunOutput)
             ui->txtOutput->appendPlainText(line);
@@ -761,22 +930,19 @@ void NeoAdaEdit::onPlay()
     for (const auto &sym : mAda.globalFunctions())
         ui->txtOutput->appendPlainText(QString::fromStdString(sym));
 
-    const QString unhandledException = QString::fromStdString(mAda.state()->unhandledException());
     if (mAda.hasError()) {
-        appendOutputLine(ui->txtOutput, QString("Error: %1").arg(QString::fromStdString(mAda.lastError())), QColor("#b00020"));
-        if (mStatus)
-            mStatus->setText(tr("Error after %1 ms").arg(elapsed));
+        const QString message = QString::fromStdString(mAda.lastError());
+        appendOutputLine(ui->txtOutput, QString("Error: %1").arg(message), QColor("#b00020"));
+        QMessageBox::critical(this, tr("NeoAda Exception"), message);
     } else if (!unhandledException.isEmpty()) {
-        appendOutputLine(ui->txtOutput, tr("Unhandled exception: %1").arg(displayExceptionName(unhandledException)), QColor("#b00020"));
+        const QString message = tr("Unhandled exception: %1").arg(displayExceptionName(unhandledException));
+        appendOutputLine(ui->txtOutput, message, QColor("#b00020"));
         appendOutputLine(ui->txtOutput, tr("Finished in %1 ms").arg(elapsed));
-        if (mStatus)
-            mStatus->setText(tr("Unhandled exception after %1 ms").arg(elapsed));
+        QMessageBox::critical(this, tr("NeoAda Exception"), message);
     } else {
         if (ret.type() != Nda::Undefined)
             ui->txtOutput->appendPlainText("\nreturn: " + QString::fromStdString(ret.toString()));
         ui->txtOutput->appendPlainText(tr("\nFinished in %1 ms").arg(elapsed));
-        if (mStatus)
-            mStatus->setText(tr("Finished in %1 ms").arg(elapsed));
     }
 }
 
@@ -786,34 +952,17 @@ void NeoAdaEdit::onStop()
     if (mRunning)
         return;
 
+    for (auto *scenario : mScenarios)
+        scenario->stop();
     ui->txtOutput->clear();
-    if (mStatus)
-        mStatus->setText(tr("Output cleared"));
-}
-
-//-------------------------------------------------------------------------------------------------
-void NeoAdaEdit::onLoadExample()
-{
-    if (mRunning)
-        return;
-
-    if (!mExampleBox)
-        return;
-    if (!confirmDiscardChanges())
-        return;
-
-    const int index = mExampleBox->currentIndex();
-    if (index < 0 || index >= mExamples.size())
-        return;
-
-    setScriptText(mExamples[index].code);
-    ui->txtOutput->clear();
-    ui->txtOutput->appendPlainText(tr("Loaded example: %1").arg(mExamples[index].title));
 }
 
 //-------------------------------------------------------------------------------------------------
 void NeoAdaEdit::closeEvent(QCloseEvent *event)
 {
+    for (auto *scenario : mScenarios)
+        scenario->stop();
+
     if (mRunning) {
         event->ignore();
         return;

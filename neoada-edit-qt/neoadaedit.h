@@ -18,6 +18,8 @@ class QLabel;
 class QPushButton;
 class QCheckBox;
 class QSplitter;
+class QRadioButton;
+class AbstractScenario;
 
 class NeoAdaEdit : public QWidget
 {
@@ -41,7 +43,6 @@ private slots:
     // Script handling
     void onPlay();
     void onStop();
-    void onLoadExample();
     void updateTitle();
 
 protected:
@@ -59,12 +60,11 @@ private:
     NeoAdaHighlighter *mHighlighter;
     NdaRuntime         &mAda;
     QVector<Example>    mExamples;
-    QComboBox          *mExampleBox;
+    QVector<AbstractScenario*> mScenarios;
     QTextBrowser       *mGuide;
     QSplitter          *mMainSplitter;
-    QLabel             *mStatus;
+    AbstractScenario   *mActiveScenario;
     QPushButton        *mNewButton;
-    QPushButton        *mLoadExampleButton;
     QCheckBox          *mBufferedOutput;
     QStringList         mRunOutput;
     bool                mRunning;
@@ -77,6 +77,10 @@ private:
     void initEditor();
     void initLearningTools();
     void initExamples();
+    void initScenarios();
+    void resetScenarios();
+    void activateScenario(const QString &packageName);
+    void loadEditorAddon(const std::string &addonName);
     void setScriptText(const QString &text, const QString &fileName = QString());
 
 };

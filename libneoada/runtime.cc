@@ -159,6 +159,49 @@ NdaValue NdaRuntime::invokeFnc(const std::string &fncName, const NdaValue &arg1,
 }
 
 //-------------------------------------------------------------------------------------------------
+void NdaRuntime::invokePrc(const std::string &prcName)
+{
+    assert(mInterpreter);
+
+    mLastError.clear();
+    try {
+        NdaVariants args;
+        mInterpreter->invokeFnc("", prcName, args);
+    } catch (NdaException &ex) {
+        mLastError = ex.what();
+        std::cerr << ex.what() << std::endl;
+    } catch (const std::exception &ex) {
+        mLastError = ex.what();
+        std::cerr << "NeoAda Fatal Runtime Error: " << ex.what() << std::endl;
+    } catch (...) {
+        mLastError = "NeoAda Unknown Fatal Runtime Error";
+        std::cerr << "NeoAda Fatal Runtime Error!" << std::endl;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaRuntime::invokePrc(const std::string &prcName, const NdaValue &arg1)
+{
+    assert(mInterpreter);
+
+    mLastError.clear();
+    try {
+        NdaVariants args;
+        args.push_back(mState->toVariant(arg1));
+        mInterpreter->invokeFnc("", prcName, args);
+    } catch (NdaException &ex) {
+        mLastError = ex.what();
+        std::cerr << ex.what() << std::endl;
+    } catch (const std::exception &ex) {
+        mLastError = ex.what();
+        std::cerr << "NeoAda Fatal Runtime Error: " << ex.what() << std::endl;
+    } catch (...) {
+        mLastError = "NeoAda Unknown Fatal Runtime Error";
+        std::cerr << "NeoAda Fatal Runtime Error!" << std::endl;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
 void NdaRuntime::loadAddonAdaString()
 {
     if (!mState)

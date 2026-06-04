@@ -28,7 +28,8 @@ public:
     NdaValue   invokeFnc(const std::string &fncName, const NdaValue &arg1);    // function fncName(arg1: any) return any;
     NdaValue   invokeFnc(const std::string &fncName, const NdaValue &arg1, const NdaValue &arg2);
 
-    void       invokePrc(const std::string &prcName, const NdaValue &arg1);    // function fncName(arg1: any) return any;
+    void       invokePrc(const std::string &prcName);
+    void       invokePrc(const std::string &prcName, const NdaValue &arg1);
 
     virtual void loadAddonAdaString();
     virtual void loadAddonAdaList();

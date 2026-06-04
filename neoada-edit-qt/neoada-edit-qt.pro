@@ -17,7 +17,8 @@ SOURCES += main.cc \
     linenumberarea.cc \
     neoadaedit.cc \
     neoadahighlighter.cc \
-    neocodeedit.cc
+    neocodeedit.cc \
+    scenarios/marsroverscenario.cc
 
 FORMS += \
     neoadaedit.ui
@@ -26,4 +27,6 @@ HEADERS += \
     linenumberarea.h \
     neoadaedit.h \
     neoadahighlighter.h \
-    neocodeedit.h
+    neocodeedit.h \
+    scenarios/abstractscenario.h \
+    scenarios/marsroverscenario.h
