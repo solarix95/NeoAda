@@ -18,7 +18,8 @@ SOURCES += main.cc \
     neoadaedit.cc \
     neoadahighlighter.cc \
     neocodeedit.cc \
-    scenarios/marsroverscenario.cc
+    scenarios/marsroverscenario.cc \
+    scenarios/rocketscenario.cc
 
 FORMS += \
     neoadaedit.ui
@@ -29,4 +30,5 @@ HEADERS += \
     neoadahighlighter.h \
     neocodeedit.h \
     scenarios/abstractscenario.h \
-    scenarios/marsroverscenario.h
+    scenarios/marsroverscenario.h \
+    scenarios/rocketscenario.h

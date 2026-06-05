@@ -3,6 +3,8 @@
 
 #include "abstractscenario.h"
 
+#include <functional>
+
 #include <QString>
 #include <QVector>
 #include <QWidget>
@@ -27,16 +29,19 @@ public:
     QString sensorValue() const;
     double x() const;
     double y() const;
+    void setClickCallback(std::function<void(const QString&)> callback);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
     enum Direction { North, East, South, West };
     struct Rock { double x; double y; double rx; double ry; };
 
     QRect playFieldRect() const;
+    QRectF roverHitRect() const;
     void loadDefaultMap();
     void randomizeMap();
 
@@ -50,6 +55,7 @@ private:
     double mTargetX;
     double mTargetY;
     QPushButton *mRandomButton;
+    std::function<void(const QString&)> mClickCallback;
 };
 
 class MarsRoverScenario : public AbstractScenario

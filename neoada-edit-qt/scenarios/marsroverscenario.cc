@@ -2,6 +2,7 @@
 
 #include <QtMath>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPolygonF>
 #include <QPushButton>
@@ -35,6 +36,12 @@ MarsRoverWidget::MarsRoverWidget(QWidget *parent)
 QRect MarsRoverWidget::playFieldRect() const
 {
     return rect().adjusted(0, 0, 0, -44);
+}
+
+QRectF MarsRoverWidget::roverHitRect() const
+{
+    const QPointF center(playFieldRect().center());
+    return QRectF(center.x() - 46.0, center.y() - 46.0, 92.0, 92.0);
 }
 
 void MarsRoverWidget::loadDefaultMap()
@@ -167,6 +174,11 @@ double MarsRoverWidget::x() const
 double MarsRoverWidget::y() const
 {
     return mY;
+}
+
+void MarsRoverWidget::setClickCallback(std::function<void(const QString&)> callback)
+{
+    mClickCallback = std::move(callback);
 }
 
 QString MarsRoverWidget::sensorValue() const
@@ -332,6 +344,26 @@ void MarsRoverWidget::resizeEvent(QResizeEvent *event)
     mRandomButton->setGeometry((width() - w) / 2, height() - h - 8, w, h);
 }
 
+void MarsRoverWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (!roverHitRect().contains(event->pos())) {
+        QWidget::mousePressEvent(event);
+        return;
+    }
+
+    QString button = QStringLiteral("unknown");
+    if (event->button() == Qt::LeftButton)
+        button = QStringLiteral("left");
+    else if (event->button() == Qt::RightButton)
+        button = QStringLiteral("right");
+    else if (event->button() == Qt::MiddleButton)
+        button = QStringLiteral("middle");
+
+    if (mClickCallback)
+        mClickCallback(button);
+    event->accept();
+}
+
 
 MarsRoverScenario::MarsRoverScenario()
     : mWidget(new MarsRoverWidget())
@@ -341,6 +373,24 @@ MarsRoverScenario::MarsRoverScenario()
     mTimer->setInterval(40);
     QObject::connect(mTimer, &QTimer::timeout, [this]() {
         tick();
+    });
+    mWidget->setClickCallback([this](const QString &button) {
+        if (!mRuntime)
+            return;
+
+        NdaVariants args;
+        args.push_back(mRuntime->state()->toVariant(NdaValue(button.toStdString())));
+        if (!mRuntime->state()->hasFunction("", "onClick", args))
+            return;
+
+        mRuntime->invokePrc("onClick", NdaValue(button.toStdString()));
+        if (mRuntime->hasError() || !mRuntime->state()->unhandledException().empty()) {
+            const QString message = mRuntime->hasError()
+                    ? QString::fromStdString(mRuntime->lastError())
+                    : QStringLiteral("Unhandled exception: %1").arg(QString::fromStdString(mRuntime->state()->unhandledException()));
+            stop();
+            QMessageBox::critical(mWidget, QStringLiteral("NeoAda Exception"), message);
+        }
     });
 }
 
@@ -382,6 +432,12 @@ begin
     else
         Rover:forward();
     end if;
+end;
+
+procedure onClick(mouseButton : String) is
+begin
+    print("Rover clicked: " & mouseButton);
+    Rover:steerRight();
 end;
 
 return "MarsRover bereit";

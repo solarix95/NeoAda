@@ -1,4 +1,5 @@
 #include <QAbstractTextDocumentLayout>
+#include <QKeyEvent>
 #include <QPainter>
 #include <QScrollBar>
 #include <QResizeEvent>
@@ -96,6 +97,39 @@ void NeoCodeEdit::resizeEvent(QResizeEvent *event)
 
     // Cursor-Overlay unten rechts über dem Inhalt (Viewport)
     updateCursorOverlay();
+}
+
+
+void NeoCodeEdit::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Tab && event->modifiers() == Qt::NoModifier) {
+        textCursor().insertText(QStringLiteral("    "));
+        event->accept();
+        return;
+    }
+
+    if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+            && (event->modifiers() == Qt::NoModifier || event->modifiers() == Qt::KeypadModifier)) {
+        QTextCursor cursor = textCursor();
+        const QString text = cursor.block().text();
+        QString indent;
+        for (const QChar ch : text) {
+            if (ch == QLatin1Char(' ') || ch == QLatin1Char('\t'))
+                indent.append(ch);
+            else
+                break;
+        }
+
+        cursor.beginEditBlock();
+        cursor.insertBlock();
+        cursor.insertText(indent);
+        cursor.endEditBlock();
+        setTextCursor(cursor);
+        event->accept();
+        return;
+    }
+
+    QTextEdit::keyPressEvent(event);
 }
 
 void NeoCodeEdit::lineNumberAreaPaintEvent(QPaintEvent *event)

@@ -37,6 +37,7 @@
 #include "neoadahighlighter.h"
 #include "scenarios/abstractscenario.h"
 #include "scenarios/marsroverscenario.h"
+#include "scenarios/rocketscenario.h"
 #include <state.h>
 #include <runtime.h>
 
@@ -528,6 +529,7 @@ void NeoAdaEdit::initScenarios()
     qDeleteAll(mScenarios);
     mScenarios.clear();
     mScenarios.push_back(new MarsRoverScenario());
+    mScenarios.push_back(new RocketScenario());
 }
 
 //-------------------------------------------------------------------------------------------------
