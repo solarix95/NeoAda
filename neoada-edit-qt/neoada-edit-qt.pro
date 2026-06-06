@@ -11,13 +11,11 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 
 NEOADA_PATH = ../libneoada
 include(../libneoada/libneoada.pro)
+include(neocodeedit.pro)
 
 # Input
 SOURCES += main.cc \
-    linenumberarea.cc \
     neoadaedit.cc \
-    neoadahighlighter.cc \
-    neocodeedit.cc \
     scenarios/marsroverscenario.cc \
     scenarios/rocketscenario.cc
 
@@ -25,10 +23,7 @@ FORMS += \
     neoadaedit.ui
 
 HEADERS += \
-    linenumberarea.h \
     neoadaedit.h \
-    neoadahighlighter.h \
-    neocodeedit.h \
     scenarios/abstractscenario.h \
     scenarios/marsroverscenario.h \
     scenarios/rocketscenario.h

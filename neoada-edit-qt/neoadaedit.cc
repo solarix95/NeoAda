@@ -929,8 +929,10 @@ void NeoAdaEdit::onPlay()
             ui->txtOutput->appendPlainText(line);
     }
 
+    /*
     for (const auto &sym : mAda.globalFunctions())
         ui->txtOutput->appendPlainText(QString::fromStdString(sym));
+    */
 
     if (mAda.hasError()) {
         const QString message = QString::fromStdString(mAda.lastError());

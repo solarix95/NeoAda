@@ -49,8 +49,8 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
 
     // ---------- Keywords ----------
     const QStringList keywords = {
-        "declare", "type", "is", "of", "list", "with",
-        "if", "then", "elsif", "else", "end",
+        "declare", "type", "is", "of", "list", "with", "volatile",
+        "if", "then", "elsif", "else", "case", "end",
         "for", "in", "while", "loop",
         "procedure", "function", "return", "begin",
         "break", "continue", "when", "exception", "raise", "others"
@@ -71,6 +71,9 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
         "and", "or", "not", "mod", "rem"
     };
     m_rules.push_back({ wordsRx(opWords), opwFmt });
+
+    // ---------- Built-in functions ----------
+    m_rules.push_back({ wordsRx({"typeof"}), fnFmt });
 
     // ---------- Literals ----------
     // true/false as booleans

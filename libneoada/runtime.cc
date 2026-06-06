@@ -140,8 +140,9 @@ NdaValue NdaRuntime::invokeFnc(const std::string &fncName, const NdaValue &arg1)
     NdaVariants args;
     args.push_back(mState->toVariant(arg1));
 
-    mInterpreter->invokeFnc("", fncName, args);
-    return mState->toValue(mState->ret());
+    if (mInterpreter->invokeFnc("", fncName, args) == Nada::NoError && mState->ret().type() != Nda::Undefined)
+        return mState->toValue(mState->ret());
+    return NdaValue();
 }
 
 //-------------------------------------------------------------------------------------------------

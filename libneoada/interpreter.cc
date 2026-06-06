@@ -312,10 +312,14 @@ Nada::Error NdaInterpreter::invokeFnc(const std::string &typeName, const std::st
         mState->popStack();
     } else {
         auto parameters = fnc.fncValues(args);
-        if (fnc.nativeFncCallback)
-            fnc.nativeFncCallback(parameters, mState->ret());
-        else
-            fnc.nativePrcCallback(parameters);
+        const bool ok = fnc.nativeFncCallback
+                ? fnc.nativeFncCallback(parameters, mState->ret())
+                : fnc.nativePrcCallback(parameters);
+        if (!ok) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+        }
     }
 
     return Nada::Error::NoError;
@@ -634,7 +638,18 @@ void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
         return;
     }
 
-    throw NdaException(error,node->line, node->column);
+    std::string extra;
+    if (error == Nada::Error::UnknownFunctionCall) {
+        std::string args;
+        for (auto arg : values) {
+            if (!args.empty())
+                args += ",";
+            args += arg.toString() + ":" + arg.runtimeType()->name.displayValue;
+        }
+        extra += name + "(" + args + ")";
+    }
+
+    throw NdaException(error,node->line, node->column, extra);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -690,10 +705,14 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
     } else {
         auto parameters = fnc.fncValues(values);
 
-        if (fnc.nativeFncCallback)
-            fnc.nativeFncCallback(parameters, mState->ret());
-        else
-            fnc.nativePrcCallback(parameters);
+        const bool ok = fnc.nativeFncCallback
+                ? fnc.nativeFncCallback(parameters, mState->ret())
+                : fnc.nativePrcCallback(parameters);
+        if (!ok) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+        }
     }
 }
 
@@ -770,10 +789,14 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
         // Creating "this": keep real variables as references, but also allow temporary receivers.
         parameters["this"] = thisValue;
 
-        if (fnc.nativeFncCallback)
-            fnc.nativeFncCallback(parameters, mState->ret());
-        else
-            fnc.nativePrcCallback(parameters);
+        const bool ok = fnc.nativeFncCallback
+                ? fnc.nativeFncCallback(parameters, mState->ret())
+                : fnc.nativePrcCallback(parameters);
+        if (!ok) {
+            mState->setUnhandledException("programerror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+        }
     }
 
 }

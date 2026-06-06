@@ -3,6 +3,10 @@
 #include "../state.h"
 #include <algorithm>
 #include <cassert>
+#include <cerrno>
+#include <cctype>
+#include <cstdlib>
+#include <iostream>
 
 #define CHECK_INSTANCE_CALL if (args.find("this") == args.end()) return false
 
@@ -19,6 +23,63 @@ inline void rtrim(std::string &s) {
     s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
                 return !std::isspace(ch);
             }).base(), s.end());
+}
+
+std::string trimmed(std::string s)
+{
+    rtrim(s);
+    ltrim(s);
+    return s;
+}
+
+std::string lowerAscii(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return s;
+}
+
+bool parseNumber(const std::string &text, double &value)
+{
+    const std::string s = trimmed(text);
+    if (s.empty())
+        return false;
+
+    char *end = nullptr;
+    errno = 0;
+    value = std::strtod(s.c_str(), &end);
+    return true; // errno == 0 && end && *end == '\0';
+}
+
+bool parseNatural(const std::string &text, int64_t &value)
+{
+    const std::string s = trimmed(text);
+    if (s.empty() || s[0] == '-')
+        return false;
+
+    char *end = nullptr;
+    errno = 0;
+    const long long parsed = std::strtoll(s.c_str(), &end, 10);
+    if (errno != 0 || !end || *end != '\0' || parsed < 0)
+        return false;
+
+    value = static_cast<int64_t>(parsed);
+    return true;
+}
+
+bool parseBool(const std::string &text, bool &value)
+{
+    const std::string s = lowerAscii(trimmed(text));
+    if (s == "true") {
+        value = true;
+        return true;
+    }
+    if (s == "false") {
+        value = false;
+        return true;
+    }
+    return false;
 }
 
 void add_AdaString_symbols(NdaState *state)
@@ -281,6 +342,103 @@ void add_AdaString_symbols(NdaState *state)
             return false;
 
         ret.fromString(state->stringType(), text);
+        return true;
+    });
+
+
+    // ------------------ String.ToNumber() ---------------------------------------------------------
+    state->bindFnc("string","toNumber",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        std::cout << "TO NUMBER1 " << self.runtimeType()->name.lowerValue << std::endl;
+        if (self.type() != Nda::String)
+            return false;
+
+        double value = 0.0;
+
+        std::cout << "TO NUMBER2 " << self.toString() << " " << parseNumber(self.toString(), value) << std::endl;
+        if (!parseNumber(self.toString(), value))
+            return false;
+
+        ret.fromNumber(state->numberType(), value);
+        return true;
+    });
+
+    // ------------------ String.ToNatural() ---------------------------------------------------------
+    state->bindFnc("string","toNatural",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::String)
+            return false;
+
+        int64_t value = 0;
+        if (!parseNatural(self.toString(), value))
+            return false;
+
+        ret.fromNatural(state->naturalType(), value);
+        return true;
+    });
+
+    // ------------------ String.ToBool() ---------------------------------------------------------
+    state->bindFnc("string","toBool",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::String)
+            return false;
+
+        bool value = false;
+        if (!parseBool(self.toString(), value))
+            return false;
+
+        ret.fromBool(state->booleanType(), value);
+        return true;
+    });
+
+    // ------------------ String.IsNumber() ---------------------------------------------------------
+    state->bindFnc("string","isNumber",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::String)
+            return false;
+
+        double value = 0.0;
+        ret.fromBool(state->booleanType(), parseNumber(self.toString(), value));
+        return true;
+    });
+
+    // ------------------ String.IsNatural() ---------------------------------------------------------
+    state->bindFnc("string","isNatural",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::String)
+            return false;
+
+        int64_t value = 0;
+        ret.fromBool(state->booleanType(), parseNatural(self.toString(), value));
+        return true;
+    });
+
+    // ------------------ String.IsBool() ---------------------------------------------------------
+    state->bindFnc("string","isBool",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::String)
+            return false;
+
+        bool value = false;
+        ret.fromBool(state->booleanType(), parseBool(self.toString(), value));
         return true;
     });
 

@@ -48,6 +48,15 @@ void NdaState::reset()
     mBytesType   = registerType("Bytes",Nda::Bytes, true);     assert(mBytesType);
     mDictType    = registerType("Dict",Nda::Dict, true);       assert(mDictType);
 
+    bindFnc("typeof", {{"value", "Any", Nda::InMode}}, [this](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        const auto type = args.at("value").runtimeType();
+        if (!type)
+            return false;
+
+        ret.fromString(stringType(), type->name.lowerValue);
+        return true;
+    });
+
 }
 
 //-------------------------------------------------------------------------------------------------
