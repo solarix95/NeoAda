@@ -82,6 +82,57 @@ void add_AdaList_symbols(NdaState *state)
         return true;
     });
 
+    // ------------------ List.RemoveAt() -------------------------------------------------------
+    state->bindPrc("list", "removeAt", {{"pos", "natural", Nda::InMode}}, [state](const Nda::FncValues &args) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+
+        bool ok = false;
+        const int64_t pos = args.at("pos").toInt64(&ok);
+        if (!ok || pos < 0 || pos >= self.listSize()) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        self.takeFromList(static_cast<int>(pos));
+        return true;
+    });
+
+    // ------------------ List.RemoveFirst() ----------------------------------------------------
+    state->bindPrc("list", "removeFirst", {}, [state](const Nda::FncValues &args) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+        if (self.listSize() <= 0) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        self.takeFromList(0);
+        return true;
+    });
+
+    // ------------------ List.RemoveLast() -----------------------------------------------------
+    state->bindPrc("list", "removeLast", {}, [state](const Nda::FncValues &args) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+        if (self.listSize() <= 0) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        self.takeFromList(self.listSize() - 1);
+        return true;
+    });
+
     // ------------------ List.Concat() ---------------------------------------------------------
     state->bindPrc("list","concat",{{"v", "any", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
 

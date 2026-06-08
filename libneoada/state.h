@@ -108,6 +108,7 @@ public:
 
     inline std::string  unhandledException() const { return mUnhandledException; }
     inline bool         hasUnhandledException() const { return !mUnhandledException.empty(); }
+    inline void         raiseException(const std::string &name) { mUnhandledException = name; }
 
 private:
     friend class NdaInterpreter;

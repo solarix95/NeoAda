@@ -25,6 +25,7 @@ HEADERS += \
     $$NEOADA_PATH/exception.h \
     $$NEOADA_PATH/runtime.h \
     $$NEOADA_PATH/addons/AdaList.h \
+    $$NEOADA_PATH/addons/AdaDict.h \
     $$NEOADA_PATH/addons/AdaBytes.h \
     $$NEOADA_PATH/addons/AdaString.h \
     $$NEOADA_PATH/addons/AdaMath.h \
@@ -56,6 +57,7 @@ SOURCES += \
     $$NEOADA_PATH/exception.cc \
     $$NEOADA_PATH/runtime.cc \
     $$NEOADA_PATH/addons/AdaList.cc \
+    $$NEOADA_PATH/addons/AdaDict.cc \
     $$NEOADA_PATH/addons/AdaBytes.cc \
     $$NEOADA_PATH/addons/AdaString.cc \
     $$NEOADA_PATH/addons/AdaMath.cc \

@@ -51,8 +51,9 @@ public:
     void  fromReference(const Nda::RuntimeType *type, NdaVariant *other);
 
     bool    toBool(bool *ok = nullptr) const;
-    double  toDouble(bool *ok = nullptr) const;
-    int64_t toInt64(bool *ok = nullptr) const;
+    double   toDouble(bool *ok = nullptr) const;
+    int64_t  toInt64(bool *ok = nullptr) const;
+    uint64_t toUInt64(bool *ok = nullptr) const;
     bool    isNan() const;
 
     // NeoAda-Operators

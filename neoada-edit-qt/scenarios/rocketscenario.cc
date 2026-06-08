@@ -17,6 +17,7 @@ constexpr double kAtmosphereRadius = 100.0;
 constexpr double kDt = 0.04;
 }
 
+//-------------------------------------------------------------------------------------------------
 RocketWidget::RocketWidget(QWidget *parent)
     : QWidget(parent)
     , mX(0.0)
@@ -36,6 +37,7 @@ RocketWidget::RocketWidget(QWidget *parent)
     setAutoFillBackground(true);
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::reset()
 {
     mX = 0.0;
@@ -53,18 +55,21 @@ void RocketWidget::reset()
     update();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::start()
 {
     mRunning = true;
     update();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::stop()
 {
     mRunning = false;
     update();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::steerLeft()
 {
     mAngle -= 2.0;
@@ -73,6 +78,7 @@ void RocketWidget::steerLeft()
     update();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::steerRight()
 {
     mAngle += 2.0;
@@ -81,13 +87,15 @@ void RocketWidget::steerRight()
     update();
 }
 
-void RocketWidget::stage()
+//-------------------------------------------------------------------------------------------------
+void RocketWidget::doStage()
 {
     if (mStage < 3)
         ++mStage;
     update();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::simulationStep()
 {
     if (!mRunning)
@@ -132,47 +140,62 @@ void RocketWidget::simulationStep()
     update();
 }
 
+//-------------------------------------------------------------------------------------------------
 bool RocketWidget::isRunning() const
 {
     return mRunning;
 }
 
+//-------------------------------------------------------------------------------------------------
 double RocketWidget::x() const
 {
     return mX;
 }
 
+//-------------------------------------------------------------------------------------------------
 double RocketWidget::y() const
 {
     return mY;
 }
 
+//-------------------------------------------------------------------------------------------------
 double RocketWidget::height() const
 {
     return qMax(0.0, qSqrt(mX * mX + mY * mY) - kPlanetRadius);
 }
 
+//-------------------------------------------------------------------------------------------------
 double RocketWidget::fuel() const
 {
     return mFuel;
 }
 
+//-------------------------------------------------------------------------------------------------
 double RocketWidget::speed() const
 {
     return qSqrt(mVx * mVx + mVy * mVy);
 }
 
+//-------------------------------------------------------------------------------------------------
 double RocketWidget::missionTime() const
 {
     return mMissionTime;
 }
 
+//-------------------------------------------------------------------------------------------------
+int RocketWidget::state() const
+{
+    return mStage;
+}
+
+//-------------------------------------------------------------------------------------------------
 QPointF RocketWidget::worldToScreen(double x, double y) const
 {
     const QPointF center(width() * 0.34, height() * 0.78);
     return center + QPointF(x, -y);
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::drawPlanet(QPainter &p) const
 {
     const QPointF planetCenter = worldToScreen(0.0, 0.0);
@@ -196,6 +219,7 @@ void RocketWidget::drawPlanet(QPainter &p) const
     p.drawEllipse(planetCenter, kPlanetRadius + 95, kPlanetRadius + 95);
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::drawRocket(QPainter &p) const
 {
     const QPointF rocketCenter = worldToScreen(mX, mY);
@@ -238,6 +262,7 @@ void RocketWidget::drawRocket(QPainter &p) const
     p.restore();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
@@ -396,6 +421,7 @@ void RocketWidget::paintEvent(QPaintEvent *)
                QStringLiteral("x=%1  y=%2  v=%3  zoom=%4x").arg(mX, 0, 'f', 1).arg(mY, 0, 'f', 1).arg(speed(), 0, 'f', 2).arg(mOrbitZoom, 0, 'f', 1));
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketWidget::wheelEvent(QWheelEvent *event)
 {
     const QRect launchRect = rect().adjusted(10, 10, -(width() / 2 + 5), -10);
@@ -424,6 +450,7 @@ void RocketWidget::wheelEvent(QWheelEvent *event)
 }
 
 
+//-------------------------------------------------------------------------------------------------
 RocketScenario::RocketScenario()
     : mWidget(new RocketWidget())
     , mTimer(new QTimer(mWidget))
@@ -435,26 +462,31 @@ RocketScenario::RocketScenario()
     });
 }
 
+//-------------------------------------------------------------------------------------------------
 RocketScenario::~RocketScenario()
 {
     delete mWidget;
 }
 
+//-------------------------------------------------------------------------------------------------
 QString RocketScenario::packageName() const
 {
     return QStringLiteral("App.NeoAdaEdit.Rocket");
 }
 
+//-------------------------------------------------------------------------------------------------
 QString RocketScenario::title() const
 {
     return QStringLiteral("Rocket Launch");
 }
 
+//-------------------------------------------------------------------------------------------------
 QString RocketScenario::description() const
 {
     return QStringLiteral("Programmiere eine Rakete in Richtung Umlaufbahn und lerne einfache Regelungstechnik.");
 }
 
+//-------------------------------------------------------------------------------------------------
 QString RocketScenario::initialSource() const
 {
     return QString::fromUtf8(R"SCN(with App.NeoAdaEdit.Rocket;
@@ -464,7 +496,7 @@ begin
     Rocket:start();
 end;
 
-procedure onMove(sensor : String) is
+procedure run() is
 begin
     if Rocket:fuel() > 0.0 then
         if Rocket:height() > 95.0 then
@@ -473,8 +505,8 @@ begin
             Rocket:steerLeft();
         end if;
 
-        if Rocket:height() > 120.0 then
-            Rocket:stage();
+        if Rocket:state() = 1 and Rocket:height() > 120.0 then
+            Rocket:doStage();
         end if;
     end if;
 end;
@@ -483,11 +515,13 @@ return "Rocket ready";
 )SCN");
 }
 
+//-------------------------------------------------------------------------------------------------
 QWidget *RocketScenario::widget()
 {
     return mWidget;
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketScenario::bind(NdaRuntime &runtime)
 {
     mRuntime = &runtime;
@@ -508,8 +542,12 @@ void RocketScenario::bind(NdaRuntime &runtime)
         mWidget->steerRight();
         return true;
     });
-    state->bindPrc("Rocket", "stage", {}, [this](const Nda::FncValues &) -> bool {
-        mWidget->stage();
+    state->bindPrc("Rocket", "doStage", {}, [this](const Nda::FncValues &) -> bool {
+        mWidget->doStage();
+        return true;
+    });
+    state->bindFnc("Rocket", "state", {}, [state, this](const Nda::FncValues &, NdaVariant &ret) -> bool {
+        ret.fromNatural(state->naturalType(), mWidget->state());
         return true;
     });
     state->bindFnc("Rocket", "x", {}, [state, this](const Nda::FncValues &, NdaVariant &ret) -> bool {
@@ -538,6 +576,7 @@ void RocketScenario::bind(NdaRuntime &runtime)
     });
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketScenario::reset()
 {
     stop();
@@ -545,6 +584,7 @@ void RocketScenario::reset()
     mRuntime = nullptr;
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketScenario::afterRun(NdaRuntime &runtime)
 {
     mRuntime = &runtime;
@@ -558,19 +598,20 @@ void RocketScenario::afterRun(NdaRuntime &runtime)
         }
     }
 
-    if (mWidget->isRunning())
-        mTimer->start();
+    mTimer->start();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketScenario::stop()
 {
     mTimer->stop();
     mWidget->stop();
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketScenario::tick()
 {
-    if (!mRuntime || !mWidget->isVisible() || !mWidget->isRunning()) {
+    if (!mRuntime || !mWidget->isVisible()) {
         mTimer->stop();
         return;
     }
@@ -578,14 +619,16 @@ void RocketScenario::tick()
     mWidget->simulationStep();
 
     NdaVariants args;
-    args.push_back(mRuntime->state()->toVariant(NdaValue(std::string("flight"))));
-    if (mRuntime->state()->hasFunction("", "onMove", args)) {
-        mRuntime->invokePrc("onMove", NdaValue(std::string("flight")));
-        if (mRuntime->hasError() || !mRuntime->state()->unhandledException().empty())
+    if (mRuntime->state()->hasFunction("", "run", args)) {
+        mRuntime->invokePrc("run");
+        if (mRuntime->hasError() || !mRuntime->state()->unhandledException().empty()) {
             showRuntimeError();
+            return;
+        }
     }
 }
 
+//-------------------------------------------------------------------------------------------------
 void RocketScenario::showRuntimeError()
 {
     const QString message = mRuntime->hasError()

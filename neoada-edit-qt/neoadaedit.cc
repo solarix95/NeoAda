@@ -36,6 +36,7 @@
 
 #include "neoadahighlighter.h"
 #include "scenarios/abstractscenario.h"
+#include "scenarios/asteroiddefensescenario.h"
 #include "scenarios/marsroverscenario.h"
 #include "scenarios/rocketscenario.h"
 #include <state.h>
@@ -530,6 +531,7 @@ void NeoAdaEdit::initScenarios()
     mScenarios.clear();
     mScenarios.push_back(new MarsRoverScenario());
     mScenarios.push_back(new RocketScenario());
+    mScenarios.push_back(new AsteroidDefenseScenario());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -566,6 +568,8 @@ void NeoAdaEdit::loadEditorAddon(const std::string &addonName)
 {
     if (addonName == "ada.list")
         mAda.loadAddonAdaList();
+    else if (addonName == "ada.dict")
+        mAda.loadAddonAdaDict();
     else if (addonName == "ada.bytes")
         mAda.loadAddonAdaBytes();
     else if (addonName == "ada.string")
@@ -642,24 +646,70 @@ void NeoAdaEdit::initLearningTools()
 <p><b>Start:</b> Write code, press <b>F5</b>, read the output below.</p>
 <ul>
 <li><code>declare n : Natural := 42;</code></li>
-<li><code>print("n=" & n);</code></li>
+<li><code>print("n=" &amp; n);</code></li>
 <li><code>if n &gt; 0 then ... end if;</code></li>
 <li><code>while n &gt; 0 loop ... end loop;</code></li>
 <li><code>for i in 1..10 loop ... end loop;</code></li>
 </ul>
-<p><b>Addons:</b></p>
+
+<p><b>Case / when:</b></p>
+<pre>case month is
+  when 1 =&gt; print("January");
+  when 2 =&gt; print("February");
+  when others =&gt; print("Other");
+end case;</pre>
+
+<p><b>Numeric literals:</b></p>
 <ul>
-<li><code>with Ada.List;</code> for <code>List.length()</code>, <code>append()</code>, ...</li>
-<li><code>with Ada.String;</code> for text helpers.</li>
+<li><code>42</code>, <code>42_n</code>: <code>Natural</code></li>
+<li><code>42_u</code>: <code>Supernatural</code> (unsigned)</li>
+<li><code>42_d</code>, <code>3.14</code>, <code>1.2E3</code>: <code>Number</code></li>
+<li><code>255_b</code>: <code>Byte</code></li>
+<li><code>1_000_000</code>: digit separators</li>
+<li><code>16#FF#</code>, <code>2#1010#</code>: based literals</li>
+</ul>
+
+<p><b>Addons:</b> Load helpers with <code>with Ada.Name;</code>.</p>
+
+<p><b>Ada.String</b></p>
+<p><code>length()</code>, <code>append(value)</code>, <code>insert(pos,text)</code><br>
+<code>contains(text)</code>, <code>indexOf(text)</code><br>
+<code>toUpper()</code>, <code>toLower()</code>, <code>upper()</code>, <code>lower()</code><br>
+<code>trim()</code>, <code>trimmed()</code>, <code>chop(n)</code>, <code>chopped(n)</code><br>
+<code>slice(pos,n)</code>, <code>sliced(pos,n)</code><br>
+<code>toNumber()</code>, <code>toNatural()</code>, <code>toBool()</code><br>
+<code>isNumber()</code>, <code>isNatural()</code>, <code>isBool()</code><br>
+<code>String:format(value,"f2")</code><br>
+<code>String:fromBytes(data,encoding)</code>, <code>toBytes(encoding)</code></p>
+
+<p><b>Ada.List</b></p>
+<p>Access elements with <code>list[index]</code>.<br>
+<code>length()</code>, <code>clear()</code>, <code>append(value)</code><br>
+<code>insert(pos,value)</code>, <code>concat(value)</code><br>
+<code>removeAt(pos)</code>, <code>removeFirst()</code>, <code>removeLast()</code><br>
+<code>contains(value)</code>, <code>indexOf(value)</code><br>
+<code>flip()</code>, <code>flipped()</code></p>
+
+<p><b>Ada.Dict</b></p>
+<p>Access values with <code>dict{key}</code>.<br>
+<code>length()</code>, <code>clear()</code>, <code>contains(key)</code><br>
+<code>remove(key)</code>, <code>keys()</code>, <code>values()</code><br>
+<code>value(key,defaultValue)</code></p>
+
+<p><b>Other addons:</b></p>
+<ul>
 <li><code>with Ada.Bytes;</code> for binary byte arrays.</li>
 <li><code>with Ada.Io.File;</code> for <code>File</code> and <code>TextFile</code>.</li>
+<li><code>with Ada.Math;</code>, <code>Ada.DateTime</code>, <code>Ada.Json</code>, <code>Ada.Regexp</code>.</li>
 </ul>
+
 <p><b>Exceptions:</b></p>
-<ul>
-<li><code>exception when ConstraintError =&gt; print("Index oder Zahl ungueltig");</code></li>
-<li><code>when others =&gt; print("Fehler"); raise;</code> re-raises the active exception.</li>
-</ul>
-<p><b>Files:</b> <code>TextFile</code> reads/writes <code>String</code>; <code>File</code> reads/writes <code>Bytes</code>.</p>
+<pre>begin
+  -- risky code
+exception
+  when ConstraintError =&gt; print("Invalid value");
+  when others =&gt; print("Error"); raise;
+end;</pre>
 <p><b>Tip:</b> Use <b>New</b> to start with an empty script, an example, or a prepared scenario.</p>
 )"));
     mGuide->setMinimumWidth(240);

@@ -7,6 +7,9 @@
 #include <cctype>
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
+#include <locale>
+#include <sstream>
 
 #define CHECK_INSTANCE_CALL if (args.find("this") == args.end()) return false
 
@@ -82,9 +85,126 @@ bool parseBool(const std::string &text, bool &value)
     return false;
 }
 
+bool parseFormatSpec(const std::string &format, char &mode, int &digits, bool &hasDigits)
+{
+    if (format.empty())
+        return false;
+
+    mode = format[0];
+    if (mode != 'f' && mode != 'e' && mode != 'E' && mode != 'g'
+            && mode != 'd' && mode != 'x' && mode != 'b' && mode != 'o')
+        return false;
+
+    hasDigits = format.size() > 1;
+    digits = 0;
+    for (size_t i = 1; i < format.size(); ++i) {
+        if (!std::isdigit(static_cast<unsigned char>(format[i])))
+            return false;
+        const int digit = format[i] - '0';
+        if (digits > 100 || (digits == 100 && digit > 0))
+            return false;
+        digits = digits * 10 + digit;
+    }
+    return digits <= 100;
+}
+
+std::string formatUnsigned(uint64_t value, unsigned base)
+{
+    static const char digits[] = "0123456789abcdef";
+    std::string result;
+    do {
+        result.push_back(digits[value % base]);
+        value /= base;
+    } while (value != 0);
+    std::reverse(result.begin(), result.end());
+    return result;
+}
+
+bool formatValue(const NdaVariant &value, const std::string &format, std::string &result)
+{
+    char mode = 0;
+    int digits = 0;
+    bool hasDigits = false;
+    if (!parseFormatSpec(format, mode, digits, hasDigits))
+        return false;
+
+    const bool floatingMode = mode == 'f' || mode == 'e' || mode == 'E' || mode == 'g';
+    if (floatingMode) {
+        if (value.type() != Nda::Number && value.type() != Nda::Natural
+                && value.type() != Nda::Supernatural && value.type() != Nda::Byte)
+            return false;
+        if (mode == 'g' && hasDigits && digits == 0)
+            return false;
+
+        bool ok = false;
+        const double number = value.toDouble(&ok);
+        if (!ok)
+            return false;
+
+        std::ostringstream stream;
+        stream.imbue(std::locale::classic());
+        stream << std::setprecision(hasDigits ? digits : 6);
+        if (mode == 'f')
+            stream << std::fixed;
+        else if (mode == 'e' || mode == 'E')
+            stream << std::scientific;
+        else
+            stream << std::defaultfloat;
+        if (mode == 'E')
+            stream << std::uppercase;
+        stream << number;
+        result = stream.str();
+        return true;
+    }
+
+    if (value.type() != Nda::Natural && value.type() != Nda::Supernatural
+            && value.type() != Nda::Byte)
+        return false;
+
+    bool negative = false;
+    uint64_t magnitude = 0;
+    if (value.type() == Nda::Natural) {
+        bool ok = false;
+        const int64_t signedValue = value.toInt64(&ok);
+        if (!ok)
+            return false;
+        negative = signedValue < 0;
+        magnitude = negative
+                ? static_cast<uint64_t>(-(signedValue + 1)) + 1
+                : static_cast<uint64_t>(signedValue);
+    } else {
+        bool ok = false;
+        magnitude = value.toUInt64(&ok);
+        if (!ok)
+            return false;
+    }
+
+    const unsigned base = mode == 'x' ? 16u : (mode == 'b' ? 2u : (mode == 'o' ? 8u : 10u));
+    result = formatUnsigned(magnitude, base);
+    const size_t width = hasDigits ? static_cast<size_t>(digits) : 0;
+    const size_t signWidth = negative ? 1u : 0u;
+    if (result.size() + signWidth < width)
+        result.insert(0, width - result.size() - signWidth, '0');
+    if (negative)
+        result.insert(result.begin(), '-');
+    return true;
+}
+
 void add_AdaString_symbols(NdaState *state)
 {
     assert(state);
+
+    // ------------------ String.Format() ---------------------------------------------------------
+    state->bindFnc("string", "format", {{"value", "any", Nda::InMode}, {"format", "string", Nda::InMode}}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        std::string formatted;
+        if (!formatValue(args.at("value"), args.at("format").toString(), formatted)) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret.fromString(state->stringType(), formatted);
+        return true;
+    });
 
     // ------------------ String.Length() ---------------------------------------------------------
     state->bindFnc("string","length",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {

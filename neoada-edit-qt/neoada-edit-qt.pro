@@ -16,6 +16,7 @@ include(neocodeedit.pro)
 # Input
 SOURCES += main.cc \
     neoadaedit.cc \
+    scenarios/asteroiddefensescenario.cc \
     scenarios/marsroverscenario.cc \
     scenarios/rocketscenario.cc
 
@@ -25,5 +26,6 @@ FORMS += \
 HEADERS += \
     neoadaedit.h \
     scenarios/abstractscenario.h \
+    scenarios/asteroiddefensescenario.h \
     scenarios/marsroverscenario.h \
     scenarios/rocketscenario.h

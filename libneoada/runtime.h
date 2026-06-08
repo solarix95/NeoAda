@@ -30,9 +30,14 @@ public:
 
     void       invokePrc(const std::string &prcName);
     void       invokePrc(const std::string &prcName, const NdaValue &arg1);
+    void       invokePrc(const std::string &prcName, const NdaValue &arg1, const NdaValue &arg2,
+                         const NdaValue &arg3, const NdaValue &arg4);
+    void       invokePrc(const std::string &prcName, const NdaValue &arg1, const NdaValue &arg2,
+                         const NdaValue &arg3, const NdaValue &arg4, const NdaValue &arg5);
 
     virtual void loadAddonAdaString();
     virtual void loadAddonAdaList();
+    virtual void loadAddonAdaDict();
     virtual void loadAddonAdaBytes();
     virtual void loadAddonAdaMath();
     virtual void loadAddonAdaIoFile();

@@ -12,6 +12,7 @@ NEOADA_PATH = ../libneoada
 include(../libneoada/libneoada.pro)
 SOURCES +=  tst_parser.cpp \
             tst_AdaString.cpp \
+            tst_AdaDict.cpp \
             tst_AdaMath.cpp \
             tst_AdaTextEncoding.cpp \
             tst_AdaIoFile.cpp \

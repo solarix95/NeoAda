@@ -490,6 +490,29 @@ int64_t NdaVariant::toInt64(bool *ok) const
 }
 
 //-------------------------------------------------------------------------------------------------
+uint64_t NdaVariant::toUInt64(bool *ok) const
+{
+    if (ok) *ok = false;
+    switch (myType()) {
+    case Nda::Reference:
+        return cInternalReference()->toUInt64(ok);
+    case Nda::Natural:
+        if (mValue.uInt64 < 0)
+            return 0;
+        if (ok) *ok = true;
+        return static_cast<uint64_t>(mValue.uInt64);
+    case Nda::Supernatural:
+        if (ok) *ok = true;
+        return mValue.uUInt64;
+    case Nda::Byte:
+        if (ok) *ok = true;
+        return mValue.uByte;
+    default:
+        return 0;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
 bool NdaVariant::isNan() const
 {
     if (myType() == Nda::Reference)

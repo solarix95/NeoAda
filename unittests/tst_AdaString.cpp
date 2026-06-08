@@ -2,6 +2,7 @@
 #include <QString>
 
 #include <libneoada/runtime.h>
+#include <libneoada/state.h>
 
 class TstAdaString : public QObject
 {
@@ -26,6 +27,14 @@ private slots:
     void test_api_runtime_AdaString_Sliced();
     void test_api_runtime_AdaString_FromBytes();
     void test_api_runtime_AdaString_ToBytes();
+    void test_api_runtime_AdaString_FormatFloating();
+    void test_api_runtime_AdaString_FormatInteger();
+    void test_api_runtime_AdaString_FormatConstraintError();
+    void test_api_runtime_AdaString_ToNumber();
+    void test_api_runtime_AdaString_ToNatural();
+    void test_api_runtime_AdaString_ToBool();
+    void test_api_runtime_AdaString_IsConversions();
+    void test_api_runtime_AdaString_ConversionProgramError();
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -400,6 +409,196 @@ void TstAdaString::test_api_runtime_AdaString_ToBytes()
     auto ret = r.runScript(script);
 
     QVERIFY(ret.toInt64() == 1);
+}
+
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_FormatFloating()
+{
+    const std::string script = R"(
+    with Ada.String;
+
+    if String:format(12.3456, "f2") <> "12.35" then
+        return 0;
+    end if;
+    if String:format(12.3456, "e2") <> "1.23e+01" then
+        return 0;
+    end if;
+    if String:format(12.3456, "E2") <> "1.23E+01" then
+        return 0;
+    end if;
+    if String:format(12.3456, "g4") <> "12.35" then
+        return 0;
+    end if;
+    if String:format(2.5, "f") <> "2.500000" then
+        return 0;
+    end if;
+    return 1;
+    )";
+
+    NdaRuntime runtime;
+    const auto ret = runtime.runScript(script);
+    QVERIFY2(!runtime.hasError(), runtime.lastError().c_str());
+    QCOMPARE(ret.toInt64(), int64_t(1));
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_FormatInteger()
+{
+    const std::string script = R"(
+    with Ada.String;
+
+    if String:format(42, "d5") <> "00042" then
+        return 0;
+    end if;
+    if String:format(255, "x4") <> "00ff" then
+        return 0;
+    end if;
+    if String:format(255, "b") <> "11111111" then
+        return 0;
+    end if;
+    if String:format(255, "o") <> "377" then
+        return 0;
+    end if;
+    return 1;
+    )";
+
+    NdaRuntime runtime;
+    const auto ret = runtime.runScript(script);
+    QVERIFY2(!runtime.hasError(), runtime.lastError().c_str());
+    QCOMPARE(ret.toInt64(), int64_t(1));
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_FormatConstraintError()
+{
+    const std::string script = R"(
+    with Ada.String;
+
+    begin
+        String:format(12.5, "x");
+        return 0;
+    exception
+        when ConstraintError => return 1;
+    end;
+    )";
+
+    NdaRuntime runtime;
+    const auto ret = runtime.runScript(script);
+    QVERIFY2(!runtime.hasError(), runtime.lastError().c_str());
+    QCOMPARE(ret.toInt64(), int64_t(1));
+    QVERIFY(runtime.state()->unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_ToNumber()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "  12.5 ";
+    return x.toNumber();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toDouble() == 12.5);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_ToNatural()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "  42 ";
+    return x.toNatural();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_ToBool()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare t : String := "true";
+    declare f : String := " FALSE ";
+    if t.toBool() = true and f.toBool() = false then
+        return 1;
+    end if;
+    return 0;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_IsConversions()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare numberOk : String := "-12.5e2";
+    declare naturalOk : String := "42";
+    declare boolOk : String := "false";
+    declare bad : String := "12abc";
+
+    if numberOk.isNumber() = true and naturalOk.isNatural() = true and boolOk.isBool() = true
+       and bad.isNumber() = false and bad.isNatural() = false and bad.isBool() = false then
+        return 1;
+    end if;
+    return 0;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_ConversionProgramError()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    function Test() return Natural is
+        x : String := "not-a-number";
+    begin
+        x.toNatural();
+        return 0;
+    exception
+        when ProgramError => return 1;
+    end;
+
+    return Test();
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 1);
+    QVERIFY(r.state()->unhandledException().empty());
 }
 
 

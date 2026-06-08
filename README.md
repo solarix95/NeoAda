@@ -176,8 +176,11 @@ Provides methods for `String` values and byte conversion helpers.
 | `s.chopped(n)` | `String` | Copy without the last `n` characters. |
 | `s.slice(pos, n)` | - | Keeps a slice in place. |
 | `s.sliced(pos, n)` | `String` | Slice copy. |
+| `String:format(value, format)` | `String` | Formats numeric values with `f`, `e`, `E`, `g`, `d`, `x`, `b`, or `o`. |
 | `String:fromBytes(data, encoding)` | `String` | Decodes `Bytes` as text. |
 | `s.toBytes(encoding)` | `Bytes` | Encodes text to `Bytes`. |
+
+For `f`, `e`, `E`, and `g`, trailing digits specify precision, for example `f2`. For `d`, `x`, `b`, and `o`, they specify the minimum width with zero padding, for example `x4`. Invalid formats or type combinations raise `ConstraintError`.
 
 Supported encodings are provided by `Ada.Text.Encoding`: `utf-8`, `utf8`, `latin1`, `iso-8859-1`, `ascii`, `utf-16`, `utf16`, `utf-16le`, `utf16le`, `utf-16be`, `utf16be`.
 
@@ -321,17 +324,30 @@ Provides dictionary-backed `Date`, `Time`, and `DateTime` objects. Supported for
 | `DateTime` | `dt.addDays(days)` | `DateTime` | Returns date/time plus days. |
 | `DateTime` | `dt.addSecs(secs)` | `DateTime` | Returns date/time plus seconds. |
 
-### **Core Dictionary Type**
+### **Ada.Dict**
 
-`Dict` is a core container type, not a separate addon. Use dictionary literals and `{}` access for arbitrary key/value members.
+`Dict` is a core container type. `with Ada.Dict;` adds QMap-style helper methods. Dictionary literals and `{}` remain the syntax for direct key access.
 
 ```neoada
+with Ada.Dict;
+
 declare person : Dict := {"name": "Ada", "age": 42};
 print(person{"name"});
+print(person.value("country", "unknown"));
 ```
 
+| Class | Method | Returns | Description |
+| --- | --- | --- | --- |
+| `Dict` | `d.length()` | `Natural` | Number of entries. |
+| `Dict` | `d.clear()` | - | Removes all entries. |
+| `Dict` | `d.contains(key)` | `Boolean` | Tests whether a key exists. |
+| `Dict` | `d.remove(key)` | `Natural` | Removes a key and returns `1`, or `0` if absent. |
+| `Dict` | `d.keys()` | `List` | Returns all keys in dictionary order. |
+| `Dict` | `d.values()` | `List` | Returns values in the same order as `keys()`. |
+| `Dict` | `d.value(key, defaultValue)` | `Any` | Returns a value without inserting a missing key. |
+
 ## **Planned Features**
-- Advanced data structures (e.g., dictionaries, dynamic arrays).
+- Additional data structures (e.g., sets and queues).
 - Native bindings for Python and Java.
 - Enhanced error diagnostics.
 

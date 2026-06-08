@@ -20,7 +20,7 @@ public:
     void stop();
     void steerLeft();
     void steerRight();
-    void stage();
+    void doStage();
     void simulationStep();
 
     bool isRunning() const;
@@ -30,6 +30,7 @@ public:
     double fuel() const;
     double speed() const;
     double missionTime() const;
+    int state() const;
 
 protected:
     void paintEvent(QPaintEvent *event) override;

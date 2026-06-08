@@ -228,6 +228,7 @@ private slots:
     void test_interpreter_static_method();
 
     void test_api_evaluate_Literals();
+    void test_api_evaluate_TypeOf();
     void test_api_evaluate_Length();
     void test_api_evaluate_Equal();
     void test_api_evaluate_NotEqual();
@@ -326,6 +327,8 @@ private slots:
     void test_api_runtime_AdaList_Length();
     void test_api_runtime_AdaList_Append();
     void test_api_runtime_AdaList_Insert();
+    void test_api_runtime_AdaList_Remove();
+    void test_api_runtime_AdaList_RemoveConstraintError();
     void test_api_runtime_AdaList_Concat();
     void test_api_runtime_AdaList_Contains();
     void test_api_runtime_AdaList_IndexOf();
@@ -4174,6 +4177,27 @@ void TstParser::test_api_evaluate_Length()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_TypeOf()
+{
+    NdaState state;
+
+    QVERIFY(NeoAda::evaluate("return typeof(42);", state).toString() == "natural");
+    QVERIFY(NeoAda::evaluate("return typeof(42.5);", state).toString() == "number");
+    QVERIFY(NeoAda::evaluate("return typeof(true);", state).toString() == "boolean");
+    QVERIFY(NeoAda::evaluate("return typeof(42_b);", state).toString() == "byte");
+    QVERIFY(NeoAda::evaluate("return typeof(\"NeoAda\");", state).toString() == "string");
+    QVERIFY(NeoAda::evaluate("return typeof([1, 2, 3]);", state).toString() == "list");
+    QVERIFY(NeoAda::evaluate("return typeof({\"answer\": 42});", state).toString() == "dict");
+
+    std::string customTypeScript = R"(
+        type Altitude is Natural;
+        declare value : Altitude := 1200;
+        return typeof(value);
+    )";
+    QVERIFY(NeoAda::evaluate(customTypeScript, state).toString() == "altitude");
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Equal()
 {
     NdaState state;
@@ -5820,6 +5844,56 @@ void TstParser::test_api_runtime_AdaList_Insert()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Remove()
+{
+    std::string script = R"(
+    with Ada.List;
+    declare x : List := [10,20,30,40,50];
+    x.removeAt(2);
+    x.removeFirst();
+    x.removeLast();
+    if x.length() = 2 and x[0] = 20 and x[1] = 40 then
+        return 1;
+    end if;
+    return 0;
+    )";
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_RemoveConstraintError()
+{
+    std::string script = R"(
+    with Ada.List;
+    declare caught : Natural := 0;
+    declare x : List := [];
+    begin
+        x.removeFirst();
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    begin
+        x.removeLast();
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    x.append(42);
+    begin
+        x.removeAt(1);
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    return caught;
+    )";
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+    QVERIFY(ret.toInt64() == 3);
+    QVERIFY(r.state()->unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_runtime_AdaList_Concat()
 {
     std::string script = R"(
@@ -6557,6 +6631,7 @@ void TstParser::test_error_runtime_divisionByZero()
 
 
 extern int runAdaStringTests(int argc, char **argv);
+extern int runAdaDictTests(int argc, char **argv);
 extern int runAdaMathTests(int argc, char **argv);
 extern int runAdaTextEncodingTests(int argc, char **argv);
 extern int runAdaIoFileTests(int argc, char **argv);
@@ -6593,6 +6668,7 @@ int main(int argc, char **argv)
         status |= QTest::qExec(&parserTests, argc, argv);
 
     status |= runAdaStringTests(argc, argv);
+    status |= runAdaDictTests(argc, argv);
     status |= runAdaMathTests(argc, argv);
     status |= runAdaTextEncodingTests(argc, argv);
     status |= runAdaIoFileTests(argc, argv);

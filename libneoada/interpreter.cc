@@ -316,7 +316,8 @@ Nada::Error NdaInterpreter::invokeFnc(const std::string &typeName, const std::st
                 ? fnc.nativeFncCallback(parameters, mState->ret())
                 : fnc.nativePrcCallback(parameters);
         if (!ok) {
-            mState->setUnhandledException("programerror");
+            if (mState->unhandledException().empty())
+                mState->setUnhandledException("programerror");
             mState->ret().reset();
             mExecState = ExceptionState;
         }
@@ -709,7 +710,8 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
                 ? fnc.nativeFncCallback(parameters, mState->ret())
                 : fnc.nativePrcCallback(parameters);
         if (!ok) {
-            mState->setUnhandledException("programerror");
+            if (mState->unhandledException().empty())
+                mState->setUnhandledException("programerror");
             mState->ret().reset();
             mExecState = ExceptionState;
         }
@@ -793,7 +795,8 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
                 ? fnc.nativeFncCallback(parameters, mState->ret())
                 : fnc.nativePrcCallback(parameters);
         if (!ok) {
-            mState->setUnhandledException("programerror");
+            if (mState->unhandledException().empty())
+                mState->setUnhandledException("programerror");
             mState->ret().reset();
             mExecState = ExceptionState;
         }
