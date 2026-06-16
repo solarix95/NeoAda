@@ -21,6 +21,9 @@ public:
 
     NdaVariant execute(const NdaParser::ASTNodePtr &node, NdaState *state = nullptr);
     NdaVariant execute(Nda::Runnable *node, NdaState *state = nullptr);
+    NdaVariant executeFormula(Nda::Runnable *node, NdaState *state = nullptr);
+
+    bool isFormula(const NdaParser::ASTNodePtr &node) const;
 
     Nda::Runnable *prepare(const NdaParser::ASTNodePtr &node);
 
@@ -96,6 +99,7 @@ private:
     std::string     mActiveException;
     NdaState       *mState;
     Nda::Runnable  *mRunnable;
+    bool            mFormulaMode;
 
     bool            mHasVolatileAccessTarget;
     std::string     mVolatileAccessSymbol;

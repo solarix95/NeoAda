@@ -227,6 +227,10 @@ private slots:
 
     void test_interpreter_static_method();
 
+    void test_api_formula_EvaluatePreparedState();
+    void test_api_formula_PreparedRunnable();
+    void test_api_formula_RejectStatements();
+
     void test_api_evaluate_Literals();
     void test_api_evaluate_TypeOf();
     void test_api_evaluate_Length();
@@ -4142,6 +4146,66 @@ void TstParser::test_interpreter_static_method()
     auto ret = interpreter.execute(ast);
 
     QVERIFY(ret.toString() == "10");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_formula_EvaluatePreparedState()
+{
+    NdaState state;
+    QVERIFY(state.define("a", "Natural"));
+    QVERIFY(state.define("b", "Natural"));
+    state.valueRef("a").fromNatural(state.naturalType(), 40);
+    state.valueRef("b").fromNatural(state.naturalType(), 2);
+
+    QVERIFY(NeoAda::evaluateFormula("a + b", state).toInt64() == 42);
+    QVERIFY(state.value("a").toInt64() == 40);
+    QVERIFY(state.value("b").toInt64() == 2);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_formula_PreparedRunnable()
+{
+    NdaState state;
+    state.bindFnc("sum", {{"a", "natural", Nda::InMode}, {"b", "natural", Nda::InMode}}, [&state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        ret.fromNatural(state.naturalType(), args.at("a").toUInt64() + args.at("b").toUInt64());
+        return true;
+    });
+
+    auto formula = NeoAda::prepareFormula("sum(13, 52)", state);
+    QVERIFY(formula.isValid());
+    QVERIFY(NeoAda::executeFormula(formula, state).toInt64() == 65);
+    QVERIFY(NeoAda::executeFormula(formula, state).toInt64() == 65);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_formula_RejectStatements()
+{
+    NdaState state;
+    NdaException ex;
+
+    auto formula = NeoAda::prepareFormula("declare x : Natural := 1;", state, &ex);
+    QVERIFY(!formula.isValid());
+    QVERIFY(ex.code() != Nada::NoError);
+
+    ex = NdaException();
+    QVERIFY(state.define("a", "Natural"));
+    state.valueRef("a").fromNatural(state.naturalType(), 1);
+    formula = NeoAda::prepareFormula("a := 2", state, &ex);
+    QVERIFY(!formula.isValid());
+    QVERIFY(ex.code() != Nada::NoError);
+
+    bool touched = false;
+    state.bindPrc("touch", {}, [&touched](const Nda::FncValues&) -> bool {
+        touched = true;
+        return true;
+    });
+
+    ex = NdaException();
+    formula = NeoAda::prepareFormula("touch()", state, &ex);
+    QVERIFY(formula.isValid());
+    NeoAda::executeFormula(formula, state, &ex);
+    QVERIFY(ex.code() == Nada::InvalidStatement);
+    QVERIFY(!touched);
 }
 
 //-------------------------------------------------------------------------------------------------

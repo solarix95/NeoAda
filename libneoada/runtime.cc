@@ -109,6 +109,78 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
 }
 
 //-------------------------------------------------------------------------------------------------
+NdaVariant NdaRuntime::evaluateFormula(const std::string &formula, NdaException *exception)
+{
+    NdaFormula prepared = prepareFormula(formula, exception);
+    if (!prepared.isValid())
+        return NdaVariant();
+    return executeFormula(prepared, exception);
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaFormula NdaRuntime::prepareFormula(const std::string &formula, NdaException *exception)
+{
+    if (!mState)
+        reset();
+
+    NdaLexer       lexer;
+    NdaParser      parser(lexer);
+
+    mLastError.clear();
+    try {
+        auto ast = parser.parseFormula(formula);
+        if (!mInterpreter->isFormula(ast))
+            throw NdaException(Nada::Error::InvalidStatement,0,0);
+        return NdaFormula(mInterpreter->prepare(ast));
+    } catch (NdaException &ex) {
+        mLastError = ex.what();
+        if (exception)
+            *exception = ex;
+        else
+            std::cerr << ex.what() << std::endl;
+    } catch (const std::exception& ex) {
+        mLastError = ex.what();
+        std::cerr << "NeoAda Fatal Runtime Error: " << ex.what() << std::endl;
+    } catch (...) {
+        mLastError = "NeoAda Unknown Fatal Runtime Error";
+        std::cerr << "NeoAda Fatal Runtime Error!" << std::endl;
+    }
+
+    return NdaFormula();
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaRuntime::executeFormula(NdaFormula &formula, NdaException *exception)
+{
+    if (!mState)
+        reset();
+
+    if (!formula.isValid())
+        return NdaVariant();
+
+    mLastError.clear();
+    try {
+        auto ret = mInterpreter->executeFormula(formula.runnable(), mState);
+        ret.dereference();
+        return ret;
+    } catch (NdaException &ex) {
+        mLastError = ex.what();
+        if (exception)
+            *exception = ex;
+        else
+            std::cerr << ex.what() << std::endl;
+    } catch (const std::exception& ex) {
+        mLastError = ex.what();
+        std::cerr << "NeoAda Fatal Runtime Error: " << ex.what() << std::endl;
+    } catch (...) {
+        mLastError = "NeoAda Unknown Fatal Runtime Error";
+        std::cerr << "NeoAda Fatal Runtime Error!" << std::endl;
+    }
+
+    return NdaVariant();
+}
+
+//-------------------------------------------------------------------------------------------------
 NdaState *NdaRuntime::state()
 {
     return mState;

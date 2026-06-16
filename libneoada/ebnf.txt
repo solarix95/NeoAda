@@ -1,88 +1,168 @@
+(* NeoAda grammar overview. This is a practical EBNF for the public language
+   surface; exact precedence and diagnostics are implemented by NdaParser. *)
 
-program   ::= { statement }
+script          ::= { statement }
 
-statement ::= declaration
-            | assignment
-            | return_statement
-            | if_statement
-            | for_loop
-            | while_loop
-            | method_declaration
-            | break_statement
-            | continue_statement
-            | method_call
-            | expression_statement
+(* Read-only formula API: a formula is exactly one expression. The parser wraps
+   it internally as a return statement. Declarations, assignments, with-clauses,
+   procedure/function definitions and control statements are not valid here. *)
+formula         ::= expression EOF
 
-comment             ::= "--" { any_character_except_newline } newline
+statement       ::= with_clause
+                  | declaration
+                  | volatile_declaration
+                  | type_definition
+                  | assignment
+                  | return_statement
+                  | raise_statement
+                  | block_statement
+                  | if_statement
+                  | case_statement
+                  | for_loop
+                  | while_loop
+                  | break_statement
+                  | continue_statement
+                  | procedure_declaration
+                  | function_declaration
+                  | procedure_call
 
-declaration         ::= "declare" identifier ":" type [ ":=" expression ] ";"
+comment         ::= "--" { any_character_except_newline } newline
 
-method_declaration  ::= "function" type_name ":" identifier "(" parameter_list ")" [ "return" type ] "is" block "end" identifier ";"
+with_clause     ::= "with" package_name ";"
+package_name    ::= identifier { "." identifier }
 
-parameter_list      ::= [ parameter { "," parameter } ]
-parameter           ::= identifier ":" type
+(* Declarations *)
+declaration          ::= "declare" declaration_item { "," declaration_item } ":" type [ ":=" expression ] ";"
+volatile_declaration ::= "volatile" declaration_item { "," declaration_item } ":" type [ ":=" expression ] ";"
+declaration_item     ::= identifier
 
+type_definition ::= "type" identifier "is" type ";"
 
-if_statement        ::= "if" expression "then" statement_list { "elsif" expression "then" statement_list } [ "else" statement_list ] "end" "if" ";"
+type            ::= builtin_type | identifier
+builtin_type    ::= "Any"
+                  | "Number"
+                  | "Natural"
+                  | "Supernatural"
+                  | "Integer"
+                  | "Boolean"
+                  | "String"
+                  | "Byte"
+                  | "Bytes"
+                  | "List"
+                  | "Dict"
+                  | "File"
+                  | "TextFile"
+                  | "Date"
+                  | "Time"
+                  | "DateTime"
 
-for_loop            ::= "for" identifier "in" iterable_or_range "loop" statement_list "end" "loop" ";"
-iterable_or_range   ::= range | identifier
-range               ::= expression ".." expression
+(* Procedures and functions. A name after end is optional, but if present it
+   must match the declared procedure/function name. *)
+procedure_declaration ::= "procedure" [ method_context ] identifier "(" formal_parameter_list ")"
+                          "is" { local_declaration } "begin" statement_list "end" [ identifier ] ";"
 
-while_loop          ::= "while" expression "loop" statement_list "end" "loop" ";"
-break_statement     ::= "break"    ["when" expression] ";"
-continue_statement  ::= "continue" ["when" expression] ";"
+function_declaration  ::= "function" [ method_context ] identifier "(" formal_parameter_list ")"
+                          "return" type "is" { local_declaration } "begin" statement_list "end" [ identifier ] ";"
 
-function_call        ::= simple_call | method_call_static | method_call_instance
-simple_call          ::= identifier "(" argument_list ")" ";"
-method_call_static   ::= type_name ":" identifier "(" argument_list ")" ";"
-method_call_instance ::= instance "." identifier "(" argument_list ")" ";"
+method_context        ::= type ":"
+local_declaration     ::= declaration_without_keyword ";"
+declaration_without_keyword ::= declaration_item { "," declaration_item } ":" type [ ":=" expression ]
 
-expression          ::= relation { logical_operator relation }
-logical_operator    ::= "and" | "or" | "xor"
+formal_parameter_list ::= [ formal_parameter_group { ";" formal_parameter_group } ]
+formal_parameter_group ::= identifier { "," identifier } ":" [ parameter_mode ] type
+parameter_mode        ::= "in" | "out"
 
-relation             ::= simple_expression [ relational_operator simple_expression ]
-relational_operator  ::= "=" | "<>" | "<" | "<=" | ">" | ">="
+procedure_call        ::= simple_call ";" | static_method_call ";" | instance_method_call ";"
+assignment            ::= assignable ":=" expression ";"
+assignable            ::= identifier | access_expression
 
-simple_expression    ::= [ unary_operator ] term { adding_operator term }
-unary_operator       ::= "+" | "-"
-adding_operator      ::= "+" | "-" | "&"
+return_statement      ::= "return" [ expression ] ";"
+raise_statement       ::= "raise" [ identifier ] ";"
 
-term                 ::= factor { multiplying_operator factor }
-multiplying_operator ::= "*" | "/" | "mod" | "rem"
+block_statement       ::= "begin" statement_list [ exception_part ] "end" ";"
+statement_list        ::= { statement }
 
-factor               ::= primary [ "**" primary ]
+exception_part        ::= "exception" exception_handler { exception_handler }
+exception_handler     ::= "when" ( identifier | "others" ) "=>" statement_list
 
-primary ::= numeric_literal
-          | string_literal
-          | list_literal
-          | identifier [ "[" expression "]" ]
-          | function_call
-          | "(" expression ")"
-          | unary_operator primary
-          | "not" primary
+if_statement          ::= "if" expression "then" statement_list
+                          { "elsif" expression "then" statement_list }
+                          [ "else" statement_list ]
+                          "end" "if" ";"
 
-block           ::= "begin" statement_list "end"
-statement_list  ::= { statement }
+case_statement        ::= "case" expression "is" case_when { case_when } "end" "case" ";"
+case_when             ::= "when" ( case_choice { "|" case_choice } | "others" ) "=>" statement_list
+case_choice           ::= expression
 
-numeric_literal ::= numeral [ "." numeral ] [ exponent ]
-numeral         ::= digit { digit | "_" }
-exponent        ::= "E" [ "+" | "-" ] numeral
-string_literal  ::= '"' { character } '"'
-list_literal    ::= "[" [ expression { "," expression } ] "]"
+for_loop              ::= "for" identifier "in" iterable_or_range "loop" statement_list "end" "loop" ";"
+iterable_or_range     ::= range | expression
+range                 ::= expression ".." expression
 
-type              ::= "Number"       // double
-                    | "Natural"      // int64
-                    | "Supernatural" // unsigned int64
-                    | "Boolean"
-                    | "Character"
-                    | "String"       // utf8-String
-                    | "Byte"
-                    | "list"
-                    | "dict"
-                    | custom_type
+while_loop            ::= "while" expression "loop" statement_list "end" "loop" ";"
+break_statement       ::= "break"    [ "when" expression ] ";"
+continue_statement    ::= "continue" [ "when" expression ] ";"
 
-custom_type       ::= "type" identifier "is" type ";"
+(* Expressions *)
+expression            ::= relation { logical_operator relation }
+logical_operator      ::= "and" | "or" | "xor"
 
+relation              ::= simple_expression [ relational_operator simple_expression ]
+relational_operator   ::= "=" | "<>" | "<" | "<=" | ">" | ">="
 
+simple_expression     ::= [ sign ] term { adding_operator term }
+sign                  ::= "+" | "-"
+adding_operator       ::= "+" | "-" | "&"
 
+term                  ::= factor { multiplying_operator factor }
+multiplying_operator  ::= "*" | "/" | "mod" | "rem"
+
+factor                ::= primary [ "**" primary ]
+
+primary               ::= [ unary_operator ] atom { call_or_access }
+unary_operator        ::= "+" | "-" | "#"
+
+atom                  ::= numeric_literal
+                        | string_literal
+                        | boolean_literal
+                        | list_literal
+                        | dict_literal
+                        | identifier
+                        | "(" expression ")"
+
+call_or_access        ::= function_call_suffix
+                        | static_method_call_suffix
+                        | instance_method_call_suffix
+                        | access_suffix
+
+function_call         ::= identifier "(" argument_list ")"
+simple_call           ::= identifier "(" argument_list ")"
+static_method_call    ::= type ":" identifier "(" argument_list ")"
+instance_method_call  ::= expression "." identifier "(" argument_list ")"
+
+function_call_suffix        ::= "(" argument_list ")"
+static_method_call_suffix   ::= ":" identifier "(" argument_list ")"
+instance_method_call_suffix ::= "." identifier "(" argument_list ")"
+access_suffix               ::= "[" expression "]"
+access_expression           ::= expression access_suffix
+
+argument_list         ::= [ expression { "," expression } ]
+
+(* Literals *)
+boolean_literal       ::= "true" | "false"
+string_literal        ::= '"' { character } '"'
+
+numeric_literal       ::= based_literal [ numeric_suffix ]
+                        | decimal_literal [ numeric_suffix ]
+
+decimal_literal       ::= numeral [ "." numeral ] [ exponent ]
+based_literal         ::= numeral "#" based_digit { based_digit | "_" } "#"
+numeric_suffix        ::= "_n" | "_u" | "_d" | "_b"
+numeral               ::= digit { digit | "_" }
+exponent              ::= ( "E" | "e" ) [ "+" | "-" ] numeral
+based_digit           ::= digit | "A".."F" | "a".."f"
+
+list_literal          ::= "[" [ expression { "," expression } ] "]"
+dict_literal          ::= "{" [ dict_element { "," dict_element } ] "}"
+dict_element          ::= expression ":" expression
+
+identifier            ::= letter { letter | digit | "_" }

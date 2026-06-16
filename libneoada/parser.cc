@@ -27,6 +27,25 @@ NdaParser::ASTNodePtr NdaParser::parse(const std::string &script) {
 }
 
 //-------------------------------------------------------------------------------------------------
+NdaParser::ASTNodePtr NdaParser::parseFormula(const std::string &formula)
+{
+    mLexer.setScript(formula);
+
+    auto programNode = std::make_shared<ASTNode>(ASTNodeType::Program, mLexer.line(), mLexer.column());
+    if (!mLexer.nextToken())
+        throw NdaException(Nada::Error::UnexpectedEof,mLexer.line(), mLexer.column(),mLexer.token());
+
+    auto returnNode = std::make_shared<ASTNode>(ASTNodeType::Return, mLexer.line(), mLexer.column());
+    ASTNode::addChild(returnNode,parseExpression());
+    ASTNode::addChild(programNode,returnNode);
+
+    if (mLexer.nextToken())
+        throw NdaException(Nada::Error::InvalidStatement,mLexer.line(), mLexer.column(),mLexer.token());
+
+    return programNode;
+}
+
+//-------------------------------------------------------------------------------------------------
 NdaParser::ASTNodePtr NdaParser::parseStatement()
 {
     if (mLexer.tokenType() == NdaLexer::TokenType::Keyword && mLexer.token() == "declare") {

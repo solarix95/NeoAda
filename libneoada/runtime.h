@@ -4,6 +4,7 @@
 #include <string>
 #include "variant.h"
 #include "value.h"
+#include "formula.h"
 
 class NdaException;
 class NdaState;
@@ -20,6 +21,9 @@ public:
     std::string lastError() const;
 
     NdaVariant runScript(const std::string &script, NdaException *e = nullptr);
+    NdaVariant evaluateFormula(const std::string &formula, NdaException *e = nullptr);
+    NdaFormula prepareFormula(const std::string &formula, NdaException *e = nullptr);
+    NdaVariant executeFormula(NdaFormula &formula, NdaException *e = nullptr);
     NdaVariant runFile(const std::string &fileName, NdaException *e = nullptr);
     NdaState  *state();
     std::vector<std::string> globalFunctions() const;

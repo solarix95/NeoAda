@@ -80,6 +80,7 @@ public:
     NdaParser(NdaLexer &lexer);
 
     NdaParser::ASTNodePtr parse(const std::string &script);
+    NdaParser::ASTNodePtr parseFormula(const std::string &formula);
 
 private:
     NdaParser::ASTNodePtr parseStatement();

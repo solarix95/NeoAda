@@ -7,10 +7,50 @@
 
 #include "private/runnable.h"
 
+namespace {
+
+bool isFormulaNode(const NdaParser::ASTNodePtr &node)
+{
+    if (!node)
+        return false;
+
+    switch (node->type) {
+    case NdaParser::ASTNodeType::Program:
+        return node->children.size() == 1 && isFormulaNode(node->children[0]);
+    case NdaParser::ASTNodeType::Return:
+        return node->children.size() == 1 && isFormulaNode(node->children[0]);
+    case NdaParser::ASTNodeType::Expression:
+    case NdaParser::ASTNodeType::ExpressionList:
+    case NdaParser::ASTNodeType::Literal:
+    case NdaParser::ASTNodeType::ListLiteral:
+    case NdaParser::ASTNodeType::DictLiteral:
+    case NdaParser::ASTNodeType::Number:
+    case NdaParser::ASTNodeType::Identifier:
+    case NdaParser::ASTNodeType::BooleanLiteral:
+    case NdaParser::ASTNodeType::AccessOperator:
+    case NdaParser::ASTNodeType::UnaryOperator:
+    case NdaParser::ASTNodeType::BinaryOperator:
+    case NdaParser::ASTNodeType::FunctionCall:
+    case NdaParser::ASTNodeType::StaticMethodCall:
+    case NdaParser::ASTNodeType::InstanceMethodCall:
+    case NdaParser::ASTNodeType::Range:
+        for (const auto &child : node->children) {
+            if (!isFormulaNode(child))
+                return false;
+        }
+        return true;
+    default:
+        return false;
+    }
+}
+
+}
+
 //-------------------------------------------------------------------------------------------------
 NdaInterpreter::NdaInterpreter(NdaState *state)
     : mState(state)
     , mRunnable(nullptr)
+    , mFormulaMode(false)
     , mHasVolatileAccessTarget(false)
 {
 }
@@ -41,6 +81,27 @@ NdaVariant NdaInterpreter::execute(const NdaParser::ASTNodePtr &node, NdaState *
     // lets keep "mRunnable" here -> later invoke!!
 
     return (state ? state : mState)->ret();
+}
+
+//-------------------------------------------------------------------------------------------------
+bool NdaInterpreter::isFormula(const NdaParser::ASTNodePtr &node) const
+{
+    return isFormulaNode(node);
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaInterpreter::executeFormula(Nda::Runnable *node, NdaState *state)
+{
+    const bool oldFormulaMode = mFormulaMode;
+    mFormulaMode = true;
+    try {
+        auto ret = execute(node,state);
+        mFormulaMode = oldFormulaMode;
+        return ret;
+    } catch (...) {
+        mFormulaMode = oldFormulaMode;
+        throw;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -279,6 +340,9 @@ Nada::Error NdaInterpreter::invokeFnc(const std::string &typeName, const std::st
         return Nada::Error::UnknownFunctionCall;
 
     auto &fnc = *fncPtr;
+
+    if (mFormulaMode && fnc.returnType.empty() && !fnc.nativeFncCallback)
+        throw NdaException(Nada::Error::InvalidStatement,0,0,fncName);
 
     if (fnc.callBlock) {
         mState->pushStack(NadaSymbolTable::LocalScope);
@@ -674,6 +738,9 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
 
     auto &fnc = *fncPtr;
 
+    if (mFormulaMode && fnc.returnType.empty() && !fnc.nativeFncCallback)
+        throw NdaException(Nada::Error::InvalidStatement,node->line,node->column,typeName + ":" + node->value.lowerValue);
+
     if (fnc.callBlock) {
         mState->pushStack(NadaSymbolTable::LocalScope);
         assert(values.size() == fnc.parameters.size());
@@ -750,6 +817,9 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
     }
 
     auto &fnc = *fncPtr;
+
+    if (mFormulaMode && fnc.returnType.empty() && !fnc.nativeFncCallback)
+        throw NdaException(Nada::Error::InvalidStatement,node->line,node->column,typeName + "." + node->value.lowerValue);
 
     if (fnc.callBlock) {
         mState->pushStack(NadaSymbolTable::LocalScope);
