@@ -99,6 +99,17 @@ exception
 end;
 ```
 
+A `finally` block runs after the protected statements and after any matching handler. It also runs before `return`, `break`, `continue`, or an unhandled exception leaves the block. If `finally` raises its own exception, that exception replaces the original one.
+
+```neoada
+begin
+    f := TextFile:openRead(path);
+    return f.readAll();
+finally
+    f.close();
+end;
+```
+
 Handlers may re-raise either a named exception or the currently handled exception:
 
 ```neoada
@@ -168,7 +179,11 @@ Provides methods for `String` values and byte conversion helpers.
 | `s.upper()` | - | Converts the string in place to uppercase. |
 | `s.lower()` | - | Converts the string in place to lowercase. |
 | `s.contains(text)` | `Boolean` | True if `text` occurs in `s`. |
+| `s.startsWith(text)` | `Boolean` | True if `s` begins with `text`. |
+| `s.endsWith(text)` | `Boolean` | True if `s` ends with `text`. |
 | `s.indexOf(text)` | `Natural` | First position, or `-1` if not found. |
+| `s.replace(before, after)` | `String` | Returns a copy with all occurrences replaced. |
+| `s.split(separator)` | `List` | Splits into strings; empty separator raises `ConstraintError`. |
 | `s.insert(pos, text)` | - | Inserts text at position. |
 | `s.trim()` | - | Trims whitespace in place. |
 | `s.trimmed()` | `String` | Trimmed copy. |
@@ -191,12 +206,25 @@ Provides methods for `List` values.
 | Method | Returns | Description |
 | --- | --- | --- |
 | `xs.length()` | `Natural` | Number of elements. |
+| `xs.isEmpty()` | `Boolean` | True if the list has no elements. |
 | `xs.clear()` | - | Removes all elements. |
-| `xs.append(value)` | - | Appends one element. |
+| `xs.append(value)` | - | Appends one element. A list is appended as one nested element. |
+| `xs.extend(values)` | - | Appends each element from another list. |
 | `xs.insert(pos, value)` | - | Inserts at position. |
+| `xs.first()` | `Any` | First element; raises `ConstraintError` for empty lists. |
+| `xs.last()` | `Any` | Last element; raises `ConstraintError` for empty lists. |
+| `xs.mid(pos, n)` | `List` | Slice copy with up to `n` elements. |
+| `xs.removeAt(pos)` | - | Removes one element by index. |
+| `xs.removeFirst()` | - | Removes the first element. |
+| `xs.removeLast()` | - | Removes the last element. |
+| `xs.takeAt(pos)` | `Any` | Removes and returns one element by index. |
+| `xs.takeFirst()` | `Any` | Removes and returns the first element. |
+| `xs.takeLast()` | `Any` | Removes and returns the last element. |
 | `xs.concat(value)` | - | Concatenates another list/value. |
 | `xs.contains(value)` | `Boolean` | True if the value exists. |
 | `xs.indexOf(value)` | `Natural` | First position, or `-1` if not found. |
+| `xs.sort()` | - | Sorts in place. |
+| `xs.sorted()` | `List` | Sorted copy. |
 | `xs.flip()` | - | Reverses in place. |
 | `xs.flipped()` | `List` | Reversed copy. |
 
@@ -339,12 +367,19 @@ print(person.value("country", "unknown"));
 | Class | Method | Returns | Description |
 | --- | --- | --- | --- |
 | `Dict` | `d.length()` | `Natural` | Number of entries. |
+| `Dict` | `d.isEmpty()` | `Boolean` | True when the dictionary has no entries. |
 | `Dict` | `d.clear()` | - | Removes all entries. |
 | `Dict` | `d.contains(key)` | `Boolean` | Tests whether a key exists. |
 | `Dict` | `d.remove(key)` | `Natural` | Removes a key and returns `1`, or `0` if absent. |
 | `Dict` | `d.keys()` | `List` | Returns all keys in dictionary order. |
 | `Dict` | `d.values()` | `List` | Returns values in the same order as `keys()`. |
+| `Dict` | `d.items()` | `List` | Returns entries as dictionaries with `key` and `value`. |
 | `Dict` | `d.value(key, defaultValue)` | `Any` | Returns a value without inserting a missing key. |
+| `Dict` | `d.ensure(key, defaultValue)` | `Any` | Returns an existing value or inserts and returns the default. |
+| `Dict` | `d.take(key)` | `Any` | Returns and removes a value; raises `ConstraintError` if absent. |
+| `Dict` | `d.take(key, defaultValue)` | `Any` | Returns and removes a value, or returns the default if absent. |
+| `Dict` | `d.update(other)` | - | Inserts/replaces all entries from another dictionary. |
+| `Dict` | `d.updated(other)` | `Dict` | Returns a merged copy and leaves the original unchanged. |
 
 ## **Planned Features**
 - Additional data structures (e.g., sets and queues).

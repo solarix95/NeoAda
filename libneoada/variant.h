@@ -87,6 +87,7 @@ public:
     int               indexInList(const NdaVariant &value) const;
     bool              containsInList(const NdaVariant &value) const;
     void              reverseList();
+    void              sortList();
     void              clearList();
 
     // Bytes interface

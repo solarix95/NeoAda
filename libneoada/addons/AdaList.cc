@@ -1,6 +1,7 @@
 #include "AdaList.h"
 #include "../state.h"
 #include <cassert>
+#include <algorithm>
 
 #define CHECK_INSTANCE_CALL if (args.find("this") == args.end()) return false
 
@@ -38,6 +39,19 @@ void add_AdaList_symbols(NdaState *state)
         return true;
     });
 
+    // ------------------ List.IsEmpty() -------------------------------------------------------
+    state->bindFnc("list","isEmpty",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+
+        ret.fromBool(state->booleanType(), self.listSize() == 0);
+        return true;
+    });
+
     // ------------------ List.Clear() ---------------------------------------------------------
     state->bindPrc("list","clear",{}, [](const Nda::FncValues& args) -> bool {
 
@@ -66,6 +80,23 @@ void add_AdaList_symbols(NdaState *state)
         return true;
     });
 
+    // ------------------ List.Extend() ---------------------------------------------------------
+    state->bindPrc("list","extend",{{"values", "list", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self   = args.at("this");
+        auto values = args.at("values");
+
+        if (self.type() != Nda::List || values.type() != Nda::List)
+            return false;
+
+        const int count = values.listSize();
+        for (int i=0; i<count; i++)
+            self.appendToList(values.readAccess(i));
+        return true;
+    });
+
     // ------------------ List.Insert() ---------------------------------------------------------
     state->bindPrc("list","insert",{{"p", "Number", Nda::InMode}, {"v", "any", Nda::InMode}}, [](const Nda::FncValues& args) -> bool {
 
@@ -79,6 +110,92 @@ void add_AdaList_symbols(NdaState *state)
             return false;
 
         self.insertIntoList((int)pos.toInt64(), element);
+        return true;
+    });
+
+    // ------------------ List.First() ---------------------------------------------------------
+    state->bindFnc("list","first",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+        if (self.listSize() <= 0) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret = self.readAccess(0);
+        return true;
+    });
+
+    // ------------------ List.Last() ----------------------------------------------------------
+    state->bindFnc("list","last",{}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+        if (self.listSize() <= 0) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret = self.readAccess(self.listSize() - 1);
+        return true;
+    });
+
+    // ------------------ List.TakeAt() --------------------------------------------------------
+    state->bindFnc("list", "takeAt", {{"pos", "natural", Nda::InMode}}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+
+        bool ok = false;
+        const int64_t pos = args.at("pos").toInt64(&ok);
+        if (!ok || pos < 0 || pos >= self.listSize()) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret = self.readAccess(static_cast<int>(pos));
+        self.takeFromList(static_cast<int>(pos));
+        return true;
+    });
+
+    // ------------------ List.TakeFirst() -----------------------------------------------------
+    state->bindFnc("list", "takeFirst", {}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+        if (self.listSize() <= 0) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret = self.readAccess(0);
+        self.takeFromList(0);
+        return true;
+    });
+
+    // ------------------ List.TakeLast() ------------------------------------------------------
+    state->bindFnc("list", "takeLast", {}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+        if (self.listSize() <= 0) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret = self.readAccess(self.listSize() - 1);
+        self.takeFromList(self.listSize() - 1);
         return true;
     });
 
@@ -130,6 +247,60 @@ void add_AdaList_symbols(NdaState *state)
         }
 
         self.takeFromList(self.listSize() - 1);
+        return true;
+    });
+
+    // ------------------ List.Mid() -----------------------------------------------------------
+    state->bindFnc("list", "mid", {{"pos", "natural", Nda::InMode}, {"n", "natural", Nda::InMode}}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+
+        bool posOk = false;
+        bool countOk = false;
+        const int64_t pos = args.at("pos").toInt64(&posOk);
+        const int64_t count = args.at("n").toInt64(&countOk);
+        if (!posOk || !countOk || pos < 0 || count < 0) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret.initType(state->listType());
+        const int size = self.listSize();
+        if (pos >= size)
+            return true;
+
+        const int end = std::min<int64_t>(size, pos + count);
+        for (int i=static_cast<int>(pos); i<end; i++)
+            ret.appendToList(self.readAccess(i));
+        return true;
+    });
+
+    // ------------------ List.Sort() ----------------------------------------------------------
+    state->bindPrc("list", "sort", {}, [](const Nda::FncValues &args) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+
+        self.sortList();
+        return true;
+    });
+
+    // ------------------ List.Sorted() --------------------------------------------------------
+    state->bindFnc("list", "sorted", {}, [](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        CHECK_INSTANCE_CALL;
+
+        auto self = args.at("this");
+        if (self.type() != Nda::List)
+            return false;
+
+        ret.initType(self.runtimeType());
+        ret.assign(self);
+        ret.sortList();
         return true;
     });
 

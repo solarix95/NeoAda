@@ -85,6 +85,33 @@ bool parseBool(const std::string &text, bool &value)
     return false;
 }
 
+
+std::vector<std::string> splitString(const std::string &source, const std::string &separator)
+{
+    std::vector<std::string> parts;
+    size_t pos = 0;
+    while (true) {
+        const size_t next = source.find(separator, pos);
+        if (next == std::string::npos) {
+            parts.push_back(source.substr(pos));
+            break;
+        }
+        parts.push_back(source.substr(pos, next - pos));
+        pos = next + separator.size();
+    }
+    return parts;
+}
+
+std::string replaceAll(std::string source, const std::string &before, const std::string &after)
+{
+    size_t pos = 0;
+    while ((pos = source.find(before, pos)) != std::string::npos) {
+        source.replace(pos, before.size(), after);
+        pos += after.size();
+    }
+    return source;
+}
+
 bool parseFormatSpec(const std::string &format, char &mode, int &digits, bool &hasDigits)
 {
     if (format.empty())
@@ -314,6 +341,41 @@ void add_AdaString_symbols(NdaState *state)
         return true;
     });
 
+
+    // ------------------ String.StartsWith() ----------------------------------------------------
+    state->bindFnc("string","startsWith",{{"s", "string", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self   = args.at("this");
+        auto prefix = args.at("s");
+
+        if (self.type() != Nda::String)
+            return false;
+
+        const std::string text = self.toString();
+        const std::string needle = prefix.toString();
+        ret.fromBool(state->booleanType(), text.size() >= needle.size() && text.compare(0, needle.size(), needle) == 0);
+        return true;
+    });
+
+    // ------------------ String.EndsWith() ------------------------------------------------------
+    state->bindFnc("string","endsWith",{{"s", "string", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self   = args.at("this");
+        auto suffix = args.at("s");
+
+        if (self.type() != Nda::String)
+            return false;
+
+        const std::string text = self.toString();
+        const std::string needle = suffix.toString();
+        ret.fromBool(state->booleanType(), text.size() >= needle.size() && text.compare(text.size() - needle.size(), needle.size(), needle) == 0);
+        return true;
+    });
+
     // ------------------ String.IndexOf() ---------------------------------------------------------
     state->bindFnc("string","indexOf",{{"s", "string", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
 
@@ -328,6 +390,51 @@ void add_AdaString_symbols(NdaState *state)
         std::string::size_type loc = self.toString().find(needle.toString(), 0 );
 
         ret.fromNatural(state->naturalType(),(loc != std::string::npos) ? loc : -1);
+        return true;
+    });
+
+
+    // ------------------ String.Replace() --------------------------------------------------------
+    state->bindFnc("string","replace",{{"before", "string", Nda::InMode}, {"after", "string", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self   = args.at("this");
+        auto before = args.at("before");
+        auto after  = args.at("after");
+
+        if (self.type() != Nda::String)
+            return false;
+        if (before.toString().empty()) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret.fromString(self.runtimeType(), replaceAll(self.toString(), before.toString(), after.toString()));
+        return true;
+    });
+
+    // ------------------ String.Split() ----------------------------------------------------------
+    state->bindFnc("string","split",{{"separator", "string", Nda::InMode}}, [state](const Nda::FncValues& args, NdaVariant &ret) -> bool {
+
+        CHECK_INSTANCE_CALL;
+
+        auto self      = args.at("this");
+        auto separator = args.at("separator");
+
+        if (self.type() != Nda::String)
+            return false;
+        if (separator.toString().empty()) {
+            state->raiseException("constrainterror");
+            return false;
+        }
+
+        ret.initType(state->listType());
+        for (const auto &part : splitString(self.toString(), separator.toString())) {
+            NdaVariant item;
+            item.fromString(state->stringType(), part);
+            ret.appendToList(item);
+        }
         return true;
     });
 

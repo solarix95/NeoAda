@@ -53,6 +53,7 @@ private:
     void runReturn(Nda::Runnable *node);
     void runRaise(Nda::Runnable *node);
     void runExceptionHandlers(Nda::Runnable *node);
+    void runFinallyBlock(Nda::Runnable *node);
     void runBreak(Nda::Runnable *node);
     void runContinue(Nda::Runnable *node);
     void runIfStatement(Nda::Runnable *node);

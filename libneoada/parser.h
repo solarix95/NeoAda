@@ -52,6 +52,7 @@ public:
         Raise,
         Exception,
         ExceptionHandler,
+        Finally,
         Break,
         Continue,
         Range,
@@ -98,12 +99,14 @@ private:
     NdaParser::ASTNodePtr parseReturn();
     NdaParser::ASTNodePtr parseRaise();
     NdaParser::ASTNodePtr parseExceptionHandlers();
+    NdaParser::ASTNodePtr parseFinallyBlock();
     NdaParser::ASTNodePtr parseBreak();
     NdaParser::ASTNodePtr parseContinue();
 
     // Parse Sub-Elements
     NdaParser::ASTNodePtr parseBlockEnd(const std::string& endToken1,
-                                           const std::string& endToken2 = "");         // block/scope from "if"/"else"/"elsif" to "end"
+                                           const std::string& endToken2 = "",
+                                           const std::string& endToken3 = "");         // block/scope from "if"/"else"/"elsif" to "end"
     NdaParser::ASTNodePtr parseSeparator(const NdaParser::ASTNodePtr &currentNode);
 
     NdaParser::ASTNodePtr parseFormalParameterList();                                 // procedure/function parameters;

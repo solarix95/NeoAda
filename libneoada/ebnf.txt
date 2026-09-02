@@ -59,10 +59,10 @@ builtin_type    ::= "Any"
 (* Procedures and functions. A name after end is optional, but if present it
    must match the declared procedure/function name. *)
 procedure_declaration ::= "procedure" [ method_context ] identifier "(" formal_parameter_list ")"
-                          "is" { local_declaration } "begin" statement_list "end" [ identifier ] ";"
+                          "is" { local_declaration } "begin" statement_list [ exception_part ] [ finally_part ] "end" [ identifier ] ";"
 
 function_declaration  ::= "function" [ method_context ] identifier "(" formal_parameter_list ")"
-                          "return" type "is" { local_declaration } "begin" statement_list "end" [ identifier ] ";"
+                          "return" type "is" { local_declaration } "begin" statement_list [ exception_part ] [ finally_part ] "end" [ identifier ] ";"
 
 method_context        ::= type ":"
 local_declaration     ::= declaration_without_keyword ";"
@@ -79,11 +79,12 @@ assignable            ::= identifier | access_expression
 return_statement      ::= "return" [ expression ] ";"
 raise_statement       ::= "raise" [ identifier ] ";"
 
-block_statement       ::= "begin" statement_list [ exception_part ] "end" ";"
+block_statement       ::= "begin" statement_list [ exception_part ] [ finally_part ] "end" ";"
 statement_list        ::= { statement }
 
 exception_part        ::= "exception" exception_handler { exception_handler }
 exception_handler     ::= "when" ( identifier | "others" ) "=>" statement_list
+finally_part          ::= "finally" statement_list
 
 if_statement          ::= "if" expression "then" statement_list
                           { "elsif" expression "then" statement_list }

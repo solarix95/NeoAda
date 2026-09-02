@@ -1454,6 +1454,19 @@ void NdaVariant::reverseList()
 }
 
 //-------------------------------------------------------------------------------------------------
+void NdaVariant::sortList()
+{
+    assert(type() == Nda::List);
+    if (myType() == Nda::Reference)
+        return internalReference()->sortList();
+
+    assert(mValue.uPtr);
+    detachList();
+    auto &array = internalList()->array();
+    std::sort(array.begin(), array.end());
+}
+
+//-------------------------------------------------------------------------------------------------
 void NdaVariant::clearList()
 {
     if (myType() == Nda::Reference)

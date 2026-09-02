@@ -17,7 +17,12 @@ private slots:
     void test_api_runtime_AdaString_Uppper();
     void test_api_runtime_AdaString_Lower();
     void test_api_runtime_AdaString_Contains();
+    void test_api_runtime_AdaString_StartsEndsWith();
     void test_api_runtime_AdaString_IndexOf();
+    void test_api_runtime_AdaString_Replace();
+    void test_api_runtime_AdaString_ReplaceConstraintError();
+    void test_api_runtime_AdaString_Split();
+    void test_api_runtime_AdaString_SplitConstraintError();
     void test_api_runtime_AdaString_Trim();
     void test_api_runtime_AdaString_Trimmed();
     void test_api_runtime_AdaString_Chop1();
@@ -199,6 +204,25 @@ void TstAdaString::test_api_runtime_AdaString_Contains()
 }
 
 //-------------------------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_StartsEndsWith()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "NeoAda.txt";
+
+    return x.startsWith("Neo") and x.endsWith(".txt") and x.startsWith("Ada") = false and x.endsWith(".png") = false;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toBool());
+}
+
 void TstAdaString::test_api_runtime_AdaString_IndexOf()
 {
     std::string script = R"(
@@ -218,6 +242,91 @@ void TstAdaString::test_api_runtime_AdaString_IndexOf()
 }
 
 //-------------------------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_Replace()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "Ada lernt Ada";
+
+    return x.replace("Ada", "NeoAda");
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QCOMPARE(ret.toString(), std::string("NeoAda lernt NeoAda"));
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_ReplaceConstraintError()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "abc";
+    begin
+        x.replace("", "x");
+    exception
+        when ConstraintError => return 1;
+    end;
+
+    return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QCOMPARE(ret.toInt64(), int64_t(1));
+    QVERIFY(r.state()->unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_Split()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare parts : List := "red,,blue,".split(",");
+
+    return #parts = 4 and parts[0] = "red" and parts[1] = "" and parts[2] = "blue" and parts[3] = "";
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toBool());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstAdaString::test_api_runtime_AdaString_SplitConstraintError()
+{
+    std::string script = R"(
+
+    with Ada.String;
+
+    declare x : String := "abc";
+    begin
+        x.split("");
+    exception
+        when ConstraintError => return 1;
+    end;
+
+    return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QCOMPARE(ret.toInt64(), int64_t(1));
+    QVERIFY(r.state()->unhandledException().empty());
+}
+
 void TstAdaString::test_api_runtime_AdaString_Trim()
 {
     std::string script = R"(

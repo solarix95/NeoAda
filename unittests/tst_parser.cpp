@@ -105,6 +105,7 @@ private slots:
     void test_parser_Type();
     void test_parser_Exception();
     void test_parser_ExceptionReraise();
+    void test_parser_Finally();
 
     void test_parser_Factor();
     void test_parser_Primary1();
@@ -210,6 +211,10 @@ private slots:
     void test_interpreter_ExceptionReraiseAnonymous();
     void test_interpreter_ExceptionMainBlock();
     void test_interpreter_ExceptionNestedBlock();
+    void test_interpreter_FinallySuccess();
+    void test_interpreter_FinallyHandledException();
+    void test_interpreter_FinallyPreservesReturn();
+    void test_interpreter_FinallyExceptionReplacesOriginal();
 
     void test_interpreter_CustomType_TypeIs();
     void test_interpreter_CustomType_Procedure();
@@ -266,6 +271,7 @@ private slots:
     void test_api_evaluate_Dict_Init();
     void test_api_evaluate_Dict_Append();
     void test_api_evaluate_Dict_Embedded();
+    void test_api_evaluate_Dict_NestedListCow();
 
     void test_api_evaluate_GlobalValue();
     void test_api_evaluate_ScopeValue();
@@ -330,6 +336,13 @@ private slots:
     void test_api_runtime_AdaList_MultiInclude();
     void test_api_runtime_AdaList_Length();
     void test_api_runtime_AdaList_Append();
+    void test_api_runtime_AdaList_Extend();
+    void test_api_runtime_AdaList_ExtendRejectNonList();
+    void test_api_runtime_AdaList_MidFirstLast();
+    void test_api_runtime_AdaList_Take();
+    void test_api_runtime_AdaList_TakeConstraintError();
+    void test_api_runtime_AdaList_IsEmpty();
+    void test_api_runtime_AdaList_SortSorted();
     void test_api_runtime_AdaList_Insert();
     void test_api_runtime_AdaList_Remove();
     void test_api_runtime_AdaList_RemoveConstraintError();
@@ -1448,6 +1461,42 @@ Node(Program, "")
         Node(ExceptionHandler, "others")
           Node(Block, "")
             Node(Raise, "")
+)";
+    std::string currentAST =  ast->serialize();
+    QCOMPARE_TRIM(currentAST, expectedAST);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_parser_Finally()
+{
+    std::string script = R"(
+        begin
+            raise ConstraintError;
+        exception
+            when ConstraintError => print("handled");
+        finally
+            print("cleanup");
+        end;
+    )";
+
+    NdaLexer lexer;
+    NdaParser parser(lexer);
+    auto ast = parser.parse(script);
+
+    std::string expectedAST = R"(
+Node(Program, "")
+  Node(Block, "")
+    Node(Raise, "")
+      Node(Identifier, "ConstraintError")
+    Node(Exception, "")
+      Node(ExceptionHandler, "ConstraintError")
+        Node(Block, "")
+          Node(FunctionCall, "print")
+            Node(Literal, "handled")
+    Node(Finally, "")
+      Node(Block, "")
+        Node(FunctionCall, "print")
+          Node(Literal, "cleanup")
 )";
     std::string currentAST =  ast->serialize();
     QCOMPARE_TRIM(currentAST, expectedAST);
@@ -3740,6 +3789,87 @@ void TstParser::test_interpreter_ExceptionNestedBlock()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_FinallySuccess()
+{
+    std::string script = R"(
+        declare cleaned : Natural := 0;
+        begin
+            cleaned := 1;
+        finally
+            cleaned := cleaned + 1;
+        end;
+        return cleaned;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 2);
+    QVERIFY(r.state()->unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_FinallyHandledException()
+{
+    std::string script = R"(
+        declare cleaned : Natural := 0;
+        begin
+            raise ConstraintError;
+        exception
+            when ConstraintError => cleaned := 1;
+        finally
+            cleaned := cleaned + 1;
+        end;
+        return cleaned;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 2);
+    QVERIFY(r.state()->unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_FinallyPreservesReturn()
+{
+    std::string script = R"(
+        function Test() return Natural is
+            cleaned : Natural := 0;
+        begin
+            return 42;
+        finally
+            cleaned := 1;
+        end;
+
+        return Test();
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 42);
+    QVERIFY(r.state()->unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_interpreter_FinallyExceptionReplacesOriginal()
+{
+    std::string script = R"(
+        begin
+            raise ConstraintError;
+        finally
+            raise ProgramError;
+        end;
+    )";
+
+    NdaRuntime r;
+    r.runScript(script);
+
+    QVERIFY(r.state()->unhandledException() == "programerror");
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_interpreter_CustomType_TypeIs()
 {
     std::string script = R"(
@@ -4895,6 +5025,22 @@ void TstParser::test_api_evaluate_Dict_Embedded()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_NestedListCow()
+{
+    std::string script = R"(
+        declare a : Dict := {"items":[1, 2, 3]};
+        declare b : Dict := a;
+
+        b{"items"}[0] := 99;
+
+        return a{"items"}[0] <> b{"items"}[0];
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toBool());
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_GlobalValue()
 {
     std::string script = R"(
@@ -5884,6 +6030,176 @@ void TstParser::test_api_runtime_AdaList_Append()
     auto ret = r.runScript(script);
 
     QVERIFY(ret.toInt64() == 4);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Extend()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,2];
+
+    x.append([3,4]);
+    x.extend([5,6]);
+
+    if x.length() = 5 and x[2].length() = 2 and x[3] = 5 and x[4] = 6 then
+        return 1;
+    end if;
+
+    return 0;
+    )";
+
+    NdaRuntime r;
+
+    auto ret = r.runScript(script);
+
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_ExtendRejectNonList()
+{
+    std::string script = R"(
+
+    with Ada.List;
+
+    declare x : List := [1,2];
+    x.extend(42);
+
+    return x.length();
+    )";
+
+    NdaRuntime r;
+    NdaException ex;
+
+    auto ret = r.runScript(script, &ex);
+
+    QVERIFY(ret.type() == Nda::Undefined);
+    QVERIFY(r.hasError());
+    QVERIFY(ex.code() == Nada::UnknownSymbol);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_MidFirstLast()
+{
+    std::string script = R"(
+    with Ada.List;
+    declare x : List := [10,20,30,40];
+    declare m : List := x.mid(1,2);
+    if x.first() = 10 and x.last() = 40 and m.length() = 2 and m[0] = 20 and m[1] = 30 and x.length() = 4 then
+        return 1;
+    end if;
+    return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_Take()
+{
+    std::string script = R"(
+    with Ada.List;
+    declare x : List := [10,20,30,40];
+    declare a : Natural := x.takeAt(1);
+    declare b : Natural := x.takeFirst();
+    declare c : Natural := x.takeLast();
+    if a = 20 and b = 10 and c = 40 and x.length() = 1 and x[0] = 30 then
+        return 1;
+    end if;
+    return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_TakeConstraintError()
+{
+    std::string script = R"(
+    with Ada.List;
+    declare caught : Natural := 0;
+    declare x : List := [];
+    begin
+        x.first();
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    begin
+        x.last();
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    begin
+        x.takeFirst();
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    begin
+        x.takeLast();
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    begin
+        x.takeAt(0);
+    exception
+        when ConstraintError => caught := caught + 1;
+    end;
+    return caught;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+    QVERIFY(ret.toInt64() == 5);
+    QVERIFY(r.state()->unhandledException().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_IsEmpty()
+{
+    std::string script = R"(
+    with Ada.List;
+    declare x : List := [];
+    declare before : Boolean := x.isEmpty();
+    x.append(42);
+    declare after : Boolean := x.isEmpty();
+    if before = true and after = false then
+        return 1;
+    end if;
+    return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+    QVERIFY(ret.toInt64() == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaList_SortSorted()
+{
+    std::string script = R"(
+    with Ada.List;
+    declare x : List := [3,1,2];
+    declare y : List := x.sorted();
+    if x[0] <> 3 or y[0] <> 1 or y[1] <> 2 or y[2] <> 3 then
+        return 0;
+    end if;
+    x.sort();
+    if x[0] = 1 and x[1] = 2 and x[2] = 3 then
+        return 1;
+    end if;
+    return 0;
+    )";
+
+    NdaRuntime r;
+    auto ret = r.runScript(script);
+    QVERIFY(ret.toInt64() == 1);
 }
 
 //-------------------------------------------------------------------------------------------------

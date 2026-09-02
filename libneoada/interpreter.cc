@@ -221,6 +221,9 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
     case NdaParser::ASTNodeType::ExceptionHandler:
         ret->type = Nda::CallNOP;
         break;
+    case NdaParser::ASTNodeType::Finally:
+        ret->call = &NdaInterpreter::runFinallyBlock;
+        break;
     case NdaParser::ASTNodeType::Break:
         ret->call = &NdaInterpreter::runBreak;
         break;
@@ -516,21 +519,30 @@ void NdaInterpreter::runSingleBlock(Nda::Runnable *node)
 
     for (int i=0; i<node->childrenCount; i++) {
         auto *child = node->children[i];
+
         if (child->call == &NdaInterpreter::runExceptionHandlers) {
             if (mExecState == ExceptionState)
                 run(child);
+            continue;
+        }
+
+        if (child->call == &NdaInterpreter::runFinallyBlock) {
+            run(child);
             break;
         }
+
         if (mExecState == ExceptionState)
+            continue;
+        if (mExecState == ReturnState || mExecState == BreakState || mExecState == ContinueState)
             continue;
 
         run(child);
         if (mExecState == ReturnState)
-            break;
+            continue;
         if (mExecState == BreakState)
-            break;
+            continue;
         if (mExecState == ContinueState)
-            break;
+            continue;
         if (mExecState == ExceptionState)
             continue;
 
@@ -921,6 +933,31 @@ void NdaInterpreter::runExceptionHandlers(Nda::Runnable *node)
         run(handler->children[0]);
         mActiveException = previousActiveException;
         return;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaInterpreter::runFinallyBlock(Nda::Runnable *node)
+{
+    assert(node->childrenCount == 1);
+
+    const ExecState previousState = mExecState;
+    const std::string previousException = mState->unhandledException();
+    const NdaVariant previousRet = mState->ret();
+
+    mExecState = RunState;
+    if (previousState == ExceptionState)
+        mState->clearUnhandledException();
+
+    run(node->children[0]);
+
+    if (mExecState == RunState) {
+        mExecState = previousState;
+        if (previousState == ExceptionState)
+            mState->setUnhandledException(previousException);
+        if (previousState == ReturnState || previousState == BreakState ||
+            previousState == ContinueState || previousState == ExceptionState)
+            mState->ret() = previousRet;
     }
 }
 

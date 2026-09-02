@@ -673,7 +673,8 @@ end case;</pre>
 
 <p><b>Ada.String</b></p>
 <p><code>length()</code>, <code>append(value)</code>, <code>insert(pos,text)</code><br>
-<code>contains(text)</code>, <code>indexOf(text)</code><br>
+<code>contains(text)</code>, <code>startsWith(text)</code>, <code>endsWith(text)</code><br>
+<code>indexOf(text)</code>, <code>replace(before,after)</code>, <code>split(separator)</code><br>
 <code>toUpper()</code>, <code>toLower()</code>, <code>upper()</code>, <code>lower()</code><br>
 <code>trim()</code>, <code>trimmed()</code>, <code>chop(n)</code>, <code>chopped(n)</code><br>
 <code>slice(pos,n)</code>, <code>sliced(pos,n)</code><br>
@@ -684,17 +685,22 @@ end case;</pre>
 
 <p><b>Ada.List</b></p>
 <p>Access elements with <code>list[index]</code>.<br>
-<code>length()</code>, <code>clear()</code>, <code>append(value)</code><br>
-<code>insert(pos,value)</code>, <code>concat(value)</code><br>
+<code>length()</code>, <code>isEmpty()</code>, <code>clear()</code><br>
+<code>append(value)</code>, <code>extend(values)</code>, <code>insert(pos,value)</code><br>
+<code>first()</code>, <code>last()</code>, <code>mid(pos,n)</code><br>
 <code>removeAt(pos)</code>, <code>removeFirst()</code>, <code>removeLast()</code><br>
+<code>takeAt(pos)</code>, <code>takeFirst()</code>, <code>takeLast()</code><br>
 <code>contains(value)</code>, <code>indexOf(value)</code><br>
-<code>flip()</code>, <code>flipped()</code></p>
+<code>sort()</code>, <code>sorted()</code>, <code>flip()</code>, <code>flipped()</code></p>
 
 <p><b>Ada.Dict</b></p>
 <p>Access values with <code>dict{key}</code>.<br>
-<code>length()</code>, <code>clear()</code>, <code>contains(key)</code><br>
-<code>remove(key)</code>, <code>keys()</code>, <code>values()</code><br>
-<code>value(key,defaultValue)</code></p>
+<code>length()</code>, <code>isEmpty()</code>, <code>clear()</code><br>
+<code>contains(key)</code>, <code>remove(key)</code><br>
+<code>keys()</code>, <code>values()</code>, <code>items()</code><br>
+<code>value(key,defaultValue)</code>, <code>ensure(key,defaultValue)</code><br>
+<code>take(key)</code>, <code>take(key,defaultValue)</code><br>
+<code>update(other)</code>, <code>updated(other)</code></p>
 
 <p><b>Other addons:</b></p>
 <ul>
@@ -709,6 +715,8 @@ end case;</pre>
 exception
   when ConstraintError =&gt; print("Invalid value");
   when others =&gt; print("Error"); raise;
+finally
+  -- cleanup code
 end;</pre>
 <p><b>Tip:</b> Use <b>New</b> to start with an empty script, an example, or a prepared scenario.</p>
 )"));
