@@ -24,6 +24,9 @@ public:
 
     bool operator<(const NdaVariant &other) const; // std::map
 
+    bool isValidDictKey() const;
+    int  compareDictKey(const NdaVariant &other) const;
+
     void reset();
     void initType(const Nda::RuntimeType *type);
     void fromString(const Nda::RuntimeType *type, const std::string &value);

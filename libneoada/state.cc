@@ -57,6 +57,12 @@ void NdaState::reset()
         return true;
     });
 
+    bindFnc("isany", {{"value", "Any", Nda::InMode}}, [this](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+        const auto type = args.at("value").runtimeType();
+        ret.fromBool(booleanType(), type && type->dataType == Nda::Any);
+        return true;
+    });
+
 }
 
 //-------------------------------------------------------------------------------------------------

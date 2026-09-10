@@ -1603,6 +1603,13 @@ void NdaInterpreter::runAccessOperator(Nda::Runnable *node)
     } else {
         assert(targetObj.type() == Nda::Dict);
         NdaVariant accessIndex = mState->ret();
+        accessIndex.dereference();
+        if (!accessIndex.isValidDictKey()) {
+            mState->setUnhandledException("constrainterror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
         auto &targetValue = targetObj.writeDictAccess(accessIndex);
         if (targetValue.type() == Nda::Undefined) // new Value!!
             targetValue.initType(mState->typeByName("any"));
@@ -1838,6 +1845,13 @@ void NdaInterpreter::evalDictLiteral(Nda::Runnable *node)
     for (int i=0; i<node->childrenCount/2; i++) {
         run(node->children[i*2 + 0]);
         auto key   = mState->ret();
+        key.dereference();
+        if (!key.isValidDictKey()) {
+            mState->setUnhandledException("constrainterror");
+            mState->ret().reset();
+            mExecState = ExceptionState;
+            return;
+        }
         run(node->children[i*2 + 1]);
         auto value = mState->ret();
         ret.appendToDict(key,value);

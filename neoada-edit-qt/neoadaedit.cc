@@ -669,6 +669,9 @@ end case;</pre>
 <li><code>16#FF#</code>, <code>2#1010#</code>: based literals</li>
 </ul>
 
+<p><b>Builtins:</b><br>
+<code>typeof(value)</code>, <code>isany(value)</code></p>
+
 <p><b>Addons:</b> Load helpers with <code>with Ada.Name;</code>.</p>
 
 <p><b>Ada.String</b></p>

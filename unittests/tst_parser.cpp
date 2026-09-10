@@ -238,6 +238,7 @@ private slots:
 
     void test_api_evaluate_Literals();
     void test_api_evaluate_TypeOf();
+    void test_api_evaluate_IsAny();
     void test_api_evaluate_Length();
     void test_api_evaluate_Equal();
     void test_api_evaluate_NotEqual();
@@ -270,6 +271,12 @@ private slots:
 
     void test_api_evaluate_Dict_Init();
     void test_api_evaluate_Dict_Append();
+    void test_api_evaluate_Dict_StringVariableKey();
+    void test_api_evaluate_Dict_LocalStringKeyLifetime();
+    void test_api_evaluate_Dict_ValidKeyTypes();
+    void test_api_evaluate_Dict_InvalidKeyTypes();
+    void test_api_evaluate_Dict_InvalidNumberKeys();
+    void test_api_runtime_AdaDict_InvalidMethodKey();
     void test_api_evaluate_Dict_Embedded();
     void test_api_evaluate_Dict_NestedListCow();
 
@@ -4392,6 +4399,21 @@ void TstParser::test_api_evaluate_TypeOf()
 }
 
 //-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_IsAny()
+{
+    NdaState state;
+
+    QVERIFY(NeoAda::evaluate("declare value : Any; return isany(value);", state).toBool());
+    QVERIFY(NeoAda::evaluate("return isany(42);", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return isany(42.5);", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return isany(true);", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return isany(42_b);", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return isany(\"NeoAda\");", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return isany([1, 2, 3]);", state).toBool() == false);
+    QVERIFY(NeoAda::evaluate("return isany({\"answer\": 42});", state).toBool() == false);
+}
+
+//-------------------------------------------------------------------------------------------------
 void TstParser::test_api_evaluate_Equal()
 {
     NdaState state;
@@ -5010,6 +5032,101 @@ void TstParser::test_api_evaluate_Dict_Append()
 
     NdaState state;
     QVERIFY(NeoAda::evaluate(script, state).toInt64() == 23);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_StringVariableKey()
+{
+    std::string script = R"(
+        declare data : Dict := {"answer": 42};
+        declare key : String := "answer";
+        return data{key};
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_LocalStringKeyLifetime()
+{
+    std::string script = R"(
+        declare data : Dict;
+
+        procedure insertValue() is
+            key : String := "answer";
+        begin
+            data{key} := 42;
+        end;
+
+        insertValue();
+        return data{"answer"};
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 42);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_ValidKeyTypes()
+{
+    std::string script = R"(
+        declare data : Dict;
+        data{"key"} := 1;
+        data{true}  := 2;
+        data{7_b}   := 4;
+        data{7}     := 8;
+        data{7_u}   := 16;
+        data{7.0}   := 32;
+        return data{"key"} + data{true} + data{7_b} + data{7} + data{7_u} + data{7.0};
+    )";
+
+    NdaState state;
+    QVERIFY(NeoAda::evaluate(script, state).toInt64() == 63);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_InvalidKeyTypes()
+{
+    const std::vector<std::string> scripts = {
+        "declare data : Dict; declare key : Any; data{key} := 1;",
+        "declare data : Dict; declare key : List := [1]; data{key} := 1;",
+        "declare data : Dict; declare key : Bytes; data{key} := 1;",
+        "declare data : Dict; declare key : Dict := {}; data{key} := 1;"
+    };
+
+    for (const auto &script : scripts) {
+        NdaRuntime runtime;
+        runtime.runScript(script);
+        QCOMPARE(runtime.state()->unhandledException(), std::string("constrainterror"));
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_evaluate_Dict_InvalidNumberKeys()
+{
+    const std::vector<std::string> scripts = {
+        "with Ada.Math; declare data : Dict; data{Math:nan()} := 1;",
+        "with Ada.Math; declare data : Dict; data{Math:infinity()} := 1;"
+    };
+
+    for (const auto &script : scripts) {
+        NdaRuntime runtime;
+        runtime.runScript(script);
+        QCOMPARE(runtime.state()->unhandledException(), std::string("constrainterror"));
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_api_runtime_AdaDict_InvalidMethodKey()
+{
+    NdaRuntime runtime;
+    runtime.runScript(R"(
+        with Ada.Dict;
+        declare data : Dict;
+        data.ensure([], 42);
+    )");
+    QCOMPARE(runtime.state()->unhandledException(), std::string("constrainterror"));
 }
 
 //-------------------------------------------------------------------------------------------------

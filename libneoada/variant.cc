@@ -64,6 +64,60 @@ bool NdaVariant::operator<(const NdaVariant &other) const
 }
 
 //-------------------------------------------------------------------------------------------------
+bool NdaVariant::isValidDictKey() const
+{
+    if (myType() == Nda::Reference)
+        return cInternalReference()->isValidDictKey();
+
+    switch (myType()) {
+    case Nda::Number:
+        return std::isfinite(mValue.uDouble);
+    case Nda::Natural:
+    case Nda::Supernatural:
+    case Nda::Boolean:
+    case Nda::Byte:
+    case Nda::String:
+        return true;
+    default:
+        return false;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+int NdaVariant::compareDictKey(const NdaVariant &other) const
+{
+    if (myType() == Nda::Reference)
+        return cInternalReference()->compareDictKey(other);
+    if (other.myType() == Nda::Reference)
+        return compareDictKey(*other.cInternalReference());
+
+    assert(isValidDictKey());
+    assert(other.isValidDictKey());
+
+    if (myType() != other.myType())
+        return myType() < other.myType() ? -1 : 1;
+
+    switch (myType()) {
+    case Nda::Number:
+        return OP_SPACESHIP(mValue.uDouble, other.mValue.uDouble);
+    case Nda::Natural:
+        return OP_SPACESHIP(mValue.uInt64, other.mValue.uInt64);
+    case Nda::Supernatural:
+        return OP_SPACESHIP(mValue.uUInt64, other.mValue.uUInt64);
+    case Nda::Boolean:
+    case Nda::Byte:
+        return OP_SPACESHIP(mValue.uByte, other.mValue.uByte);
+    case Nda::String:
+        return OP_SPACESHIP(toString(), other.toString());
+    default:
+        break;
+    }
+
+    assert(false && "invalid dict key");
+    return 0;
+}
+
+//-------------------------------------------------------------------------------------------------
 void NdaVariant::initType(const Nda::RuntimeType *type)
 {
     if (mRuntimeType) reset();
@@ -760,6 +814,12 @@ double NdaVariant::spaceship(const NdaVariant &other, bool *ok) const
 {
     if (ok) *ok = false;
 
+    if (myType() == Nda::Reference)
+        return cInternalReference()->spaceship(other, ok);
+
+    if (other.myType() == Nda::Reference)
+        return spaceship(*other.cInternalReference(), ok);
+
     // double camparison
     if (type() != other.type() && (type() == Nda::Number || other.type() == Nda::Number)) {
         bool vok = true;
@@ -1341,7 +1401,9 @@ void NdaVariant::appendToList(const NdaVariant &value)
 
     assert(mValue.uPtr);
     detachList();
-    internalList()->array().push_back(value);
+    NdaVariant storedValue = value;
+    storedValue.dereference();
+    internalList()->array().push_back(storedValue);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1495,7 +1557,9 @@ bool NdaVariant::appendToBytes(const NdaVariant &value)
 
     assert(mValue.uPtr);
     detachBytes();
-    internalBytes()->array().push_back(value);
+    NdaVariant storedValue = value;
+    storedValue.dereference();
+    internalBytes()->array().push_back(storedValue);
     return true;
 }
 
@@ -1550,8 +1614,14 @@ void NdaVariant::appendToDict(const NdaVariant &key, const NdaVariant &value)
         return internalReference()->appendToDict(key,value);
 
     assert(mValue.uPtr);
+    NdaVariant storedKey = key;
+    storedKey.dereference();
+    assert(storedKey.isValidDictKey());
+    NdaVariant storedValue = value;
+    storedValue.dereference();
+
     detachDict();
-    internalDict()->dict()[key] = value;
+    internalDict()->dict()[storedKey] = storedValue;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1561,7 +1631,11 @@ bool NdaVariant::contains(const NdaVariant &key) const
     if (myType() == Nda::Reference)
         return cInternalReference()->contains(key);
     assert(mValue.uPtr);
-    return cInternalDict()->cDict().count(key) > 0;
+    NdaVariant storedKey = key;
+    storedKey.dereference();
+    if (!storedKey.isValidDictKey())
+        return false;
+    return cInternalDict()->cDict().count(storedKey) > 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1572,9 +1646,12 @@ NdaVariant &NdaVariant::writeDictAccess(const NdaVariant &key)
         return internalReference()->writeDictAccess(key);
 
     assert(mValue.uPtr);
+    NdaVariant storedKey = key;
+    storedKey.dereference();
+    assert(storedKey.isValidDictKey());
     detachDict();
 
-    return internalDict()->dict()[key]; // read only: internalDict()->dict().at(key);
+    return internalDict()->dict()[storedKey]; // read only: internalDict()->dict().at(storedKey);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1605,7 +1682,9 @@ void NdaVariant::takeFromDict(const NdaVariant &key)
 
     detachDict();
 
-    internalDict()->dict().erase(key);
+    NdaVariant storedKey = key;
+    storedKey.dereference();
+    internalDict()->dict().erase(storedKey);
 }
 
 //-------------------------------------------------------------------------------------------------

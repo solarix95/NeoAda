@@ -7,6 +7,18 @@
 
 namespace Nda {
 
+namespace {
+
+bool validateDictKey(NdaState *state, const NdaVariant &key)
+{
+    if (key.isValidDictKey())
+        return true;
+    state->raiseException("constrainterror");
+    return false;
+}
+
+}
+
 void add_AdaDict_symbols(NdaState *state)
 {
     assert(state);
@@ -54,6 +66,9 @@ void add_AdaDict_symbols(NdaState *state)
         if (self.type() != Nda::Dict)
             return false;
 
+        if (!validateDictKey(state, args.at("key")))
+            return false;
+
         ret.fromBool(state->booleanType(), self.contains(args.at("key")));
         return true;
     });
@@ -63,6 +78,9 @@ void add_AdaDict_symbols(NdaState *state)
 
         auto self = args.at("this");
         if (self.type() != Nda::Dict)
+            return false;
+
+        if (!validateDictKey(state, args.at("key")))
             return false;
 
         const bool removed = self.contains(args.at("key"));
@@ -98,7 +116,7 @@ void add_AdaDict_symbols(NdaState *state)
         return true;
     });
 
-    state->bindFnc("dict", "value", {{"key", "any", Nda::InMode}, {"defaultValue", "any", Nda::InMode}}, [](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+    state->bindFnc("dict", "value", {{"key", "any", Nda::InMode}, {"defaultValue", "any", Nda::InMode}}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
         CHECK_INSTANCE_CALL;
 
         auto self = args.at("this");
@@ -106,6 +124,8 @@ void add_AdaDict_symbols(NdaState *state)
             return false;
 
         const auto key = args.at("key");
+        if (!validateDictKey(state, key))
+            return false;
         ret = self.contains(key) ? self.writeDictAccess(key) : args.at("defaultValue");
         return true;
     });
@@ -141,6 +161,8 @@ void add_AdaDict_symbols(NdaState *state)
             return false;
 
         const auto key = args.at("key");
+        if (!validateDictKey(state, key))
+            return false;
         if (!self.contains(key)) {
             state->raiseException("constrainterror");
             return false;
@@ -151,7 +173,7 @@ void add_AdaDict_symbols(NdaState *state)
         return true;
     });
 
-    state->bindFnc("dict", "take", {{"key", "any", Nda::InMode}, {"defaultValue", "any", Nda::InMode}}, [](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+    state->bindFnc("dict", "take", {{"key", "any", Nda::InMode}, {"defaultValue", "any", Nda::InMode}}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
         CHECK_INSTANCE_CALL;
 
         auto self = args.at("this");
@@ -159,6 +181,8 @@ void add_AdaDict_symbols(NdaState *state)
             return false;
 
         const auto key = args.at("key");
+        if (!validateDictKey(state, key))
+            return false;
         if (self.contains(key)) {
             ret = self.writeDictAccess(key);
             self.takeFromDict(key);
@@ -168,7 +192,7 @@ void add_AdaDict_symbols(NdaState *state)
         return true;
     });
 
-    state->bindFnc("dict", "ensure", {{"key", "any", Nda::InMode}, {"defaultValue", "any", Nda::InMode}}, [](const Nda::FncValues &args, NdaVariant &ret) -> bool {
+    state->bindFnc("dict", "ensure", {{"key", "any", Nda::InMode}, {"defaultValue", "any", Nda::InMode}}, [state](const Nda::FncValues &args, NdaVariant &ret) -> bool {
         CHECK_INSTANCE_CALL;
 
         auto self = args.at("this");
@@ -176,6 +200,8 @@ void add_AdaDict_symbols(NdaState *state)
             return false;
 
         const auto key = args.at("key");
+        if (!validateDictKey(state, key))
+            return false;
         if (!self.contains(key))
             self.appendToDict(key, args.at("defaultValue"));
         ret = self.writeDictAccess(key);

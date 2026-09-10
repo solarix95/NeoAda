@@ -154,6 +154,15 @@ int main() {
 }
 ```
 
+## **Builtin Runtime Functions**
+
+These functions are available without an addon.
+
+| Function | Returns | Description |
+| --- | --- | --- |
+| `typeof(value)` | `String` | Current runtime type name, for example `natural`, `string`, or `any`. |
+| `isany(value)` | `Boolean` | True when `typeof(value)` is `any`. |
+
 ## **Addon Reference**
 
 Addons are loaded with `with Ada.Name;`. Type and method names are case-insensitive, but the examples use the preferred display style. Static methods use `Type:method(...)`; instance methods use `value.method(...)`. Instance methods can be chained.

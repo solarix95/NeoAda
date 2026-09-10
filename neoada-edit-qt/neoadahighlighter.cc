@@ -73,7 +73,7 @@ NeoAdaHighlighter::NeoAdaHighlighter(QTextDocument* document)
     m_rules.push_back({ wordsRx(opWords), opwFmt });
 
     // ---------- Built-in functions ----------
-    m_rules.push_back({ wordsRx({"typeof"}), fnFmt });
+    m_rules.push_back({ wordsRx({"typeof", "isany"}), fnFmt });
 
     // ---------- Literals ----------
     // true/false as booleans

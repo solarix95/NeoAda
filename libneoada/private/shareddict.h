@@ -9,7 +9,15 @@
 
 namespace Nda {
 
-using StdMap = std::map<NdaVariant,NdaVariant>;
+struct DictKeyLess
+{
+    bool operator()(const NdaVariant &left, const NdaVariant &right) const
+    {
+        return left.compareDictKey(right) < 0;
+    }
+};
+
+using StdMap = std::map<NdaVariant,NdaVariant,DictKeyLess>;
 
 class SharedDict : public Nda::SharedData
 {
