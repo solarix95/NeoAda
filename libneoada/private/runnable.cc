@@ -3,7 +3,7 @@
 
 //-------------------------------------------------------------------------------------------------
 Nda::Runnable::Runnable(int l, int c, int ccount, const std::string &v)
-    : value(v), parent(nullptr), line(l)
+    : value(v), parent(nullptr), sourceId(0), line(l)
     , column(c), variantCache(nullptr)
     , symbolIndex(-1), symbolScope(-1), symbolIsGlobal(false)
 {
@@ -16,7 +16,7 @@ Nda::Runnable::Runnable(int l, int c, int ccount, const std::string &v)
 
 //-------------------------------------------------------------------------------------------------
 Nda::Runnable::Runnable(int l, int c, int ccount, const LowerString &v)
-    : value(v), parent(nullptr), line(l)
+    : value(v), parent(nullptr), sourceId(0), line(l)
     , column(c), variantCache(nullptr)
     , symbolIndex(-1), symbolScope(-1), symbolIsGlobal(false)
 {

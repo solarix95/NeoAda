@@ -2,6 +2,7 @@
 #define LIB_NEOADA_RUNNABLE_H
 
 #include "utils.h"
+#include <cstdint>
 
 class NdaVariant;
 class NdaInterpreter;
@@ -32,6 +33,7 @@ struct Runnable
     Runnable        **children;
     int               childrenCount;
 
+    uint32_t          sourceId;
     int               line;
     int               column;
 

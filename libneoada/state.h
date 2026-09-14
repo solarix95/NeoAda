@@ -2,6 +2,8 @@
 #define LIB_NEOADA_STATE_H
 
 #include <string>
+#include <cstdint>
+#include <cstddef>
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
@@ -12,6 +14,39 @@
 
 class NdaInterpreter;
 
+namespace Nda {
+
+struct SourceLocation {
+    uint32_t sourceId;
+    int line;
+    int column;
+
+    SourceLocation(uint32_t source = 0, int row = 0, int col = 0)
+        : sourceId(source), line(row), column(col) {}
+
+    bool isValid() const { return sourceId != 0 || line != 0 || column != 0; }
+};
+
+struct StackFrame {
+    std::string callable;
+    SourceLocation callSite;
+
+    StackFrame(const std::string &name = "", const SourceLocation &site = SourceLocation())
+        : callable(name), callSite(site) {}
+};
+
+struct ExceptionContext {
+    std::string name;
+    std::string message;
+    SourceLocation origin;
+    std::vector<StackFrame> stack;
+
+    bool isValid() const { return !name.empty(); }
+    void clear() { name.clear(); message.clear(); origin = SourceLocation(); stack.clear(); }
+};
+
+}
+
 class NdaState
 {
 public:
@@ -19,6 +54,28 @@ public:
     virtual ~NdaState();
 
     void       reset();
+
+    uint32_t registerSource(const std::string &sourceName, const std::string &source = "", const std::string &kind = "script");
+    std::string sourceName(uint32_t sourceId) const;
+    static std::string anonymousSourceName(const std::string &source, const std::string &kind = "script", size_t limit = 100);
+
+    const Nda::SourceLocation &currentLocation() const;
+    void setCurrentLocation(const Nda::SourceLocation &location);
+
+    void pushDebugFrame(const std::string &callable, const Nda::SourceLocation &callSite);
+    void popDebugFrame();
+
+    void raiseException(const std::string &name, const std::string &message = "");
+    const Nda::ExceptionContext &pendingException() const;
+    void setPendingException(const Nda::ExceptionContext &context);
+    void clearPendingException();
+    const Nda::ExceptionContext *activeException() const;
+    void pushActiveException(const Nda::ExceptionContext &context);
+    void popActiveException();
+
+    std::string exceptionWhat() const;
+    std::string exceptionWhere() const;
+    std::string exceptionTrace() const;
 
     // runtime type information
     const Nda::RuntimeType *registerType(std::string name, Nda::Type type, bool instantiable);
@@ -106,20 +163,24 @@ public:
 
     inline NdaVariant  &ret()  { return mRetValue; }
 
-    inline std::string  unhandledException() const { return mUnhandledException; }
-    inline bool         hasUnhandledException() const { return !mUnhandledException.empty(); }
-    inline void         raiseException(const std::string &name) { mUnhandledException = name; }
+    inline std::string  unhandledException() const { return mPendingException.name; }
+    inline bool         hasUnhandledException() const { return mPendingException.isValid(); }
 
 private:
     friend class NdaInterpreter;
 
-    inline void         setUnhandledException(const std::string &name) { mUnhandledException = name; }
-    inline void         clearUnhandledException() { mUnhandledException.clear(); }
+    inline void         setUnhandledException(const std::string &name) { raiseException(name); }
+    inline void         clearUnhandledException() { clearPendingException(); }
 
     void destroy();
 
     NdaVariant         mRetValue;
-    std::string        mUnhandledException;
+    Nda::ExceptionContext mPendingException;
+    std::vector<Nda::ExceptionContext> mActiveExceptions;
+    Nda::SourceLocation mCurrentLocation;
+    std::vector<Nda::StackFrame> mDebugCallStack;
+    uint32_t mNextSourceId;
+    std::unordered_map<uint32_t, std::string> mSources;
 
     NadaSymbolTables   mGlobals;
     NadaStackFrames    mCallStack;

@@ -215,6 +215,11 @@ private slots:
     void test_interpreter_FinallyHandledException();
     void test_interpreter_FinallyPreservesReturn();
     void test_interpreter_FinallyExceptionReplacesOriginal();
+    void test_debug_ExceptionContextWhereWhatTrace();
+    void test_debug_ExceptionContextReraisePreservesOrigin();
+    void test_debug_ExceptionContextFinallyPreservesContext();
+    void test_debug_AnonymousSourcePreview();
+    void test_debug_PreparedFormulaSourceName();
 
     void test_interpreter_CustomType_TypeIs();
     void test_interpreter_CustomType_Procedure();
@@ -3874,6 +3879,109 @@ void TstParser::test_interpreter_FinallyExceptionReplacesOriginal()
     r.runScript(script);
 
     QVERIFY(r.state()->unhandledException() == "programerror");
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_debug_ExceptionContextWhereWhatTrace()
+{
+    NdaRuntime runtime;
+    runtime.state()->bindPrc("failnative", {}, [&runtime](const Nda::FncValues &) -> bool {
+        runtime.state()->raiseException("SensorError", "connection lost");
+        return false;
+    });
+
+    const auto ret = runtime.runScript(R"(
+        function Inner() return String is
+        begin
+            failNative();
+            return "";
+        exception
+            when others => return where() & "|" & what() & "|" & trace();
+        end;
+
+        return Inner();
+    )", "plugins/sensors.ada");
+
+    const std::string text = ret.toString();
+    QVERIFY2(text.find("plugins/sensors.ada:6:") != std::string::npos, text.c_str());
+    QVERIFY(text.find("sensorerror: connection lost") != std::string::npos);
+    QVERIFY(text.find("called from failnative") != std::string::npos);
+    QVERIFY(text.find("called from inner") != std::string::npos);
+    QVERIFY(runtime.runScript("return where();").toString().empty());
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_debug_ExceptionContextReraisePreservesOrigin()
+{
+    NdaRuntime runtime;
+    const auto ret = runtime.runScript(R"(
+        function Inner() return String is
+        begin
+            raise SensorError;
+        exception
+            when others => raise;
+        end;
+
+        function Outer() return String is
+        begin
+            return Inner();
+        exception
+            when others => return where() & "|" & what();
+        end;
+
+        return Outer();
+    )", "reraise.ada");
+
+    QVERIFY2(ret.toString().find("reraise.ada:6:") != std::string::npos, ret.toString().c_str());
+    QVERIFY(ret.toString().find("sensorerror") != std::string::npos);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_debug_ExceptionContextFinallyPreservesContext()
+{
+    NdaRuntime runtime;
+    const auto ret = runtime.runScript(R"(
+        begin
+            begin
+                raise OriginalError;
+            finally
+                declare cleaned : Natural := 1;
+            end;
+        exception
+            when others => return where() & "|" & what();
+        end;
+    )", "finally.ada");
+
+    QVERIFY2(ret.toString().find("finally.ada:6:") != std::string::npos, ret.toString().c_str());
+    QVERIFY(ret.toString().find("originalerror") != std::string::npos);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_debug_AnonymousSourcePreview()
+{
+    NdaRuntime runtime;
+    const auto ret = runtime.runScript(R"(
+        begin
+            raise PreviewError;
+        exception
+            when others => return where();
+        end;
+    )");
+
+    QVERIFY(ret.toString().find("[script \"") == 0);
+    QVERIFY(ret.toString().find("raise PreviewError") != std::string::npos);
+}
+
+//-------------------------------------------------------------------------------------------------
+void TstParser::test_debug_PreparedFormulaSourceName()
+{
+    NdaRuntime runtime;
+    runtime.runScript("declare data : Dict;");
+    NdaFormula formula = runtime.prepareFormula("data{[]}", "rules/altitude.formula");
+    QVERIFY(formula.isValid());
+    runtime.executeFormula(formula);
+    QVERIFY(runtime.state()->exceptionWhere().find("rules/altitude.formula:1:") == 0);
+    QCOMPARE(runtime.state()->exceptionWhat(), std::string("constrainterror"));
 }
 
 //-------------------------------------------------------------------------------------------------

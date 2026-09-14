@@ -579,13 +579,11 @@ void add_AdaString_symbols(NdaState *state)
         CHECK_INSTANCE_CALL;
 
         auto self = args.at("this");
-        std::cout << "TO NUMBER1 " << self.runtimeType()->name.lowerValue << std::endl;
         if (self.type() != Nda::String)
             return false;
 
         double value = 0.0;
 
-        std::cout << "TO NUMBER2 " << self.toString() << " " << parseNumber(self.toString(), value) << std::endl;
         if (!parseNumber(self.toString(), value))
             return false;
 

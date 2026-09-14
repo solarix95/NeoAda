@@ -2,12 +2,15 @@
 #include "state.h"
 #include "variant.h"
 #include <cassert>
+#include <cctype>
+#include <sstream>
 
 #define BUILD_METHOD(t,n) (t + ":" + n)
 
 //-------------------------------------------------------------------------------------------------
 NdaState::NdaState()
-    : mBooleanType(nullptr)
+    : mNextSourceId(1)
+    , mBooleanType(nullptr)
     , mNumberType(nullptr)
     , mNaturalType(nullptr)
     , mStringType(nullptr)
@@ -29,7 +32,10 @@ void NdaState::reset()
 {
     destroy();
 
-    mUnhandledException.clear();
+    mPendingException.clear();
+    mActiveExceptions.clear();
+    mCurrentLocation = Nda::SourceLocation();
+    mDebugCallStack.clear();
 
     mGlobals.push_back(new NadaSymbolTable(NadaSymbolTable::GlobalScope));
 
@@ -63,6 +69,186 @@ void NdaState::reset()
         return true;
     });
 
+    bindFnc("what", {}, [this](const Nda::FncValues &, NdaVariant &ret) -> bool {
+        ret.fromString(stringType(), exceptionWhat());
+        return true;
+    });
+
+    bindFnc("where", {}, [this](const Nda::FncValues &, NdaVariant &ret) -> bool {
+        ret.fromString(stringType(), exceptionWhere());
+        return true;
+    });
+
+    bindFnc("trace", {}, [this](const Nda::FncValues &, NdaVariant &ret) -> bool {
+        ret.fromString(stringType(), exceptionTrace());
+        return true;
+    });
+
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NdaState::anonymousSourceName(const std::string &source, const std::string &kind, size_t limit)
+{
+    std::string preview;
+    bool previousWasSpace = false;
+    bool truncated = false;
+
+    for (unsigned char c : source) {
+        if (std::isspace(c)) {
+            if (!preview.empty() && !previousWasSpace)
+                preview += " ";
+            previousWasSpace = true;
+            continue;
+        }
+        previousWasSpace = false;
+        if (std::iscntrl(c))
+            continue;
+        std::string encoded;
+        if (c == 92 || c == 34)
+            encoded += static_cast<char>(92);
+        encoded += static_cast<char>(c);
+        if (preview.size() + encoded.size() > limit) {
+            truncated = true;
+            break;
+        }
+        preview += encoded;
+    }
+
+    while (!preview.empty() && preview.back() == 32)
+        preview.pop_back();
+    if (preview.empty())
+        return "<" + kind + ">";
+    return "[" + kind + " \"" + preview + (truncated ? "..." : "") + "\"]";
+}
+
+//-------------------------------------------------------------------------------------------------
+uint32_t NdaState::registerSource(const std::string &requestedName, const std::string &source, const std::string &kind)
+{
+    const std::string displayName = requestedName.empty() ? anonymousSourceName(source, kind) : requestedName;
+    for (const auto &entry : mSources) {
+        if (entry.second == displayName)
+            return entry.first;
+    }
+    const uint32_t id = mNextSourceId++;
+    mSources[id] = displayName;
+    return id;
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NdaState::sourceName(uint32_t sourceId) const
+{
+    const auto it = mSources.find(sourceId);
+    return it == mSources.end() ? std::string("<unknown>") : it->second;
+}
+
+//-------------------------------------------------------------------------------------------------
+const Nda::SourceLocation &NdaState::currentLocation() const
+{
+    return mCurrentLocation;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::setCurrentLocation(const Nda::SourceLocation &location)
+{
+    mCurrentLocation = location;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::pushDebugFrame(const std::string &callable, const Nda::SourceLocation &callSite)
+{
+    mDebugCallStack.push_back({callable, callSite});
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::popDebugFrame()
+{
+    assert(!mDebugCallStack.empty());
+    mDebugCallStack.pop_back();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::raiseException(const std::string &name, const std::string &message)
+{
+    mPendingException.name = Nda::toLower(name);
+    mPendingException.message = message;
+    mPendingException.origin = mCurrentLocation;
+    mPendingException.stack = mDebugCallStack;
+}
+
+//-------------------------------------------------------------------------------------------------
+const Nda::ExceptionContext &NdaState::pendingException() const
+{
+    return mPendingException;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::setPendingException(const Nda::ExceptionContext &context)
+{
+    mPendingException = context;
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::clearPendingException()
+{
+    mPendingException.clear();
+}
+
+//-------------------------------------------------------------------------------------------------
+const Nda::ExceptionContext *NdaState::activeException() const
+{
+    return mActiveExceptions.empty() ? nullptr : &mActiveExceptions.back();
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::pushActiveException(const Nda::ExceptionContext &context)
+{
+    mActiveExceptions.push_back(context);
+}
+
+//-------------------------------------------------------------------------------------------------
+void NdaState::popActiveException()
+{
+    assert(!mActiveExceptions.empty());
+    mActiveExceptions.pop_back();
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NdaState::exceptionWhere() const
+{
+    const Nda::ExceptionContext *context = activeException();
+    if (!context && mPendingException.isValid())
+        context = &mPendingException;
+    if (!context)
+        return "";
+    const auto &loc = context->origin;
+    return sourceName(loc.sourceId) + ":" + std::to_string(loc.line) + ":" + std::to_string(loc.column);
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NdaState::exceptionWhat() const
+{
+    const Nda::ExceptionContext *context = activeException();
+    if (!context && mPendingException.isValid())
+        context = &mPendingException;
+    if (!context)
+        return "";
+    return context->message.empty() ? context->name : context->name + ": " + context->message;
+}
+
+//-------------------------------------------------------------------------------------------------
+std::string NdaState::exceptionTrace() const
+{
+    const Nda::ExceptionContext *context = activeException();
+    if (!context && mPendingException.isValid())
+        context = &mPendingException;
+    if (!context)
+        return "";
+
+    std::ostringstream out;
+    out << exceptionWhat() << "\n  at " << sourceName(context->origin.sourceId) << ":" << context->origin.line << ":" << context->origin.column;
+    for (auto it = context->stack.rbegin(); it != context->stack.rend(); ++it)
+        out << "\n  called from " << it->callable << " at " << sourceName(it->callSite.sourceId) << ":" << it->callSite.line << ":" << it->callSite.column;
+    return out.str();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -439,6 +625,12 @@ void NdaState::destroy()
 
     mFunctions.clear(); // release shared-pointers: ASTNodes
     mLoadedAddons.clear();
+    mPendingException.clear();
+    mActiveExceptions.clear();
+    mDebugCallStack.clear();
+    mCurrentLocation = Nda::SourceLocation();
+    mSources.clear();
+    mNextSourceId = 1;
 
     while (!mCallStack.empty()) {
         auto *tables = mCallStack.back();

@@ -19,17 +19,19 @@ public:
     NdaInterpreter(NdaState *state);
     ~NdaInterpreter();
 
-    NdaVariant execute(const NdaParser::ASTNodePtr &node, NdaState *state = nullptr);
+    NdaVariant execute(const NdaParser::ASTNodePtr &node, NdaState *state = nullptr, uint32_t sourceId = 0);
     NdaVariant execute(Nda::Runnable *node, NdaState *state = nullptr);
     NdaVariant executeFormula(Nda::Runnable *node, NdaState *state = nullptr);
 
     bool isFormula(const NdaParser::ASTNodePtr &node) const;
 
-    Nda::Runnable *prepare(const NdaParser::ASTNodePtr &node);
+    Nda::Runnable *prepare(const NdaParser::ASTNodePtr &node, uint32_t sourceId = 0);
 
     Nada::Error invokeFnc(const std::string &typeName, const std::string &fncName, NdaVariants &args);
 
 private:
+    Nda::Runnable *prepareNode(const NdaParser::ASTNodePtr &node);
+
     enum ExecState {
         RunState,
         ReturnState,
@@ -97,10 +99,10 @@ private:
     void evalDictLiteral(Nda::Runnable *node);
 
     ExecState       mExecState;
-    std::string     mActiveException;
     NdaState       *mState;
     Nda::Runnable  *mRunnable;
     bool            mFormulaMode;
+    uint32_t        mPrepareSourceId;
 
     bool            mHasVolatileAccessTarget;
     std::string     mVolatileAccessSymbol;

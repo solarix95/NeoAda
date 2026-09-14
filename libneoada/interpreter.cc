@@ -9,6 +9,32 @@
 
 namespace {
 
+class ExecutionLocationGuard
+{
+public:
+    ExecutionLocationGuard(NdaState *state, const Nda::Runnable *node)
+        : mState(state), mPrevious(state->currentLocation())
+    {
+        mState->setCurrentLocation({node->sourceId, node->line, node->column});
+    }
+    ~ExecutionLocationGuard() { mState->setCurrentLocation(mPrevious); }
+private:
+    NdaState *mState;
+    Nda::SourceLocation mPrevious;
+};
+
+class DebugFrameGuard
+{
+public:
+    DebugFrameGuard(NdaState *state, const std::string &callable) : mState(state)
+    {
+        mState->pushDebugFrame(callable, state->currentLocation());
+    }
+    ~DebugFrameGuard() { mState->popDebugFrame(); }
+private:
+    NdaState *mState;
+};
+
 bool isFormulaNode(const NdaParser::ASTNodePtr &node)
 {
     if (!node)
@@ -51,6 +77,7 @@ NdaInterpreter::NdaInterpreter(NdaState *state)
     : mState(state)
     , mRunnable(nullptr)
     , mFormulaMode(false)
+    , mPrepareSourceId(0)
     , mHasVolatileAccessTarget(false)
 {
 }
@@ -63,7 +90,7 @@ NdaInterpreter::~NdaInterpreter()
 }
 
 //-------------------------------------------------------------------------------------------------
-NdaVariant NdaInterpreter::execute(const NdaParser::ASTNodePtr &node, NdaState *state)
+NdaVariant NdaInterpreter::execute(const NdaParser::ASTNodePtr &node, NdaState *state, uint32_t sourceId)
 {
     assert(node);
     if (!state && !mState)
@@ -75,7 +102,7 @@ NdaVariant NdaInterpreter::execute(const NdaParser::ASTNodePtr &node, NdaState *
     mExecState = RunState;
     mHasVolatileAccessTarget = false;
 
-    mRunnable = prepare(node);
+    mRunnable = prepare(node, sourceId);
     execute(mRunnable,state);
 
     // lets keep "mRunnable" here -> later invoke!!
@@ -124,11 +151,19 @@ NdaVariant NdaInterpreter::execute(Nda::Runnable *node, NdaState *state)
 }
 
 //-------------------------------------------------------------------------------------------------
-Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
+Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node, uint32_t sourceId)
+{
+    mPrepareSourceId = sourceId;
+    return prepareNode(node);
+}
+
+//-------------------------------------------------------------------------------------------------
+Nda::Runnable *NdaInterpreter::prepareNode(const NdaParser::ASTNodePtr &node)
 {
     assert(node);
 
     Nda::Runnable *ret = new Nda::Runnable(node->line,node->column, (int)node->children.size(), node->value);
+    ret->sourceId = mPrepareSourceId;
     ret->type = Nda::CallType;
 
     switch (node->type) {
@@ -330,7 +365,7 @@ Nda::Runnable *NdaInterpreter::prepare(const NdaParser::ASTNodePtr &node)
     }
 
     for (int i=0; i<ret->childrenCount; i++) {
-        ret->children[i] = prepare(node->children[i]);
+        ret->children[i] = prepareNode(node->children[i]);
     }
     return ret;
 }
@@ -426,6 +461,7 @@ bool NdaInterpreter::validateFunctionReturn(const Nda::FunctionEntry &fnc)
 //-------------------------------------------------------------------------------------------------
 void NdaInterpreter::run(Nda::Runnable *node)
 {
+    ExecutionLocationGuard locationGuard(mState, node);
     switch(node->type) {
     case Nda::CallNOP: break;
     case Nda::FallbackCall:
@@ -696,6 +732,7 @@ void NdaInterpreter::runFunctionCall(Nda::Runnable *node)
     }
     const std::string &name = node->value.lowerValue;
 
+    DebugFrameGuard debugFrame(mState, name);
     auto error = invokeFnc("",name,values);
     if (error == Nada::Error::NoError)
         return;
@@ -742,6 +779,7 @@ void NdaInterpreter::runStaticMethodCall(Nda::Runnable *node)
     }
 
     std::string typeName = node->children[0]->value.lowerValue;
+    DebugFrameGuard debugFrame(mState, typeName + ":" + node->value.lowerValue);
     auto *fncPtr = mState->functionPtr(typeName, node->value.lowerValue,values);
     if (!fncPtr) {
         mState->ret().reset();
@@ -822,6 +860,7 @@ void NdaInterpreter::runInstanceMethodCall(Nda::Runnable *node)
     }
 
     std::string typeName = runtimeType->name.lowerValue;
+    DebugFrameGuard debugFrame(mState, typeName + "." + node->value.lowerValue);
     auto *fncPtr = mState->functionPtr(typeName, node->value.lowerValue,values);
     if (!fncPtr) {
         mState->ret().reset();
@@ -901,13 +940,14 @@ void NdaInterpreter::runReturn(Nda::Runnable *node)
 void NdaInterpreter::runRaise(Nda::Runnable *node)
 {
     if (node->childrenCount == 0) {
-        if (mActiveException.empty())
-            mState->setUnhandledException("programerror");
+        const auto *active = mState->activeException();
+        if (active)
+            mState->setPendingException(*active);
         else
-            mState->setUnhandledException(mActiveException);
+            mState->raiseException("programerror", "raise without an active exception");
     } else {
         assert(node->childrenCount == 1);
-        mState->setUnhandledException(node->children[0]->value.lowerValue);
+        mState->raiseException(node->children[0]->value.lowerValue);
     }
     mState->ret().reset();
     mExecState = ExceptionState;
@@ -919,19 +959,23 @@ void NdaInterpreter::runExceptionHandlers(Nda::Runnable *node)
     if (mExecState != ExceptionState)
         return;
 
-    const std::string exceptionName = mState->unhandledException();
+    const Nda::ExceptionContext context = mState->pendingException();
     for (int i=0; i<node->childrenCount; i++) {
         auto *handler = node->children[i];
-        if (handler->value.lowerValue != exceptionName && handler->value.lowerValue != "others")
+        if (handler->value.lowerValue != context.name && handler->value.lowerValue != "others")
             continue;
 
-        mState->clearUnhandledException();
+        mState->clearPendingException();
+        mState->pushActiveException(context);
         mExecState = RunState;
         assert(handler->childrenCount == 1);
-        const std::string previousActiveException = mActiveException;
-        mActiveException = exceptionName;
-        run(handler->children[0]);
-        mActiveException = previousActiveException;
+        try {
+            run(handler->children[0]);
+        } catch (...) {
+            mState->popActiveException();
+            throw;
+        }
+        mState->popActiveException();
         return;
     }
 }
@@ -942,7 +986,7 @@ void NdaInterpreter::runFinallyBlock(Nda::Runnable *node)
     assert(node->childrenCount == 1);
 
     const ExecState previousState = mExecState;
-    const std::string previousException = mState->unhandledException();
+    const Nda::ExceptionContext previousException = mState->pendingException();
     const NdaVariant previousRet = mState->ret();
 
     mExecState = RunState;
@@ -954,7 +998,7 @@ void NdaInterpreter::runFinallyBlock(Nda::Runnable *node)
     if (mExecState == RunState) {
         mExecState = previousState;
         if (previousState == ExceptionState)
-            mState->setUnhandledException(previousException);
+            mState->setPendingException(previousException);
         if (previousState == ReturnState || previousState == BreakState ||
             previousState == ContinueState || previousState == ExceptionState)
             mState->ret() = previousRet;

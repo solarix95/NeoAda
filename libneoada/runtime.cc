@@ -1,6 +1,8 @@
 #include <cassert>
 #include <iostream>
 #include <ostream>
+#include <fstream>
+#include <sstream>
 
 #include "runtime.h"
 #include "exception.h"
@@ -81,6 +83,12 @@ std::string NdaRuntime::lastError() const
 //-------------------------------------------------------------------------------------------------
 NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *exception)
 {
+    return runScript(script, "", exception);
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaRuntime::runScript(const std::string &script, const std::string &sourceName, NdaException *exception)
+{
     if (!mState)
         reset();
 
@@ -90,7 +98,8 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
     mLastError.clear();
     try {
         auto ast = parser.parse(script);
-        return mInterpreter->execute(ast);
+        const uint32_t sourceId = mState->registerSource(sourceName, script, "script");
+        return mInterpreter->execute(ast, nullptr, sourceId);
     } catch (NdaException &ex) {
         mLastError = ex.what();
         if (exception)
@@ -111,7 +120,13 @@ NdaVariant NdaRuntime::runScript(const std::string &script, NdaException *except
 //-------------------------------------------------------------------------------------------------
 NdaVariant NdaRuntime::evaluateFormula(const std::string &formula, NdaException *exception)
 {
-    NdaFormula prepared = prepareFormula(formula, exception);
+    return evaluateFormula(formula, "", exception);
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaRuntime::evaluateFormula(const std::string &formula, const std::string &sourceName, NdaException *exception)
+{
+    NdaFormula prepared = prepareFormula(formula, sourceName, exception);
     if (!prepared.isValid())
         return NdaVariant();
     return executeFormula(prepared, exception);
@@ -119,6 +134,12 @@ NdaVariant NdaRuntime::evaluateFormula(const std::string &formula, NdaException 
 
 //-------------------------------------------------------------------------------------------------
 NdaFormula NdaRuntime::prepareFormula(const std::string &formula, NdaException *exception)
+{
+    return prepareFormula(formula, "", exception);
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaFormula NdaRuntime::prepareFormula(const std::string &formula, const std::string &sourceName, NdaException *exception)
 {
     if (!mState)
         reset();
@@ -131,7 +152,8 @@ NdaFormula NdaRuntime::prepareFormula(const std::string &formula, NdaException *
         auto ast = parser.parseFormula(formula);
         if (!mInterpreter->isFormula(ast))
             throw NdaException(Nada::Error::InvalidStatement,0,0);
-        return NdaFormula(mInterpreter->prepare(ast));
+        const uint32_t sourceId = mState->registerSource(sourceName, formula, "formula");
+        return NdaFormula(mInterpreter->prepare(ast, sourceId));
     } catch (NdaException &ex) {
         mLastError = ex.what();
         if (exception)
@@ -178,6 +200,22 @@ NdaVariant NdaRuntime::executeFormula(NdaFormula &formula, NdaException *excepti
     }
 
     return NdaVariant();
+}
+
+//-------------------------------------------------------------------------------------------------
+NdaVariant NdaRuntime::runFile(const std::string &fileName, NdaException *exception)
+{
+    std::ifstream file(fileName);
+    if (!file) {
+        NdaException ex(Nada::Error::InvalidStatement, 0, 0, fileName);
+        mLastError = ex.what();
+        if (exception)
+            *exception = ex;
+        return NdaVariant();
+    }
+    std::ostringstream contents;
+    contents << file.rdbuf();
+    return runScript(contents.str(), fileName, exception);
 }
 
 //-------------------------------------------------------------------------------------------------
