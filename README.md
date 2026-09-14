@@ -70,7 +70,7 @@ print(msg.length());
 
 #### Static Method
 ```neoada
-function string:format(value : Number, fmt : String) return String is
+function string:format(value : Number; fmt : String) return String is
 begin
     -- Formatting logic
 end;
