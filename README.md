@@ -55,6 +55,52 @@ while x > 0 loop
 end loop;
 ```
 
+### **Procedures, Functions, and Parameter Passing**
+
+Procedures perform an operation without returning a value. Functions return a typed value with `return`. Parameter names of the same type and mode may be grouped with commas; parameter groups are separated with semicolons.
+
+```neoada
+procedure Split_Total(left, right : in Natural;
+                      total       : out Natural) is
+begin
+    total := left + right;
+end Split_Total;
+
+function Add(left, right : Natural) return Natural is
+begin
+    return left + right;
+end Add;
+
+declare result : Natural := 0;
+Split_Total(20, 22, result);
+result := Add(result, 0);
+```
+
+Parameter modes determine whether the subprogram receives a value or a reference:
+
+| Mode | Passing semantics | Effect on the caller |
+| --- | --- | --- |
+| omitted or `in` | Call by value | Assignments to the parameter remain local. |
+| `out` | Call by reference | Reads and writes access the caller's argument directly. |
+
+Primitive `in` arguments have ordinary value semantics. Complex values such as `String`, `List`, `Dict`, and `Bytes` also behave as values, but their storage is initially shared using copy-on-write (COW). Passing or assigning such a value is therefore inexpensive; storage is detached only when one copy is modified. Changes to an `in` parameter do not change the caller's value.
+
+`in` expresses input/value semantics, but is not currently enforced as `const`: the parameter may be assigned or mutated inside the subprogram, producing a local value.
+
+An `out` parameter is backed by a reference to the actual argument. NeoAda currently permits reading its existing value as well as replacing or mutating it, so its behavior corresponds to Ada's `in out` rather than to a write-only Ada `out` parameter:
+
+```neoada
+procedure Append_World(text : out String) is
+begin
+    text := text & ", World"; -- reads and updates the caller's variable
+end Append_World;
+
+declare greeting : String := "Hello";
+Append_World(greeting);       -- greeting is now "Hello, World"
+```
+
+The separate `in out` syntax is not supported. Pass a writable variable to `out`; although a literal or temporary is currently accepted, changes to it have no observable effect after the call.
+
 ### **Method Declaration and Calls**
 #### Instance Method
 ```neoada
@@ -400,4 +446,3 @@ Contributions are welcome! Please see the `CONTRIBUTING.md` for guidelines on ho
 
 ## **License**
 NeoAda is open source and available under the MIT License.
-
