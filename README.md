@@ -441,6 +441,17 @@ print(person.value("country", "unknown"));
 - Native bindings for Python and Java.
 - Enhanced error diagnostics.
 
+
+## Programming in NeoAda
+
+A beginner-friendly book and reference is included in this repository:
+
+- [Programming in NeoAda](docs/README.md)
+- [Foreword from the Author](docs/book/foreword.md)
+- [Book contents](docs/book/index.md)
+
+The book covers the language from first steps through C++ embedding, with additional notes on readable and high-integrity software design.
+
 ## **Contributing**
 Contributions are welcome! Please see the `CONTRIBUTING.md` for guidelines on how to help improve NeoAda.
 
