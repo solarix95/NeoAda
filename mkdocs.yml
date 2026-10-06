@@ -1,0 +1,58 @@
+site_name: Programming in NeoAda
+site_description: A beginner-friendly guide to the NeoAda programming language
+repo_url: https://github.com/solarix95/NeoAda
+
+docs_dir: docs
+
+nav:
+  - Home: README.md
+  - Foreword: book/foreword.md
+  - Preface: book/preface.md
+  - Part I — First Steps:
+      - "1. Getting Started": book/01-getting-started.md
+      - "2. Values and Types": book/02-values-and-types.md
+      - "3. Variables": book/03-variables.md
+      - "4. Expressions": book/04-expressions.md
+      - "5. Decisions": book/05-decisions.md
+      - "6. Loops": book/06-loops.md
+  - Part II — Building Programs:
+      - "7. Procedures and Functions": book/07-functions.md
+      - "8. Lists": book/08-lists.md
+      - "9. Dictionaries": book/09-dictionaries.md
+      - "10. Strings": book/10-strings.md
+      - "11. Methods": book/11-methods.md
+      - "12. Errors and Exceptions": book/12-exceptions.md
+  - Part III — Data and Addons:
+      - "13. Using Addons": book/13-addons.md
+      - "14. Mathematics": book/14-math.md
+      - "15. Bytes and Encoding": book/15-bytes-and-encoding.md
+      - "16. Files": book/16-files.md
+      - "17. Dates and Times": book/17-dates-and-times.md
+  - Part IV — Programming Well:
+      - "18. Writing Clear Programs": book/18-clear-programs.md
+      - "19. Types as a Safety Tool": book/19-types-as-safety.md
+      - "20. Predictable Error Handling": book/20-predictable-errors.md
+      - "21. Value Semantics": book/21-value-semantics.md
+  - Part V — Embedding:
+      - "22. NeoAda and C++": book/22-neoada-and-cpp.md
+      - "23. Exposing C++": book/23-exposing-cpp.md
+      - "24. Embedded API Design": book/24-embedded-api-design.md
+      - "25. Complete Embedded App": book/25-complete-embedded-app.md
+  - Part VI — Complete Programs:
+      - "26. Guess the Number": book/26-guess-the-number.md
+      - "27. Text Adventure": book/27-text-adventure.md
+      - "28. Contact List": book/28-contact-list.md
+      - "29. Processing a Data File": book/29-processing-data-file.md
+      - "30. Configuration Script": book/30-configuration-script.md
+      - "31. Rule Engine": book/31-rule-engine.md
+  - Reference:
+      - Syntax: reference/language.md
+      - Types: reference/types.md
+      - Built-ins: reference/builtins.md
+      - Addons: reference/addons.md
+      - Exceptions: reference/exceptions.md
+      - For Ada Programmers: reference/for-ada-programmers.md
+      - For C++ Programmers: reference/for-cpp-programmers.md
+  - Design:
+      - Philosophy: design/philosophy.md
+      - High Integrity: design/high-integrity.md
