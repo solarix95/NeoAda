@@ -1,0 +1,49 @@
+# Summary
+
+- [Foreword from the Author](docs/book/foreword.md)
+- [Preface](docs/book/preface.md)
+- Part I — First Steps
+  - [1. Getting Started](docs/book/01-getting-started.md)
+  - [2. Values and Types](docs/book/02-values-and-types.md)
+  - [3. Variables](docs/book/03-variables.md)
+  - [4. Expressions](docs/book/04-expressions.md)
+  - [5. Decisions](docs/book/05-decisions.md)
+  - [6. Loops](docs/book/06-loops.md)
+- Part II — Building Programs
+  - [7. Procedures and Functions](docs/book/07-functions.md)
+  - [8. Lists](docs/book/08-lists.md)
+  - [9. Dictionaries](docs/book/09-dictionaries.md)
+  - [10. Strings](docs/book/10-strings.md)
+  - [11. Methods](docs/book/11-methods.md)
+  - [12. Errors and Exceptions](docs/book/12-exceptions.md)
+- Part III — Data and the Standard Addons
+  - [13. Using Addons](docs/book/13-addons.md)
+  - [14. Numbers and Mathematics](docs/book/14-math.md)
+  - [15. Bytes and Text Encoding](docs/book/15-bytes-and-encoding.md)
+  - [16. Files](docs/book/16-files.md)
+  - [17. Dates and Times](docs/book/17-dates-and-times.md)
+- Part IV — Programming Well
+  - [18. Writing Clear Programs](docs/book/18-clear-programs.md)
+  - [19. Types as a Safety Tool](docs/book/19-types-as-safety.md)
+  - [20. Predictable Error Handling](docs/book/20-predictable-errors.md)
+  - [21. Value Semantics](docs/book/21-value-semantics.md)
+- Part V — Embedding NeoAda
+  - [22. NeoAda and C++](docs/book/22-neoada-and-cpp.md)
+  - [23. Exposing C++ to NeoAda](docs/book/23-exposing-cpp.md)
+  - [24. Designing an Embedded Scripting API](docs/book/24-embedded-api-design.md)
+  - [25. A Complete Embedded Application](docs/book/25-complete-embedded-app.md)
+- Part VI — Complete Programs
+  - [26. Guess the Number](docs/book/26-guess-the-number.md)
+  - [27. A Small Text Adventure](docs/book/27-text-adventure.md)
+  - [28. A Contact List](docs/book/28-contact-list.md)
+  - [29. Processing a Text Data File](docs/book/29-processing-data-file.md)
+  - [30. A Configuration Script](docs/book/30-configuration-script.md)
+  - [31. A Rule Engine Embedded in C++](docs/book/31-rule-engine.md)
+- Appendices
+  - [A. Syntax at a Glance](docs/reference/language.md)
+  - [B. Built-in Types](docs/reference/types.md)
+  - [C. Built-in Functions](docs/reference/builtins.md)
+  - [D. Standard Addons](docs/reference/addons.md)
+  - [E. Exception Reference](docs/reference/exceptions.md)
+  - [F. NeoAda for Ada Programmers](docs/reference/for-ada-programmers.md)
+  - [G. NeoAda for C++ Programmers](docs/reference/for-cpp-programmers.md)
